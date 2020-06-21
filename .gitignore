@@ -1,0 +1,6 @@
+.DS_Store
+/.settings
+/.project
+/node_modules
+/old
+/docs
