@@ -2,8 +2,8 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Nexus} = require('../nexus.js');
-const {Context} = require('../context.js');
+const {Nexus} = require('../structure/nexus.js');
+const {Context} = require('../server/context.js');
 
 const sut = require('./action.js');
 
@@ -215,6 +215,9 @@ describe('src/controller/action.js', function(){
 			params: {
 				id: 1234,
 				action: 'foo-bar'
+			},
+			permissions: {
+				'oh-boy': true
 			}
 		});
 

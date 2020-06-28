@@ -1,6 +1,4 @@
 
-// I understand ctx, ...args is pointless, but it shouldn't kill performance and
-// I want to establish ctx is the first variable
 function asyncWrap(fn, old, before = true){
 	if (before){
 		if (old){

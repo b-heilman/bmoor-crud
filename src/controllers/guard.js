@@ -6,7 +6,7 @@ const config = new Config({
 	putIsPatch: true
 });
 
-const {Route} = require('../server/route.js');
+const {Controller} = require('../server/controller.js');
 
 // -- post
 // create => POST: ''
@@ -53,24 +53,26 @@ function runUpdate(ids, service, delta, ctx){
 	}
 }
 
-class Guard {
+class Guard extends Controller {
 	constructor(service, settings){
+		super();
+		
 		this.service = service;
 		this.settings = settings;
 	}
 
 	async read(ctx){
-		if (ctx.method === 'get'){
+		if (ctx.getMethod() === 'get'){
 			if (!this.settings.read){
 				operationNotAllowed('read');
 			}
 
-			if (ctx.query){
+			if (ctx.hasQuery()){
 				if (!this.settings.query){
 					operationNotAllowed('query');
 				}
 
-				return this.service.query(ctx.query, ctx);
+				return this.service.query(ctx.getQuery(), ctx);
 			} else if (ctx.params){
 				let ids = ctx.getParam('id');
 
@@ -115,13 +117,13 @@ class Guard {
 	async write(ctx){
 		const datum = await ctx.getContent();
 
-		if (ctx.method === 'post'){
+		if (ctx.getMethod() === 'post'){
 			if (!this.settings.create){
 				operationNotAllowed('create');
 			}
 
 			return this.service.create(datum, ctx);
-		} else if (ctx.method === 'put'){
+		} else if (ctx.getMethod() === 'put'){
 			const ids = (ctx.getParam('id')||'').trim();
 
 			if (!this.settings.update){
@@ -144,7 +146,7 @@ class Guard {
 				});
 			}
 			
-		} else if (ctx.method === 'patch'){
+		} else if (ctx.getMethod() === 'patch'){
 			const ids = (ctx.getParam('id')||'').trim();
 
 			if (!this.settings.update){
@@ -170,18 +172,18 @@ class Guard {
 	}
 
 	async delete(ctx){
-		if (ctx.method === 'delete'){
+		if (ctx.getMethod() === 'delete'){
 			if (!this.settings.delete){
 				operationNotAllowed('delete');
 			}
 
-			if (ctx.query){
+			if (ctx.hasQuery()){
 				if (!this.settings.query){
 					operationNotAllowed('query');
 				}
 
-				const queriedIds = (await this.service.query(ctx.query, ctx))
-					.map(datum => this.service.model.getKey(datum));
+				const queriedIds = (await this.service.query(ctx.getQuery(), ctx))
+					.map(datum => this.service.schema.getKey(datum));
 
 				return Promise.all(queriedIds.map(
 					id => this.service.delete(id, ctx)
@@ -217,41 +219,41 @@ class Guard {
 	}
 
 	async route(ctx){
-		if (ctx.method === 'get'){
+		if (ctx.getMethod() === 'get'){
 			return this.read(ctx);
-		} else if (ctx.method === 'delete'){
+		} else if (ctx.getMethod() === 'delete'){
 			return this.delete(ctx);
 		} else {
 			return this.write(ctx);
 		}
 	}
 
-	getRoutes(){
+	getRoutes(nexus){
 		const read = this.read.bind(this);
 		const write = this.write.bind(this);
 		const del = this.delete.bind(this);
 
 		return [
 			// create
-			new Route('post', '', write),
+			this.prepareRoute(nexus, 'post', '', write),
 
 			// read / readMany
-			new Route('get', '/:id', read), 
+			this.prepareRoute(nexus, 'get', '/:id', read), 
 
 			// readAll, query
-			new Route('get', '', read),
+			this.prepareRoute(nexus, 'get', '', read),
 
 			// update
-			new Route('put', '/:id', write),
+			this.prepareRoute(nexus, 'put', '/:id', write),
 
 			// update
-			new Route('patch', '/:id', write), 
+			this.prepareRoute(nexus, 'patch', '/:id', write), 
 
 			// delete
-			new Route('delete', '/:id', del),
+			this.prepareRoute(nexus, 'delete', '/:id', del),
 
 			// delete w/ query
-			new Route('delete', '', del)
+			this.prepareRoute(nexus, 'delete', '', del)
 		];
 	}
 }

@@ -1,30 +1,37 @@
-// TODO: this needs to be renamed as Normalized
-// Synthetic will be a large denormalized schema based on smaller models
-const {Network} = require('bmoor-data/src/model/Network.js');
+
+const {create} = require('bmoor/src/lib/error.js');
+
+const {Network} = require('../graph/network.js');
 
 async function getDatum(service, query, ctx){
-	let key = service.model.getKey(query);
+	let key = service.schema.getKey(query);
 
 	// on update, a user might send a query object as the key if they are updating the name
 	// in the body but not referencing by the id
 	if (typeof(key) === 'object'){
 		query = key;
 
-		key = service.model.getKey(query);
+		key = service.schema.getKey(query);
 	}
 
 	if (key){
 		// if you make key === 0, you're a horrible person
 		return await service.read(key, ctx);
 	} else {
-		if (service.model.hasIndex()){
-			return (await service.query(service.model.getIndex(query), ctx))[0];
+		if (service.schema.hasIndex()){
+			const res = await service.query(
+				service.schema.clean('index',query), 
+				ctx
+			);
+
+			return res[0];
 		} else {
 			return null;
 		}
 	}
 }
 
+// TODO: convert action to Datum
 async function install(action, service, master, mapper, ctx){
 	let ref = action.$ref;
 	let datum = null;
@@ -37,12 +44,12 @@ async function install(action, service, master, mapper, ctx){
 		// the key
 		const current = await getDatum(service, action, ctx);
 
-		datum = await service.update(service.model.getKey(current), action, ctx);
+		datum = await service.update(service.schema.getKey(current), action, ctx);
 	} else if (action.$type === 'create-or-update'){
 		datum = await getDatum(service, action, ctx);
 
 		if (datum){
-			await service.update(service.model.getKey(datum), action, ctx);
+			await service.update(service.schema.getKey(datum), action, ctx);
 		} else {
 			datum = await service.create(action, ctx);
 		}
@@ -50,26 +57,196 @@ async function install(action, service, master, mapper, ctx){
 		datum = await service.create(action, ctx);
 	}
 
-	mapper.getByDirection(service.model.name, 'incoming')
-	.forEach(link => {
-		const targets = master[link.name];
-
-		if (!targets){
-			return;
-		}
-
-		targets.forEach(target => {
-			if (target[link.remote] === ref){
-				target[link.remote] = datum[link.local];
+	// when this thing is processed, update any references to it
+	mapper.getByDirection(service.schema.name, 'incoming').forEach(
+		link => master.process(link.name, 
+			target => {
+				if (target.getField(link.remote) === ref){
+					target.setField(link.remote, datum[link.local]);
+				}
 			}
-		});
-	});
+		)
+	);
 
 	return datum;
 }
 
 // take a master datum, and a mapper reference to all classes, and convert that
 // into a series of service calls
+
+class DatumRef {
+	constructor(value){
+		this.value = value;
+	}
+
+	toJson(){
+		return this.value;
+	}
+}
+
+class Datum {
+	constructor(ref, action, content){
+		this.ref = ref;
+		this.action = action;
+		this.content = content;
+	}
+
+	setField(field, value){
+		// TODO: use bmoor.set
+		this.content[field] = value;
+	}
+
+	getField(field){
+		// TODO: use bmoor.get
+		return this.content[field];
+	}
+
+	getAction(){
+		return this.action;
+	}
+
+	getReference(){
+		return this.ref;
+	}
+
+	toJson(){
+		return Object.keys(this.content)
+		.reduce(
+			(rtn, path) => {
+				const d = this.content[path];
+
+				rtn[path] = d instanceof DatumRef ? d.value : d;
+
+				return rtn;
+			},
+			{
+				$ref: this.ref,
+				$type: this.action
+			}
+		);
+	}
+
+	lock(){
+		return new Datum(
+			this.ref,
+			this.action,
+			Object.keys(this.content) // TODO: need a better way to do this
+			.reduce(
+				(rtn, path) => {
+					const d = this.content[path];
+
+					rtn[path] = d instanceof DatumRef ? d.value : d;
+
+					return rtn;
+				},
+				{}
+			)
+		);
+	}
+}
+
+class SeriesMap extends Map {
+	constructor(series, parent){
+		super();
+
+		this.parent = parent;
+		this.series = series;
+	}
+
+	install(index, value){
+		if (this.has(index)){
+			this.get(index).push(value);
+		} else {
+			this.set(index, [value]);
+		}
+
+		if (this.parent){
+			this.parent.install(index, value);
+		}
+	}
+
+	create(index, ref, action, content){
+		// the concept if someone builds a smart series, they can
+		// attach DatumRefs in places and we will update inline
+		let alias = null;
+		if (ref instanceof(DatumRef)){
+			ref.value += ':'+this.series; 
+			alias = ref.value;
+		} else {
+			alias = ref;
+		}
+
+		const datum = new Datum(alias, action, content);
+
+		this.install(index, datum);
+
+		return datum;
+	}
+
+	import(index, arr){
+		return arr.map(command => {
+			const {$ref: ref, $type: action, ...content} = command;
+
+			return this.create(index, ref, action, content);
+		});
+	}
+
+	process(index, cb){
+		if (this.has(index)){
+			return this.get(index).map(cb);
+		}
+	}
+}
+
+class Schema extends SeriesMap{
+	constructor(nexus){
+		super(0);
+
+		this.nexus = nexus;
+		this.position = 1;
+	}
+
+	nextSeries(){
+		const series = new SeriesMap(this.position, this);
+
+		this.position++;
+
+		return series;
+	}
+
+	import(schema){
+		return Object.keys(schema).reduce(
+			(master, model) => {
+				master.import(model, schema[model]);
+
+				return master;
+			},
+			this.nextSeries()
+		);
+	}
+
+	toJson(){
+		const agg = {};
+
+		for (let [index, arr] of this.entries()) {
+			agg[index] = arr.map(datum => datum.toJson());
+		}
+
+		return agg;
+	}
+
+	lock(){
+		const schema = new Schema(this.nexus);
+
+		schema.position = this.position;
+
+		for (let [index, arr] of this.entries()) {
+			schema.set(index, arr.map(datum => datum.lock()));
+		}
+
+		return schema;
+	}
+}
 
 /**
 {
@@ -81,9 +258,39 @@ async function install(action, service, master, mapper, ctx){
 	}]
 }
 **/
-async function deflate(master, mapper, registry, ctx){
-	const references = Object.keys(master);
-	const network = new Network(mapper);
+// pushes to data source
+async function deflate(schema, nexus, ctx){
+	let master = null;
+
+	//deep copy master
+	if (schema instanceof Schema){
+		master = schema;
+	} else {
+		master = new Schema(nexus);
+		
+		master.import(schema);
+	}
+
+	// If I don't do this, I can make alterations to the incoming data, causing a possible
+	// mutation.  I might make this an option in the future to not run if you want to save
+	// data
+	master = master.lock();
+
+	// for now, I'm going to convert it back.  In the future I will write this
+	//  to 
+	const references = Array.from(master.keys());
+	
+	if (!ctx){
+		throw create(`missing ctx in deflate`, {
+			status: 404,
+			code: 'BMOOR_CRUD_SERVICE_READ_FILTER',
+			context: {
+				references
+			}
+		});
+	}
+
+	const network = new Network(nexus.mapper);
 
 	const order = network.requirements(references, 1)
 		.map(link => link.name);
@@ -93,21 +300,29 @@ async function deflate(master, mapper, registry, ctx){
 	}
 
 	return order.reduce(
-		(prom, serviceName) => {
-			const service = registry.get(serviceName);
+		async (prom, serviceName) => {
+			const service = await nexus.loadService(serviceName);
 
-			return master[serviceName].reduce(
-				(agg, datum) => agg.then(
-					() => install(
-						datum,
+			return master.get(serviceName).reduce(
+				async (prom, datum) => {
+					const agg = await prom;
+
+					const res = await install(
+						datum.toJson(),
 						service,
 						master,
-						mapper,
+						nexus.mapper,
 						ctx
-					)
-				), prom
+					);
+
+					agg.push(res);
+
+					return agg;
+				}, 
+				prom
 			);
-		}, Promise.resolve(true)
+		}, 
+		Promise.resolve([])
 	);
 }
 
@@ -117,7 +332,8 @@ async function getDatums(service, query, ctx){
 		await Promise.all([service.read(query, ctx)]);
 }
 
-async function inflate(service, query, mapper, registry, ctx){
+// pull from data source
+async function inflate(service, query, nexus, ctx){
 	const known = {};
 	const looking = {};
 	const toProcess = query.keys.map(
@@ -127,11 +343,23 @@ async function inflate(service, query, mapper, registry, ctx){
 			service
 		})
 	);
-	const joinModels = (query.join||[]).reduce((agg, table) => {
-		agg[table] = true;
+	const joinModels = Object.keys(query.join||[]).reduce(
+		(agg, model) => {
+			const tables = query.join[model];
 
-		return agg;
-	}, {});
+			agg[model] = tables.reduce(
+				(agg, table) => {
+					agg[table] = true;
+
+					return agg;
+				},
+				{}
+			);
+
+			return agg;
+		}, 
+		{}
+	);
 	const stubModels = (query.stub||[]).reduce((agg, table) => {
 		agg[table] = true;
 
@@ -139,14 +367,14 @@ async function inflate(service, query, mapper, registry, ctx){
 	}, {});
 	
 	let c = 0;
-	function getLooking(serviceName, key){
-		const service = registry.get(serviceName);
-		let s = looking[service.model.name];
+	async function getLooking(serviceName, key){
+		const service = await nexus.loadService(serviceName);
+		let s = looking[service.schema.name];
 
 		if (!s){
 			s = {};
 
-			looking[service.model.name] = s;
+			looking[service.schema.name] = s;
 		}
 
 		let ref = s[key];
@@ -165,16 +393,16 @@ async function inflate(service, query, mapper, registry, ctx){
 		};
 	}
 
-	function addDatum(service, datum, type = 'create-or-update'){
-		let s = known[service.model.name];
+	async function addDatum(service, datum, type = 'create-or-update'){
+		let s = known[service.schema.name];
 
 		if (!s){
 			s = {};
 
-			known[service.model.name] = s;
+			known[service.schema.name] = s;
 		}
 
-		const field = service.model.properties.key;
+		const field = service.schema.properties.key;
 		const key = datum[field];
 
 		delete datum[field];
@@ -191,7 +419,7 @@ async function inflate(service, query, mapper, registry, ctx){
 			rtn = datum;
 			s[key] = rtn;
 
-			getLooking(service.model.name, key);
+			await getLooking(service.schema.name, key);
 
 			return {
 				current: rtn,
@@ -202,71 +430,79 @@ async function inflate(service, query, mapper, registry, ctx){
 
 	do{
 		const loading = toProcess.shift();
-		const service = registry.get(loading.service);
+		const service = await nexus.loadService(loading.service);
 
 		const datums = await getDatums(service, loading.query, ctx);
 
-		const stubbed = !!stubModels[service.model.name];
+		const stubbed = !!stubModels[service.schema.name];
 
-		datums.forEach(datum => { // jshint ignore:line
-			const key = service.model.getKey(datum);
-			const {current, isNew} = addDatum(
-				service,
-				datum,
-				stubbed ? 'read' : 'create-or-update'
-			);
+		await Promise.all(
+			datums.map(async (datum) => { // jshint ignore:line
+				const key = service.schema.getKey(datum);
+				const {current, isNew} = await addDatum(
+					service,
+					datum,
+					stubbed ? 'read' : 'create-or-update'
+				);
 
-			if (!isNew){
-				return true;
-			}
+				if (!isNew){
+					return true;
+				}
 
-			//------- process outgoing links
-			if (!stubbed){
-				mapper.getByDirection(service.model.name, 'outgoing')
-				.forEach(link => { // jshint ignore:line
-					const fk = current[link.local];
+				//------- process links as long as not stubbed
+				if (!stubbed){
+					// always load outgoing link
+					await Promise.all(
+						nexus.mapper.getByDirection(service.schema.name, 'outgoing')
+						.map(async (link) => { // jshint ignore:line
+							const fk = current[link.local];
 
-					if (fk !== null){
-						const {ref, newish} = getLooking(link.name, fk); // jshint ignore:line
-						
-						if (newish){
-							toProcess.push({
-								ref: ref,
-								service: link.name,
-								query: {[link.remote]: fk}
-							});
-						}
+							if (fk !== null){
+								const {ref, newish} = await getLooking(link.name, fk); // jshint ignore:line
+								
+								if (newish){
+									toProcess.push({
+										ref: ref,
+										service: link.name,
+										query: {[link.remote]: fk}
+									});
+								}
 
-						current[link.local] = ref;
-					}
-				});
+								current[link.local] = ref;
+							}
+						})
+					);
 
-				//------- process incoming links
-				const {ref} = getLooking(service.model.name, key);
-				current.$ref = ref;
+					const {ref} = await getLooking(service.schema.name, key);
+					current.$ref = ref;
 
-				mapper.getByDirection(service.model.name, 'incoming')
-				.forEach(link => {
-					if (joinModels[link.name]){
-						toProcess.push({
-							ref: ref,
-							back: link.remote,
-							service: link.name,
-							query: {
-								[link.remote]: key
+					// optionally load incoming links
+					const lookup = joinModels[service.schema.name];
+					if (lookup){
+						nexus.mapper.getByDirection(service.schema.name, 'incoming')
+						.forEach(link => {
+							if (lookup[link.name]){
+								toProcess.push({
+									ref: ref,
+									back: link.remote,
+									service: link.name,
+									query: {
+										[link.remote]: key
+									}
+								});
 							}
 						});
 					}
-				});
-			}
+				}
 
-			//------- now that we've processed, we can change data, otherwise things get mixed up up above
-			if (loading.back){
-				current[loading.back] = loading.ref;
-			} else if (loading.ref){
-				current.$ref = loading.ref;
-			}
-		});
+				//------- now that we've processed, we can change data, otherwise things get mixed up up above
+				if (loading.back){
+					current[loading.back] = loading.ref;
+				} else if (loading.ref){
+					current.$ref = loading.ref;
+				}
+			})
+		);
 	}while(toProcess.length);
 
 	Object.keys(known).forEach(key => {
@@ -276,28 +512,30 @@ async function inflate(service, query, mapper, registry, ctx){
 	return known;
 }
 
-async function diagram(service, keys, mapper, registry, ctx){
+async function diagram(service, keys, nexus, ctx){
 	const known = {};
 	const looking = {};
-	const toProcess = keys.map(
-		key => ({
-			query: {
-				[registry.get(service).model.properties.key]: key
-			},
-			service
-		})
+	const toProcess = await Promise.all(
+		keys.map(
+			async (key) => ({
+				query: {
+					[(await nexus.loadService(service)).schema.properties.key]: key
+				},
+				service
+			})
+		)
 	);
 	
 	function addDatum(service, datum){
-		let s = known[service.model.name];
+		let s = known[service.schema.name];
 		
 		if (!s){
 			s = {};
 
-			known[service.model.name] = s;
+			known[service.schema.name] = s;
 		}
 
-		const key = service.model.getKey(datum);
+		const key = service.schema.getKey(datum);
 
 		if (!s[key]){
 			s[key] = datum;
@@ -310,13 +548,12 @@ async function diagram(service, keys, mapper, registry, ctx){
 
 	do {
 		const loading = toProcess.shift();
-		const service = registry.get(loading.service);
-
+		const service = await nexus.loadService(loading.service);
 		const results = await service.query(loading.query, ctx);  
 
 		results.forEach(datum => { // jshint ignore:line
 			if (addDatum(service, datum)){ 
-				mapper.getByDirection(service.model.name, 'outgoing')
+				nexus.mapper.getByDirection(service.schema.name, 'outgoing')
 				.forEach(link => {
 					const s = link.name;
 					const r = link.remote;
@@ -348,9 +585,9 @@ async function diagram(service, keys, mapper, registry, ctx){
 	return known;
 }
 
-async function clear(master, mapper, registry, ctx){
+async function clear(master, nexus, ctx){
 	const references = Object.keys(master);
-	const network = new Network(mapper);
+	const network = new Network(nexus.mapper);
 
 	let order = network.requirements(references, 1)
 		.reverse() // you don't want to lead with a leaf, so switch
@@ -363,19 +600,24 @@ async function clear(master, mapper, registry, ctx){
 	order = order.reverse();
 
 	return order.reduce(
-		(prom, serviceName) => {
-			const service = registry.get(serviceName);
+		async (prom, serviceName) => {
+			const service = await nexus.loadService(serviceName);
 
 			return master[serviceName].reduce(
 				(agg, datum) => agg.then(
 					() => service.delete(datum, ctx)
-				), prom
+				), 
+				prom
 			);
-		}, Promise.resolve(true)
+		}, 
+		Promise.resolve(true)
 	);
 }
 
 module.exports = {
+	Datum,
+	DatumRef,
+	Schema,
 	inflate,
 	deflate,
 	diagram,

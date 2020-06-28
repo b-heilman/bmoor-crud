@@ -2,13 +2,13 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Bus} = require('./bus.js');
-const {Nexus} = require('./nexus.js');
-const {Context} = require('./context.js');
+const {Bus} = require('../bus.js');
+const {Nexus} = require('../structure/nexus.js');
+const {Context} = require('../server/context.js');
 
 const sut = require('./forge.js');
 
-describe('src/forge.js', function(){
+describe('src/structure/forge.js', function(){
 	let bus = null;
 	let stubs = null;
 	let nexus = null;
@@ -25,7 +25,11 @@ describe('src/forge.js', function(){
 
 	afterEach(function(){
 		Object.values(stubs)
-		.forEach(stub => stub.restore());
+		.forEach(stub => {
+			if (stub.restore){
+				stub.restore();
+			}
+		});
 	});
 
 	describe('eventing', function(){
@@ -97,14 +101,13 @@ describe('src/forge.js', function(){
 			service2 = await nexus.installService('service-2', interface2);
 		});
 
-		describe('::configure', function(){
+		describe('::configureService', function(){
 			it('should allow for the subscription of afterCreate events', async function(){
-				interface1.prepare = () => Promise.resolve('foo-bar');
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar'
 				}]);
 
-				bus.broadcast.on('service-1.create', function(datum, myCtx){
+				bus.broadcast.on('service-1.create', function(was, datum, myCtx){
 					expect(datum)
 					.to.deep.equal({foo: 'bar'});
 
@@ -114,7 +117,7 @@ describe('src/forge.js', function(){
 					myCtx.addChange('foo', 'bar', {hello: 'world'});
 				});
 
-				await forge.configure('service-1');
+				await forge.configureService('service-1');
 
 				const res = await service1.create({eins: 1}, ctx);
 
@@ -122,25 +125,27 @@ describe('src/forge.js', function(){
 				.to.deep.equal({foo: 'bar'});
 
 				expect(ctx.getChanges())
-				.to.deep.equal({
-					'service-1': [{
-						action: 'create',
-						datum: {foo: 'bar'}
-					}],
-					'foo': [{
-						action: 'bar',
-						datum: {hello: 'world'}
-					}]
-				});
+				.to.deep.equal([{
+					model: 'foo',
+					action: 'bar',
+					from: {hello: 'world'},
+					to: null,
+					md: {}
+				}, {
+					model: 'service-1',
+					action: 'create',
+					to: {foo: 'bar'},
+					from: null,
+					md: {}
+				}]);
 			});
 
 			it('should allow for the subscription of afterUpdate events', async function(){
-				interface1.prepare = () => Promise.resolve('foo-bar');
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar'
 				}]);
 
-				bus.broadcast.on('service-1.update', function(datum, myCtx){
+				bus.broadcast.on('service-1.update', function(was, datum, myCtx){
 					expect(datum)
 					.to.deep.equal({foo: 'bar'});
 
@@ -150,7 +155,7 @@ describe('src/forge.js', function(){
 					myCtx.addChange('foo', 'bar', {hello: 'world'});
 				});
 
-				await forge.configure('service-1');
+				await forge.configureService('service-1');
 
 				const res = await service1.update(1, {eins: 1}, ctx);
 
@@ -158,25 +163,27 @@ describe('src/forge.js', function(){
 				.to.deep.equal({foo: 'bar'});
 
 				expect(ctx.getChanges())
-				.to.deep.equal({
-					'service-1': [{
-						action: 'update',
-						datum: {foo: 'bar'}
-					}],
-					'foo': [{
-						action: 'bar',
-						datum: {hello: 'world'}
-					}]
-				});
+				.to.deep.equal([{
+					model: 'foo',
+					action: 'bar',
+					from: {hello: 'world'},
+					to: null,
+					md: {}
+				}, {
+					model: 'service-1',
+					action: 'update',
+					to: {foo: 'bar'},
+					from: {foo: 'bar'},
+					md: {}
+				}]);
 			});
 
 			it('should allow for the subscription of afterDelete events', async function(){
-				interface1.prepare = () => Promise.resolve('foo-bar');
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar'
 				}]);
 
-				bus.broadcast.on('service-1.delete', function(datum, myCtx){
+				bus.broadcast.on('service-1.delete', function(datum, _, myCtx){
 					expect(datum)
 					.to.deep.equal({foo: 'bar'});
 
@@ -186,7 +193,7 @@ describe('src/forge.js', function(){
 					myCtx.addChange('foo', 'bar', {hello: 'world'});
 				});
 
-				await forge.configure('service-1');
+				await forge.configureService('service-1');
 
 				const res = await service1.delete(1, ctx);
 
@@ -194,16 +201,19 @@ describe('src/forge.js', function(){
 				.to.deep.equal({foo: 'bar'});
 
 				expect(ctx.getChanges())
-				.to.deep.equal({
-					'service-1': [{
-						action: 'delete',
-						datum: {foo: 'bar'}
-					}],
-					'foo': [{
-						action: 'bar',
-						datum: {hello: 'world'}
-					}]
-				});
+				.to.deep.equal([{
+					model: 'foo',
+					action: 'bar',
+					from: {hello: 'world'},
+					to: null,
+					md: {}
+				}, {
+					model: 'service-1',
+					action: 'delete',
+					to: null,
+					from: {foo: 'bar'},
+					md: {}
+				}]);
 			});
 		});
 
@@ -310,24 +320,22 @@ describe('src/forge.js', function(){
 			});
 		});
 
-		describe('::configure should play nice with ::subscribe', function(){
+		describe('::configureService should play nice with ::subscribe', function(){
 			it('should work for create', async function(){
-				interface1.prepare = () => Promise.resolve('foo-bar');
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar'
 				}]);
 
-				interface2.prepare = () => Promise.resolve('hello-world');
 				interface2.execute = () => Promise.resolve([{
 					hello: 'world'
 				}]);
 
-				await forge.configure('service-1');
+				await forge.configureService('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'create',
-					callback: function(service, datum, myCtx){
+					callback: function(service, was, datum, myCtx){
 						expect(service)
 						.to.equal(service2);
 
@@ -341,35 +349,36 @@ describe('src/forge.js', function(){
 				await service1.create({eins: 1}, ctx);
 
 				expect(ctx.getChanges())
-				.to.deep.equal({
-					'service-1': [{
-						action: 'create',
-						datum: {foo: 'bar'}
-					}],
-					'service-2': [{
-						action: 'create',
-						datum: {hello: 'world'}
-					}]
-				});
+				.to.deep.equal([{
+					model: 'service-2',
+					action: 'create',
+					from: null,
+					to: {hello: 'world'},
+					md: {}
+				}, {
+					model: 'service-1',
+					action: 'create',
+					from: null,
+					to: {foo: 'bar'},
+					md: {}
+				}]);
 			});
 
 			it('should work for update', async function(){
-				interface1.prepare = () => Promise.resolve('foo-bar');
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar'
 				}]);
 
-				interface2.prepare = () => Promise.resolve('hello-world');
 				interface2.execute = () => Promise.resolve([{
 					hello: 'world'
 				}]);
 
-				await forge.configure('service-1');
+				await forge.configureService('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'update',
-					callback: function(service, datum, myCtx){
+					callback: function(service, was, datum, myCtx){
 						expect(service)
 						.to.equal(service2);
 
@@ -383,39 +392,40 @@ describe('src/forge.js', function(){
 				await service1.update(1, {eins: 1}, ctx);
 
 				expect(ctx.getChanges())
-				.to.deep.equal({
-					'service-1': [{
-						action: 'update',
-						datum: {foo: 'bar'}
-					}],
-					'service-2': [{
-						action: 'create',
-						datum: {hello: 'world'}
-					}]
-				});
+				.to.deep.equal([{
+					model: 'service-2',
+					action: 'create',
+					from: null,
+					to: {hello: 'world'},
+					md: {}
+				}, {
+					model: 'service-1',
+					action: 'update',
+					to: {foo: 'bar'},
+					from: {foo: 'bar'},
+					md: {}
+				}]);
 			});
 
 			it('should work for delete', async function(){
-				interface1.prepare = () => Promise.resolve('foo-bar');
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar'
 				}]);
 
-				interface2.prepare = () => Promise.resolve('hello-world');
 				interface2.execute = () => Promise.resolve([{
 					hello: 'world'
 				}]);
 
-				await forge.configure('service-1');
+				await forge.configureService('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'delete',
-					callback: function(service, datum, myCtx){
+					callback: function(service, was, datum, myCtx){
 						expect(service)
 						.to.equal(service2);
 
-						expect(datum)
+						expect(was)
 						.to.deep.equal({foo: 'bar'});
 
 						return service.create({'this-is': 'junk'}, myCtx);
@@ -425,21 +435,24 @@ describe('src/forge.js', function(){
 				await service1.delete(1, ctx);
 
 				expect(ctx.getChanges())
-				.to.deep.equal({
-					'service-1': [{
-						action: 'delete',
-						datum: {foo: 'bar'}
-					}],
-					'service-2': [{
-						action: 'create',
-						datum: {hello: 'world'}
-					}]
-				});
+				.to.deep.equal([{
+					model: 'service-2',
+					action: 'create',
+					from: null,
+					to: {hello: 'world'},
+					md: {}
+				}, {
+					model: 'service-1',
+					action: 'delete',
+					to: null,
+					from: {foo: 'bar'},
+					md: {}
+				}]);
 			});
 		});
 	});
 
-	describe('::secure', function(){
+	describe('::secure via Service::clean', function(){
 		let ctx = null;
 
 		let service1 = null;
@@ -467,18 +480,17 @@ describe('src/forge.js', function(){
 			});
 
 			interface1 = {
-				prepare: sinon.stub().resolves('foo-bar'),
-				execute: () => Promise.resolve([{foo: 'bar'}])
+				execute: sinon.stub().resolves([{foo: 'bar'}])
 			};
 
 			service1 = await nexus.installService('service-1', interface1);
 
-			await forge.secure('service-1');
+			// await forge.secure('service-1');
 		});
 
 		describe('with blanket rejection', function(){
 			beforeEach(function(){
-				ctx.hasPermission = () => Promise.resolve(false);
+				ctx.hasPermission = () => false;
 			});
 
 			describe('create', function(){
@@ -490,9 +502,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -509,9 +521,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(1).args;
+					const args = interface1.execute.getCall(1).args;
 					
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -531,9 +543,9 @@ describe('src/forge.js', function(){
 							fier: 4
 						}, ctx);
 
-						const args = interface1.prepare.getCall(0).args;
+						const args = interface1.execute.getCall(0).args;
 
-						expect(args[0].context)
+						expect(args[0].query)
 						.to.deep.equal({
 							eins: 1,
 							zwei: 2
@@ -551,11 +563,23 @@ describe('src/forge.js', function(){
 						eins: 1
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 
-					expect(args[0].context)
+					expect(args[0])
 					.to.deep.equal({
-						eins: 1
+						method: 'read',
+						models: [{
+							name: 'service-1',
+							schema: 'service-1',
+							fields: [{
+								path: 'zwei'
+							}, {
+								path: 'drei'
+							}],
+							query: {
+								eins: 1
+							}
+						}]
 					});
 				});
 			});
@@ -563,7 +587,7 @@ describe('src/forge.js', function(){
 
 		describe('with blanket acceptance', function(){
 			beforeEach(function(){
-				ctx.hasPermission = () => Promise.resolve(true);
+				ctx.hasPermission = () => true;
 			});
 
 			describe('create', function(){
@@ -575,9 +599,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -595,9 +619,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(1).args;
+					const args = interface1.execute.getCall(1).args;
 					
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -615,12 +639,24 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 					
-					expect(args[0].context)
+					expect(args[0])
 					.to.deep.equal({
-						eins: 1,
-						fier: 4
+						method: 'read',
+						models: [{
+							name: 'service-1',
+							schema: 'service-1',
+							fields: [{
+								path: 'zwei'
+							}, {
+								path: 'drei'
+							}],
+							query: {
+								eins: 1,
+								fier: 4
+							}
+						}]
 					});
 				});
 			});
@@ -630,7 +666,7 @@ describe('src/forge.js', function(){
 			let check = null;
 
 			beforeEach(function(){
-				ctx.hasPermission = (permission) => Promise.resolve(check(permission));
+				ctx.hasPermission = (permission) => check(permission);
 			});
 
 			describe('create', function(){
@@ -644,9 +680,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -664,9 +700,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -685,9 +721,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(1).args;
+					const args = interface1.execute.getCall(1).args;
 					
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -705,9 +741,9 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 
-					expect(args[0].delta)
+					expect(args[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -726,12 +762,24 @@ describe('src/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.prepare.getCall(0).args;
+					const args = interface1.execute.getCall(0).args;
 					
-					expect(args[0].context)
+					expect(args[0])
 					.to.deep.equal({
-						eins: 1,
-						fier: 4
+						method: 'read',
+						models: [{
+							name: 'service-1',
+							schema: 'service-1',
+							fields: [{
+								path: 'zwei'
+							}, {
+								path: 'drei'
+							}],
+							query: {
+								eins: 1,
+								fier: 4
+							}
+						}]
 					});
 				});
 
@@ -748,9 +796,9 @@ describe('src/forge.js', function(){
 							fier: 4
 						}, ctx);
 
-						const args = interface1.prepare.getCall(0).args;
+						const args = interface1.execute.getCall(0).args;
 
-						expect(args[0].delta)
+						expect(args[0].payload)
 						.to.deep.equal({
 							eins: 1,
 							zwei: 2
@@ -763,6 +811,328 @@ describe('src/forge.js', function(){
 					.to.equal(true);
 				});
 			});
+		});
+	});
+
+	describe('::install', function(){
+		const loader = require('../server/loader.js');
+		const {Config} = require('bmoor/src/lib/config.js');
+
+		let ctx = null;
+		let trace = null;
+		let service = null;
+		let permissions =  null;
+
+		beforeEach(async function(){
+			trace = [];
+			permissions = {};
+
+			stubs.execute = sinon.stub();
+
+			ctx = new Context({
+				method: '',
+				permissions
+			});
+
+			const cfg = new Config({
+				connectors: {
+					'http': () => ({
+						execute: stubs.execute
+					})
+				},
+				model: {
+					directory: 'model-dir'
+				},
+				decorator: {
+					directory: 'decorator-dir'
+				},
+				hook: {
+					directory: 'hook-dir'
+				},
+				action: {
+					directory: 'action-dir'
+				}
+			});
+
+			stubs.getFile = sinon.stub(loader, 'getFiles');
+
+			// models
+			stubs.getFile.onCall(0)
+			.resolves([{
+				name: 'service-1',
+				path: 'model-path-1'
+			},{
+				name: 'service-2',
+				path: 'model-path-2'
+			}]);
+
+			// decorators
+			stubs.getFile.onCall(1)
+			.resolves([{
+				name: 'service-1',
+				path: 'decorator-path-1'
+			}]);
+
+			// hooks
+			stubs.getFile.onCall(2)
+			.resolves([{
+				name: 'service-1',
+				path: 'hook-path-1'
+			}]);
+
+			// actions
+			stubs.getFile.onCall(3)
+			.resolves([{
+				name: 'service-1',
+				path: 'action-path-1'
+			}]);
+
+			stubs.getFile.onCall(4)
+			.resolves([]);
+
+			stubs.getSettings = sinon.stub(loader, 'getSettings');
+			
+			stubs.getSettings.withArgs('model-path-1')
+			.resolves({
+				connector: 'http',
+				fields: {
+					id: {
+						create: false,
+						read: true,
+						update: false,
+						delete: true,
+						key: true
+					},
+					name: true
+				},
+				security: {
+					filter: 'can-read'
+				}
+			});
+
+			stubs.getSettings.withArgs('model-path-2')
+			.resolves({
+				connector: 'http',
+				fields: {
+					id: {
+						create: false,
+						read: true,
+						update: false,
+						delete: true,
+						key: true
+					},
+					name: true
+				}
+			});
+
+			stubs.getSettings.withArgs('decorator-path-1')
+			.resolves({
+				hello: function(){
+					expect(this.create)
+					.to.not.equal(undefined);
+
+					return 'world';
+				}
+			});
+
+			stubs.getSettings.withArgs('hook-path-1')
+			.resolves({
+				afterCreate: async function(){
+					trace.push(1);
+				}
+			});
+
+			stubs.action = sinon.stub();
+			stubs.getSettings.withArgs('action-path-1')
+			.resolves([{
+				model: 'service-2',
+				action: 'update',
+				callback: stubs.action
+			}]);
+
+			await forge.install(cfg);
+
+			service = await nexus.loadService('service-1');
+		});
+
+		it('should properly define the models', function(){
+			expect(service.schema.fields.length)
+			.to.equal(2);
+		});
+
+		describe('the service', function(){
+			it('should correctly run create', async function(){
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.create({eins: 1}, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+		});
+
+		it('should properly apply the security', async function(){
+			it('should correctly run read', async function(){
+				permissions['can-read'] = true;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.read(1, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+
+			it('should fail to run read without correct permissions', async function(){
+				permissions['can-read'] = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				let failed = false;
+				try {
+					const res = await service.read(1, ctx);
+
+					expect(res)
+					.to.deep.equal({foo: 'bar'});
+				} catch(ex){
+					failed = true;
+
+					expect(ex.code)
+					.to.equal('BMOOR_CRUD_SERVICE_READ_FILTER');
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+
+			it('should correctly run update', async function(){
+				permissions['can-read'] = true;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.update(12, {eins: 1}, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+
+			it('should fail to run update without correct permissions', async function(){
+				permissions['can-read'] = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				let failed = false;
+				try {
+					const res = await service.update(12, {}, ctx);
+
+					expect(res)
+					.to.deep.equal({foo: 'bar'});
+				} catch(ex){
+					failed = true;
+
+					expect(ex.code)
+					.to.equal('BMOOR_CRUD_SERVICE_READ_FILTER');
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+
+			it('should correctly run delete', async function(){
+				permissions['can-read'] = true;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.delete(12, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+
+			it('should fail to run delete without correct permissions', async function(){
+				permissions['can-read'] = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				let failed = false;
+				try {
+					const res = await service.delete(12, ctx);
+
+					expect(res)
+					.to.deep.equal({foo: 'bar'});
+				} catch(ex){
+					failed = true;
+
+					expect(ex.code)
+					.to.equal('BMOOR_CRUD_SERVICE_READ_FILTER');
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+		});
+
+		it('should properly apply the decorator', async function(){
+			expect(service.hello())
+			.to.equal('world');
+		});
+
+		it('should properly apply the hooks', async function(){
+			it('should correctly run create', async function(){
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.create({eins: 1}, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+
+				expect(trace)
+				.to.deep.equal([1]);
+			});
+		});
+
+		it('should properly apply the actions', async function(){
+			permissions['can-read'] = true;
+
+			stubs.execute.resolves([{
+				foo: 'bar'
+			}]);
+			//--------- for the update
+
+			const otherService = await nexus.loadService('service-2');
+
+			let called = false;
+
+			stubs.action.callsFake(function(myService, from, to, myCtx){
+				called = true;
+
+				expect(service)
+				.to.equal(myService);
+
+				expect(ctx)
+				.to.equal(myCtx);
+			});
+
+			await otherService.update(13, {name: 'ok'}, ctx);
+
+			expect(called)
+			.to.equal(true);
 		});
 	});
 });

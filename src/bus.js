@@ -7,8 +7,8 @@ class Bus {
 		this.broadcast = new Broadcast();
 	}
 
-	async triggerEvent(model, event, datum, ctx){
-		return this.broadcast.trigger(`${model}.${event}`, datum, ctx);
+	async triggerEvent(model, event, args){
+		return this.broadcast.trigger(`${model}.${event}`, ...args);
 	}
 
 	async addListener(model, event, cb){

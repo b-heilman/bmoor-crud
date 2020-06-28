@@ -2,17 +2,16 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Model} = require('../model.js');
-const {Service} = require('../service.js');
-const {Config} = require('bmoor/src/lib/config.js');
+const {Nexus} = require('../structure/nexus.js');
 const {deflate, inflate} = require('./normalized.js');
-const {Mapper} = require('bmoor-data/src/model/Mapper.js');
 
 describe('src/synthetics/normalized', function(){
 	let stubs = null;
+	let nexus = null;
 
 	beforeEach(function(){
 		stubs = {};
+		nexus = new Nexus();
 	});
 
 	afterEach(function(){
@@ -21,16 +20,13 @@ describe('src/synthetics/normalized', function(){
 	});
 	
 	describe('::deflate', function(){
-		let mapper = null;
-		let serviceRegistry = null;
-
 		let class1 = null;
 		let class2 = null;
 		let class3 = null;
 		let class4 = null;
 
-		beforeEach(function(){
-			const model1 = new Model('class-1', {
+		beforeEach(async function(){
+			nexus.setModel('class-1', {
 				fields: {
 					'id': {
 						key: true,
@@ -41,9 +37,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class1 = new Service(model1);
+			class1 = await nexus.installService('class-1');
 
-			const model2 = new Model('class-2', {
+			nexus.setModel('class-2', {
 				fields: {
 					id: {
 						key: true,
@@ -58,9 +54,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class2 = new Service(model2);
+			class2 = await nexus.installService('class-2');
 
-			const model3 = new Model('class-3', {
+			nexus.setModel('class-3', {
 				fields: {
 					id: {
 						key: true,
@@ -75,9 +71,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class3 = new Service(model3);
+			class3 = await nexus.installService('class-3');
 
-			const model4 = new Model('class-4', {
+			nexus.setModel('class-4', {
 				fields: {
 					id: {
 						key: true,
@@ -92,19 +88,7 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class4 = new Service(model4);
-
-			mapper = new Mapper();
-			mapper.addModel(model3);
-			mapper.addModel(model1);
-			mapper.addModel(model2);
-			mapper.addModel(model4);
-
-			serviceRegistry = new Config();
-			serviceRegistry.set(model1.name, class1);
-			serviceRegistry.set(model2.name, class2);
-			serviceRegistry.set(model3.name, class3);
-			serviceRegistry.set(model4.name, class4);
+			class4 = await nexus.installService('class-4');
 		});
 
 		it('should properly process a basic set of models', function(done){
@@ -131,21 +115,25 @@ describe('src/synthetics/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, mapper, serviceRegistry)
+			}, nexus, {})
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'foo-1'
+					$ref: 'foo-1',
+					$type: undefined
 				});
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
 					$ref: 'bar-2',
+					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
+					$ref: undefined,
+					$type: undefined,
 					class2Id: 456
 				});
 
@@ -168,8 +156,8 @@ describe('src/synthetics/normalized', function(){
 
 			deflate({
 				'class-1': [{
-					$type: 'read',
 					$ref: 'foo-1',
+					$type: 'read',
 					id: 'one'
 				}],
 				'class-2': [{
@@ -177,9 +165,10 @@ describe('src/synthetics/normalized', function(){
 					class1Id: 'foo-1'
 				}],
 				'class-3': [{
+					$ref: 'bar-2',
 					class2Id: 'bar-2',
 				}]
-			}, mapper, serviceRegistry)
+			}, nexus, {})
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.equal('one');
@@ -187,11 +176,14 @@ describe('src/synthetics/normalized', function(){
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
 					$ref: 'bar-2',
+					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
+					$ref: 'bar-2',
+					$type: undefined,
 					class2Id: 456
 				});
 
@@ -226,7 +218,7 @@ describe('src/synthetics/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, mapper, serviceRegistry)
+			}, nexus, {})
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.deep.equal({
@@ -236,11 +228,14 @@ describe('src/synthetics/normalized', function(){
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
 					$ref: 'bar-2',
+					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
+					$ref: undefined,
+					$type: undefined,
 					class2Id: 456
 				});
 
@@ -277,7 +272,7 @@ describe('src/synthetics/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, mapper, serviceRegistry)
+			}, nexus, {})
 			.then(() => {
 				expect(stubs.class1Read.getCall(0).args[0])
 				.to.equal('one');
@@ -287,19 +282,22 @@ describe('src/synthetics/normalized', function(){
 
 				expect(stubs.class1Update.getCall(0).args[1])
 				.to.deep.equal({
-					$type: 'update',
 					$ref: 'foo-1',
+					$type: 'update',
 					id: 'one'
 				});
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
 					$ref: 'bar-2',
+					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
+					$ref: undefined,
+					$type: undefined,
 					class2Id: 456
 				});
 
@@ -338,7 +336,7 @@ describe('src/synthetics/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, mapper, serviceRegistry)
+			}, nexus, {})
 			.then(() => {
 				expect(stubs.class1Read.getCall(0).args[0])
 				.to.deep.equal({info:'one'});
@@ -348,8 +346,8 @@ describe('src/synthetics/normalized', function(){
 
 				expect(stubs.class1Update.getCall(0).args[1])
 				.to.deep.equal({
-					$type: 'update',
 					$ref: 'foo-1',
+					$type: 'update',
 					id: {
 						info: 'one'
 					}
@@ -358,11 +356,14 @@ describe('src/synthetics/normalized', function(){
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
 					$ref: 'bar-2',
+					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
+					$ref: undefined,
+					$type: undefined,
 					class2Id: 456
 				});
 
@@ -372,16 +373,13 @@ describe('src/synthetics/normalized', function(){
 	});
 
 	describe('::inflate', function(){
-		let mapper = null;
-		let serviceRegistry = null;
-
 		let class1 = null;
 		let class2 = null;
 		let class3 = null;
 		let class4 = null;
 
-		beforeEach(function(){
-			const model1 = new Model('class-1', {
+		beforeEach(async function(){
+			await nexus.setModel('class-1', {
 				fields: {
 					'id': {
 						key: true,
@@ -392,9 +390,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class1 = new Service(model1);
+			class1 = await nexus.installService('class-1');
 
-			const model2 = new Model('class-2', {
+			await nexus.setModel('class-2', {
 				fields: {
 					id: {
 						key: true,
@@ -408,9 +406,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class2 = new Service(model2);
+			class2 = await nexus.installService('class-2');
 
-			const model3 = new Model('class-3', {
+			await nexus.setModel('class-3', {
 				fields: {
 					id: {
 						key: true,
@@ -424,9 +422,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class3 = new Service(model3);
+			class3 = await nexus.installService('class-3');
 
-			const model4 = new Model('class-4', {
+			await nexus.setModel('class-4', {
 				fields: {
 					id: {
 						key: true,
@@ -440,19 +438,7 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class4 = new Service(model4);
-
-			mapper = new Mapper();
-			mapper.addModel(model3);
-			mapper.addModel(model1);
-			mapper.addModel(model2);
-			mapper.addModel(model4);
-
-			serviceRegistry = new Config();
-			serviceRegistry.set(model1.name, class1);
-			serviceRegistry.set(model2.name, class2);
-			serviceRegistry.set(model3.name, class3);
-			serviceRegistry.set(model4.name, class4);
+			class4 = await nexus.installService('class-4');
 		});
 
 		describe('class1', function(){
@@ -463,8 +449,12 @@ describe('src/synthetics/normalized', function(){
 					hello: 'world'
 				});
 
-				inflate('class-1', {keys:['key-1']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-1', 
+					{keys:['key-1']}, 
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.equal('key-1');
 
@@ -492,8 +482,12 @@ describe('src/synthetics/normalized', function(){
 					foo: 'bar2'
 				});
 				
-				inflate('class-1', {keys:['key-1', 'key-2']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-1', 
+					{keys:['key-1', 'key-2']}, 
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.equal('key-1');
 
@@ -540,8 +534,11 @@ describe('src/synthetics/normalized', function(){
 					class2Id: 'key-2-1'
 				});
 
-				inflate('class-3', {keys:['key-1']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate('class-3', 
+					{keys:['key-1']},
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.deep.equal({id:'key-1-1'});
 
@@ -612,8 +609,12 @@ describe('src/synthetics/normalized', function(){
 					class2Id: 'key-2-2'
 				});
 
-				inflate('class-3', {keys:['key-1', 'key-2', 'key-3']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-3', 
+					{keys:['key-1', 'key-2', 'key-3']}, 
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.deep.equal({id:'key-1-1'});
 
@@ -688,8 +689,12 @@ describe('src/synthetics/normalized', function(){
 					class1Id: 'key-1-1'
 				});
 
-				inflate('class-4', {keys:['key-1']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-4', 
+					{keys:['key-1']},
+					nexus,
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.deep.equal({id:'key-1-1'});
 
@@ -735,8 +740,12 @@ describe('src/synthetics/normalized', function(){
 					class1Id: 'key-1-1'
 				});
 
-				inflate('class-4', {keys:['key-1', 'key-2']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-4', 
+					{keys:['key-1', 'key-2']}, 
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.deep.equal({id:'key-1-1'});
 
@@ -797,8 +806,17 @@ describe('src/synthetics/normalized', function(){
 					class1Id: 123
 				}]);
 
-				inflate('class-3', {keys:[345], join:['class-4']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-3', 
+					{
+						keys: [345], 
+						join: {
+							'class-1': ['class-4']
+						}
+					}, 
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0).args[0])
 					.to.deep.equal({id:123});
 
@@ -870,8 +888,15 @@ describe('src/synthetics/normalized', function(){
 					class1Id: 123
 				}]);
 
-				inflate('class-3', {keys:[345], stub:['class-2']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-3', 
+					{
+						keys: [345], 
+						stub: ['class-2']
+					}, 
+					nexus, 
+					{}
+				).then(instructions => {
 					expect(stubs.class1.getCall(0))
 					.to.equal(null);
 
@@ -907,17 +932,14 @@ describe('src/synthetics/normalized', function(){
 	});
 	
 	describe('pivot time', function(){
-		let mapper = null;
-		let serviceRegistry = null;
-
 		let class1 = null;
 		let class2 = null;
 		let class3 = null;
 		let class4 = null;
 		let class5 = null;
 
-		beforeEach(function(){
-			const model1 = new Model('class-1', {
+		beforeEach(async function(){
+			await nexus.setModel('class-1', {
 				fields: {
 					'id': {
 						key: true,
@@ -928,9 +950,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class1 = new Service(model1);
+			class1 = await nexus.installService('class-1');
 
-			const model2 = new Model('class-2', {
+			await nexus.setModel('class-2', {
 				fields: {
 					id: {
 						key: true,
@@ -944,9 +966,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class2 = new Service(model2);
+			class2 = await nexus.installService('class-2');
 
-			const model3 = new Model('class-3', {
+			await nexus.setModel('class-3', {
 				fields: {
 					id: {
 						key: true,
@@ -954,9 +976,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class3 = new Service(model3);
+			class3 = await nexus.installService('class-3');
 
-			const model4 = new Model('class-4', {
+			await nexus.setModel('class-4', {
 				fields: {
 					id: {
 						key: true,
@@ -970,9 +992,9 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class4 = new Service(model4);
+			class4 = await nexus.installService('class-4');
 
-			const model5 = new Model('class-5', {
+			await nexus.setModel('class-5', {
 				fields: {
 					id: {
 						key: true,
@@ -992,21 +1014,7 @@ describe('src/synthetics/normalized', function(){
 				}
 			});
 
-			class5 = new Service(model5);
-
-			mapper = new Mapper();
-			mapper.addModel(model1);
-			mapper.addModel(model2);
-			mapper.addModel(model3);
-			mapper.addModel(model4);
-			mapper.addModel(model5);
-
-			serviceRegistry = new Config();
-			serviceRegistry.set(model1.name, class1);
-			serviceRegistry.set(model2.name, class2);
-			serviceRegistry.set(model3.name, class3);
-			serviceRegistry.set(model4.name, class4);
-			serviceRegistry.set(model5.name, class5);
+			class5 = await nexus.installService('class-5');
 		});
 
 		describe('::inflate', function(){
@@ -1051,8 +1059,19 @@ describe('src/synthetics/normalized', function(){
 					class4Id: 456
 				}]);
 
-				inflate('class-1', {keys:[123], join:['class-2', 'class-5']}, mapper, serviceRegistry, {})
-				.then(instructions => {
+				inflate(
+					'class-1', 
+					{
+						keys: [123], 
+						join: {
+							'class-1': ['class-2'],
+							'class-2': ['class-5'],
+							'class-4': ['class-5']
+						}
+					}, 
+					nexus, 
+					{}
+				).then(instructions => {
 
 					expect(stubs.class1.getCall(0).args[0])
 					.to.equal(123);

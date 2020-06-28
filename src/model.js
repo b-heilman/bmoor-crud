@@ -1,155 +1,79 @@
 
+const {Schema} = require('./schema.js');
+
 const {Config} = require('bmoor/src/lib/config.js');
 
-const types = new Config();
+const major = Symbol('major');
+const minor = Symbol('minor');
 
-/**
-tableLink: {
-	name:
-	field:	
-}
-
-fieldDef: {
-	-- crud operations
-	create
-	read
-	update
-
-	-- 
-	key: // is a primary key
-	index: // can be used as a unique index
-	query: // fields allowed to be queries on
-
-	-- structure
-	link: <tableLink> // if a foreign key
-	internal: ''  TODO : internal structure
-}
-
-fields: {
-	[externalPath]: <fieldDef>
-}
-
-model: {
-	name: '',
-	type: '',
-	fields: <fields>
-}
-**/
-
-function actionExtend(op, property, old){
-	return function(datum, ctx){
-		datum[property] = op(old(op, ctx), ctx);
-		return datum;
-	};
-}
-
-function buildProperties(properties, property, field){
-	if (field === true){
-		field = {
-			create: true,
-			read: true,
-			update: true
-		};
-	} else if (field === false){
-		field = {
-			create: false,
-			read: true,
-			update: false
-		};
+const config = new Config({
+	changeTypes: {
+		major,
+		minor
+	},
+	changeRankings: {
+		[major]: 2,
+		[minor]: 1
 	}
+});
 
-	if (field.type){
-		// this allows types to define onCreate, onRead, onUpdate, onDelete
-		Object.assign(field, types.get(field.type)||{});
-	}
+function compareChanges(was, now){
+	if (now){
+		if (!was){
+			return now; 
+		} else {
+			const rankings = config.get('changeRankings');
 
-	if (field.create){
-		properties.create.push(property);
-	}
-
-	if (field.onCreate){
-		properties.onCreate = actionExtend(field.onCreate, property, properties.onCreate);
-	}
-
-	if (field.read){
-		properties.read.push(property);
-	}
-
-	if (field.onRead){
-		properties.onRead = actionExtend(field.onRead, property, properties.onRead);
-	}
-
-	if (field.update){
-		properties.update.push(property);
-
-		if (field.updateType){
-			properties.updateType[property] = field.updateType;
+			if (rankings[now] > rankings[was]){
+				return now;
+			}
 		}
 	}
 
-	if (field.onUpdate){
-		properties.onUpdate = actionExtend(field.onUpdate, property, properties.onUpdate);
-	}
-
-	if (field.index){
-		properties.index.push(property);
-	}
-
-	if (field.query){
-		properties.query.push(property);
-	}
-
-	if (field.key){
-		if (properties.key){
-			throw new Error(`bmoor-data.Model does not support compound keys: (${properties.key}, ${property})`);
-		}
-
-		properties.key = property;
-	}
+	return was;
 }
 
-function onCreate(obj){
-	return obj;
-}
-
-function onRead(obj){
-	return obj;
-}
-
-function onUpdate(obj){
-	return obj;
-}
-
-function compileProperties(fields){
-	const properties = {
-		create: [],
-		onCreate, 
-		read: [],
-		onRead,
-		update: [],
-		updateType: {},
-		onUpdate,
-		key: null,
-		index: [],
-		query: []
-	};
-
-	for (let property in fields){
-		let field = fields[property];
-
-		buildProperties(properties, property, field);
-	}
-
-	return properties;
-}
-
-class Model {
+class Model extends Schema {
 	constructor(name, settings) {
+		super();
+		
 		this.name = name;
+		this.schema = settings.schema || name;
 		this.settings = settings;
 
-		// define structure
-		this.properties = compileProperties(settings.fields);
+		const fields = settings.fields;
+
+		for (let property in fields){
+			let field = fields[property];
+
+			if (field === true){
+				field = {
+					create: true,
+					read: true,
+					update: true
+				};
+			} else if (field === false){
+				field = {
+					create: false,
+					read: true,
+					update: false
+				};
+			}
+
+			// I'm doing this for the future, but I'm not fully fleshing out out
+			// right now
+			field.model = this;
+			
+			field.external = property;
+
+			if (!field.internal){
+				field.internal = property;
+			}
+
+			this.addField(field);
+		}
+
+		this.build();
 	}
 
 	getKey(delta){
@@ -160,24 +84,27 @@ class Model {
 		return this.properties.index.length !== 0;
 	}
 
-	getIndex(query){
-		return this.properties.index
-		.reduce(
-			(agg, field) => {
-				agg[field] = query[field];
-
-				return agg;
-			},
-			{}
-		);
+	// TODO : I need to get rid of these
+	cleanIndex(query){ // getIndex
+		return this.clean('index', query);
 	}
 
-	getQuery(query){
-		return this.properties.query
+	cleanQuery(query){ // getQuery
+		return this.clean('query', query);
+	}
+
+	cleanDelta(delta, type='update'){
+		return this.clean(type, delta);
+	}
+
+	getChanges(datum, delta){
+		delta = this.clean('update', delta);
+
+		return this.properties.update
 		.reduce(
 			(agg, field) => {
-				if (field in query){
-					agg[field] = query[field];
+				if (field in delta && datum[field] !== delta[field]){
+					agg[field] = delta[field];
 				}
 
 				return agg;
@@ -186,51 +113,37 @@ class Model {
 		);
 	}
 
-	cleanDelta(delta, type = 'update'){
-		return this.properties[type]
-		.reduce((agg, field) => {
-			if (field in delta){
-				agg[field] = delta[field];
-			}
-
-			return agg;
-		}, {});
-	}
-
-	getChanges(datum, delta){
-		delta = this.cleanDelta(delta);
-
-		return this.properties.update
-		.reduce((agg, field) => {
-			if (field in delta && datum[field] !== delta[field]){
-				agg[field] = delta[field];
-			}
-
-			return agg;
-		}, {});
-	}
-
 	getChangeType(delta){
-		const changes = Object.keys(this.cleanDelta(delta))
-		.reduce((agg, property) => {
-			const type = this.properties.updateType[property];
+		return Object.keys(this.clean('update', delta))
+		.reduce(
+			(agg, property) => compareChanges(agg, this.properties.updateType[property]),
+			null
+		);
+	}
 
-			if (type){
-				agg[type] = property;
-			}
+	// produces representation for interface layer
+	// similar to lookup, which is a combination of models
+	async getQuery(query, settings, ctx){
+		const fields = (await this.testFields('read', ctx))
+		.map(
+			field => ({
+				path: field.internal
+			})
+		);
 
-			return agg;
-		}, {});
-
-		if (Object.keys(changes).length){
-			return changes;
-		} else {
-			return null;
-		}
+		return {
+			models: [{
+				name: this.name,
+				schema: this.schema,
+				fields,
+				query //TODO : maybe convert external => internal?
+			}]
+		};
 	}
 }
 
 module.exports = {
-	Model,
-	types
+	config,
+	compareChanges,
+	Model
 };

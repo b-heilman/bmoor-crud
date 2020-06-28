@@ -12,6 +12,11 @@ class Router {
 	addRouter(router){
 		this.routes.push(router);
 	}
+
+	addController(controller){
+		controller.getRoutes()
+		.forEach(route => this.addRoute(route));
+	}
 }
 
 module.exports = {

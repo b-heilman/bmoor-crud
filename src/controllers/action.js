@@ -1,7 +1,7 @@
 
 const error = require('bmoor/src/lib/error.js');
 
-const {Route} = require('../server/route.js');
+const {Controller} = require('../server/controller.js');
 
 // TODO: move this to bmoor string
 function camelize(str){
@@ -15,8 +15,10 @@ function camelize(str){
 }
 
 // actions performed against a class, but a particular instance
-class Action {
+class Action extends Controller {
 	constructor(service, settings){
+		super();
+		
 		this.service = service;
 		this.settings = Object.keys(settings)
 		.reduce((agg, key) => {
@@ -38,7 +40,7 @@ class Action {
 				type: 'warn',
 				status: 404
 			});
-		} else if (ctx.method !== setting.method){
+		} else if (ctx.getMethod() !== setting.method){
 			throw error.create('action method not found', {
 				code: 'ACTION_CONTROLLER_WRONG_METHOD',
 				type: 'warn',
@@ -46,9 +48,7 @@ class Action {
 			});
 		} 
 
-		if (setting.permission && 
-			!(await ctx.hasPermission(setting.permission))
-		){
+		if (setting.permission && !ctx.hasPermission(setting.permission)){
 			throw error.create('do not have required permission for action', {
 				code: 'ACTION_CONTROLLER_PERMISSION',
 				type: 'warn',
@@ -73,18 +73,19 @@ class Action {
 		return this.service[method](...params);
 	}
 
-	getRoutes(){
-		const run = this.run.bind(this);
+	getRoutes(nexus){
+		const run = this.route.bind(this);
 		
 		return Object.key(this.settings)
 		.map(key => {
 			const setting = this.settings[key];
 
-			return new Route(
+			return this.prepareRoute(
+				nexus,
 				setting.method,
 				'/'+key+'/:id',
 				async function(ctx){
-					ctx.params.action = key;
+					ctx.setParam('action', key);
 
 					return run(ctx);
 				}

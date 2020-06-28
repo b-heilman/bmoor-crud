@@ -1,7 +1,7 @@
 
 const error = require('bmoor/src/lib/error.js');
 
-const {Route} = require('../server/route.js');
+const {Controller} = require('../server/controller.js');
 
 // TODO: move this to bmoor string
 function camelize(str){
@@ -15,8 +15,10 @@ function camelize(str){
 }
 
 // actions performed against a class, but a particular instance
-class Utility {
+class Utility extends Controller {
 	constructor(service, settings){
+		super();
+		
 		this.service = service;
 		this.settings = Object.keys(settings)
 		.reduce((agg, key) => {
@@ -37,7 +39,7 @@ class Utility {
 				type: 'warn',
 				status: 404
 			});
-		} else if (ctx.method !== setting.method){
+		} else if (ctx.getMethod() !== setting.method){
 			throw error.create('utility method not found', {
 				code: 'UTILITY_CONTROLLER_WRONG_METHOD',
 				type: 'warn',
@@ -45,9 +47,7 @@ class Utility {
 			});
 		} 
 
-		if (setting.permission && 
-			!(await ctx.hasPermission(setting.permission))
-		){
+		if (setting.permission && !ctx.hasPermission(setting.permission)){
 			throw error.create('do not have required permission for utility', {
 				code: 'UTILITY_CONTROLLER_PERMISSION',
 				type: 'warn',
@@ -55,9 +55,9 @@ class Utility {
 			});
 		}
 
-		const method = camelize(utility);
+		const fn = camelize(utility);
 
-		if (!this.service[method]){
+		if (!this.service[fn]){
 			throw error.create('method was not found with service', {
 				code: 'UTILITY_CONTROLLER_METHOD',
 				type: 'warn',
@@ -68,21 +68,22 @@ class Utility {
 		const params = setting.parseParams	?
 			setting.parseParams(ctx) : [ctx];
 		
-		return this.service[method](...params);
+		return this.service[fn](...params);
 	}
 
-	getRoutes(){
-		const run = this.run.bind(this);
+	getRoutes(nexus){
+		const run = this.route.bind(this);
 		
 		return Object.key(this.settings)
 		.map(key => {
 			const setting = this.settings[key];
 
-			return new Route(
+			return this.prepareRoute(
+				nexus,
 				setting.method,
 				'/'+key,
 				async function(ctx){
-					ctx.params.utility = key;
+					ctx.setParam('utility', key);
 
 					return run(ctx);
 				}

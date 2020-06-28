@@ -2,8 +2,8 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Nexus} = require('../nexus.js');
-const {Context} = require('../context.js');
+const {Nexus} = require('../structure/nexus.js');
+const {Context} = require('../server/context.js');
 
 const sut = require('./utility.js');
 
@@ -215,6 +215,9 @@ describe('src/controller/utility.js', function(){
 			params: {
 				id: 1234,
 				utility: 'foo-bar'
+			},
+			permissions: {
+				'oh-boy': true
 			}
 		});
 
