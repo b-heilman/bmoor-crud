@@ -3,9 +3,9 @@ const error = require('bmoor/src/lib/error.js');
 
 const {Controller} = require('../server/controller.js');
 
-class Document extends Controller {
+class Synthetic extends Controller {
 	constructor(composite, settings){
-		super();
+		super(composite.structure);
 		
 		this.composite = composite;
 		this.settings = settings;
@@ -61,19 +61,39 @@ class Document extends Controller {
 		}
 	}
 
+	_buildRoutes(){
+		return [{
+			route: {
+				path: '',
+				method: 'post'
+			},
+			fn: (ctx) => this.route(ctx)
+		}, {
+			route: {
+				path: '/:id',
+				method: 'get'
+			},
+			fn: (ctx) => this.route(ctx)
+		}, {
+			route: {
+				path: '',
+				method: 'get'
+			},
+			fn: (ctx) => this.route(ctx)
+		}];
+	}
+
 	getRoutes(nexus){
-		const run = this.route.bind(this);
-
 		return [
-			this.prepareRoute(nexus, 'post', '/', run),
+			this.prepareRoute(nexus, 'post', '/', 'route'),
 
-			this.prepareRoute(nexus, 'get','/:id', run),
+			this.prepareRoute(nexus, 'get','/:id', 'route'),
 			
-			this.prepareRoute(nexus, 'get', '/', run)
+			this.prepareRoute(nexus, 'get', '/', 'route')
 		];
 	}
 }
 
 module.exports = {
-	Document
+	Synthetic
 };

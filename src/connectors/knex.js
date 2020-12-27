@@ -21,7 +21,8 @@ function translateSelect(stmt){
 			});
 
 			if (model.join){
-				const join = `INNER JOIN \`${modelName}\` AS \`${modelRef}\``;
+				const type = model.join.optional ? 'LEFT JOIN' : 'INNER JOIN';
+				const join = `${type} \`${modelName}\` AS \`${modelRef}\``;
 
 				if (model.join.on){
 					const on = model.join.on.map(on => {
@@ -45,13 +46,13 @@ function translateSelect(stmt){
 					const match = model.query[field];
 
 					if (Array.isArray(match)){
-						agg.where.push(`\`${modelRef}\`.\`${field}\`IN(??)`);
+						agg.where.push(`\`${modelRef}\`.\`${field}\`IN(?)`);
 						agg.params.push(match);
 					}else if (typeof(match) !== 'object'){
-						agg.where.push(`\`${modelRef}\`.\`${field}\`=??`);
+						agg.where.push(`\`${modelRef}\`.\`${field}\`=?`);
 						agg.params.push(match);
 					}else if (match.value){
-						agg.where.push(`\`${modelRef}\`.\'${field}\`${match.op}??`);
+						agg.where.push(`\`${modelRef}\`.\'${field}\`${match.op}?`);
 						agg.params.push(match.value);
 					} else {
 						agg.where.push(`\`${modelRef}\`.\`${field}\`${match.op}\`${match.name}\`.\`${match.field}\``);
@@ -104,7 +105,7 @@ const connector = {
 			.then(res => res[0]);
 
 			rtn.catch(() => {
-				console.log('knex fail =>', sql);
+				console.log('knex fail =>\n', sql, '\n', query.params);
 			});
 
 			return rtn;

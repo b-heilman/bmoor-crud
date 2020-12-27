@@ -5,29 +5,34 @@ const {Config} = require('bmoor/src/lib/config.js');
 
 async function formatResponse(res, changes/*, ctx, nexus*/){
 	if (changes.length){
-		return changes.reduce(
-			function(agg, change){
-				if (!change.md.internal){
-					let modelInfo = agg[change.model];
+		return {
+			result: res,
+			changes: changes.reduce(
+				function(agg, change){
+					if (!change.md.internal){
+						let modelInfo = agg[change.model];
 
-					if (!modelInfo){
-						modelInfo = [];
+						if (!modelInfo){
+							modelInfo = [];
 
-						agg[change.model] = modelInfo;
+							agg[change.model] = modelInfo;
+						}
+
+						modelInfo.push({
+							action: change.action,
+							datum: change.to || change.from
+						});
 					}
 
-					modelInfo.push({
-						action: change.action,
-						datum: change.to || change.from
-					});
-				}
-
-				return agg;
-			},
-			{}
-		);
+					return agg;
+				},
+				{}
+			)
+		};
 	} else {
-		return res;
+		return {
+			result: res
+		};
 	}
 }
 
@@ -43,10 +48,10 @@ async function handleRollback(changes, ctx, nexus){
 
 			if (d.action === 'create'){
 				// if it was created, just delete it
-				return service.delete(service.schema.getKey(d.to), ctx);
+				return service.delete(d.key, ctx);
 			} else if (d.action === 'update'){
 				// if it was updated, roll it back
-				return service.update(service.schema.getKey(d.to), d.from, ctx);
+				return service.update(d.key, d.from, ctx);
 			} else if (d.action === 'delete'){
 				// I don't know what to do here, because anything created that 
 				// links back to this is gonna need updated.  That causes a whole
@@ -69,30 +74,29 @@ const config = new Config({
 });
 
 class Controller {
-	constructor(){
-
+	constructor(structure){
+		this.structure = structure;
 	}
 
-	ping(){
-		return {ok: true};
-	}
-
-	prepareRoute(nexus, method, route, fn, settings={}){
+	prepareRoute(nexus, settings={}){
 		return new Route(
-			method,
-			route,
+			settings.route.path,
+			settings.route.method,
 			async (...params) => {
 				const ctx = await config.get('buildContext')(params);
 
 				await ctx.isReady();
 
 				try {
-					const res = await this[fn](ctx);
+					const res = await settings.fn(ctx);
+					const changes = ctx.getChanges();
 
-					if (settings.formatResponse){
-						return settings.formatResponse(res, ctx.getChanges(), ctx, nexus);
+					if (ctx.info.response){
+						return ctx.info.response(res, changes, ctx, nexus);
+					} else if (settings.formatResponse){
+						return settings.formatResponse(res, changes, ctx, nexus);
 					} else {
-						return config.get('formatResponse')(res, ctx.getChanges(), ctx, nexus);
+						return config.get('formatResponse')(res, changes, ctx, nexus);
 					}
 				} catch(ex){
 					if (settings.enableRollback){
@@ -101,14 +105,44 @@ class Controller {
 
 					throw ex;
 				}
-			}
+			},
+			settings
 		);
 	}
 
+	_buildRoutes(){
+		return [{
+			route: {
+				path: '',
+				method: 'get'
+			},
+			fn: () => {
+				return {ok: true};
+			}
+		}];
+	}
+
 	getRoutes(nexus){
-		return [
-			this.prepareRoute(nexus, 'get', '', 'ping')
-		];
+		return this._buildRoutes()
+		.map(routeInfo => this.prepareRoute(
+			nexus, 
+			routeInfo
+		));
+	}
+
+	toJSON(){
+		const structure = this.structure.toJSON();
+
+		return this._buildRoutes()
+		.filter(routeInfo => !routeInfo.hidden)
+		.map(
+			routeInfo => ({
+				route: routeInfo.route,
+				response: {
+					structure: routeInfo.structure || structure
+				}
+			})
+		);
 	}
 }
 

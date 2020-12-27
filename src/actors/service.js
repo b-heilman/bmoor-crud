@@ -4,10 +4,7 @@ const {create} = require('bmoor/src/lib/error.js');
 const {View} = require('./view.js');
 
 class Service extends View {
-	constructor(model, connector, settings = {}){
-		super(model, connector, settings);
-	}
-
+	
 	decorate(decoration){
 		Object.assign(this, decoration);
 	}
@@ -21,7 +18,7 @@ class Service extends View {
 			await super.create(
 				proto, 
 				{
-					model: this.schema.name
+					model: this.structure.name
 				}, 
 				ctx
 			)
@@ -32,7 +29,13 @@ class Service extends View {
 		}
 
 		if (ctx){
-			ctx.addChange(this.schema.name, 'create', null, datum);
+			ctx.addChange(
+				this.structure.name, 
+				'create', 
+				this.structure.getKey(datum), 
+				null, 
+				datum
+			);
 		}
 
 		return datum;
@@ -40,7 +43,7 @@ class Service extends View {
 
 	async read(id, ctx){
 		if (!ctx){
-			throw create(`missing ctx in read of ${this.schema.name}`, {
+			throw create(`missing ctx in read of ${this.structure.name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_READ_CTX',
 				context: {
@@ -49,12 +52,12 @@ class Service extends View {
 			});
 		}
 
-		await this.schema.build();
+		await this.structure.build();
 
 		const datum = (
 			await super.read(
-				await this.schema.getQuery(
-					{[this.schema.properties.key]: id},
+				await this.structure.getQuery(
+					{[this.structure.properties.key]: id},
 					{},
 					ctx
 				),
@@ -63,7 +66,7 @@ class Service extends View {
 		)[0];
 		
 		if (!datum){
-			throw create(`unable to view ${id} of ${this.schema.name}`, {
+			throw create(`unable to view ${id} of ${this.structure.name}`, {
 				status: 404,
 				code: 'BMOOR_CRUD_SERVICE_READ_FILTER',
 				context: {
@@ -77,7 +80,7 @@ class Service extends View {
 
 	async readAll(ctx){
 		return super.read(
-			await this.schema.getQuery(
+			await this.structure.getQuery(
 				null,
 				{},
 				ctx
@@ -87,11 +90,11 @@ class Service extends View {
 	}
 
 	async readMany(ids, ctx){
-		await this.schema.build();
+		await this.structure.build();
 
 		return super.read(
-			await this.schema.getQuery(
-				{[this.schema.properties.key]: ids},
+			await this.structure.getQuery(
+				{[this.structure.properties.key]: ids},
 				{},
 				ctx
 			),
@@ -100,14 +103,14 @@ class Service extends View {
 	}
 
 	async query(search, ctx){
-		await this.schema.build();
+		await this.structure.build();
 
 		if (this._beforeQuery){
 			await this._beforeQuery(search, ctx);
 		}
 
 		return super.read(
-			await this.schema.getQuery(
+			await this.structure.getQuery(
 				await this.clean('query', search, ctx), // TODO : transform external => internal?
 				{},
 				ctx
@@ -117,7 +120,7 @@ class Service extends View {
 	}
 
 	async update(id, delta, ctx){
-		await this.schema.build();
+		await this.structure.build();
 
 		const tgt = await this.read(id, ctx);
 
@@ -127,9 +130,9 @@ class Service extends View {
 
 		const datum = (
 			await super.update(delta, tgt, {
-				model: this.schema.name,
+				model: this.structure.name,
 				query: {
-					[this.schema.properties.key]: id
+					[this.structure.properties.key]: id
 				}
 			}, ctx)
 		)[0];
@@ -139,7 +142,13 @@ class Service extends View {
 		}
 
 		if (ctx){
-			ctx.addChange(this.schema.name, 'update', tgt, datum);
+			ctx.addChange(
+				this.structure.name, 
+				'update', 
+				id, 
+				tgt, 
+				datum
+			);
 		}
 
 		return datum;
@@ -151,7 +160,7 @@ class Service extends View {
 	 * issue.  I'm ok with that for now.
 	 **/
 	async delete(id, ctx){
-		await this.schema.build();
+		await this.structure.build();
 
 		const datum = await this.read(id, ctx);
 
@@ -160,9 +169,9 @@ class Service extends View {
 		}
 
 		await super.delete({
-			model: this.schema.name,
+			model: this.structure.name,
 			query: {
-				[this.schema.properties.key]: id
+				[this.structure.properties.key]: id
 			}
 		}, ctx);
 
@@ -171,7 +180,13 @@ class Service extends View {
 		}
 
 		if (ctx){
-			ctx.addChange(this.schema.name, 'delete', datum, null);
+			ctx.addChange(
+				this.structure.name, 
+				'delete', 
+				id, 
+				datum, 
+				null
+			);
 		}
 
 		return datum; // datum will have had onRead run against it

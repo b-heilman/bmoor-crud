@@ -42,7 +42,7 @@ describe('src/interfaces/knex.js', function(){
 
 			expect(res.where.replace(/\s+/g, ''))
 			.to.equal(`
-				\`model-1\`.\`id\` = ??
+				\`model-1\`.\`id\` = ?
 			`.replace(/\s+/g, ''));
 
 			expect(res.params)
@@ -186,7 +186,8 @@ describe('src/interfaces/knex.js', function(){
 								name: 'test-item',
 								remote: 'id',
 								local: 'itemId'
-							}]
+							}],
+							optional: true
 						}
 					}
 				]
@@ -207,14 +208,14 @@ describe('src/interfaces/knex.js', function(){
 				\`foo-bar\` AS \`test-item\`
 					INNER JOIN \`test-person\` AS \`test-person\`
 						ON \`test-person\`.\`itemId\` = \`test-item\`.\`id\`
-					INNER JOIN \`test-category\` AS \`test-category\`
+					LEFT JOIN \`test-category\` AS \`test-category\`
 						ON \`test-category\`.\`itemId\` = \`test-item\`.\`id\`
 			`.replace(/\s+/g, ''));
 
 			expect(res.where.replace(/\s+/g, ''))
 			.to.equal(`
-				\`test-item\`.\`id\`=??
-					AND \`test-person\`.\`foo\`=??
+				\`test-item\`.\`id\`=?
+					AND \`test-person\`.\`foo\`=?
 			`.replace(/\s+/g, ''));
 
 			expect(res.params)

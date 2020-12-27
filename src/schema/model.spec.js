@@ -1,7 +1,7 @@
 
 const {expect} = require('chai');
 
-describe('src/model.js', function(){
+describe('src/schema/model.js', function(){
 	
 	const {Model, config} = require('./model.js');
 
@@ -11,8 +11,10 @@ describe('src/model.js', function(){
 
 	describe('.actions', function(){
 		describe('::create', function(){
-			it('should work with a single field', function(){
-				const model = new Model('test-1', {
+			it('should work with a single field', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							onCreate: function(tgt, src){
@@ -34,8 +36,10 @@ describe('src/model.js', function(){
 				});
 			});
 
-			it('should work with multiple fields', function(){
-				const model = new Model('test-1', {
+			it('should work with multiple fields', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							onCreate: function(tgt, src){
@@ -63,8 +67,10 @@ describe('src/model.js', function(){
 		});
 
 		describe('::update', function(){
-			it('should work with a single field', function(){
-				const model = new Model('test-1', {
+			it('should work with a single field', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							onUpdate: function(tgt, src){
@@ -86,8 +92,10 @@ describe('src/model.js', function(){
 				});
 			});
 
-			it('should work with multiple fields', function(){
-				const model = new Model('test-1', {
+			it('should work with multiple fields', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							onUpdate: function(tgt, src){
@@ -115,8 +123,10 @@ describe('src/model.js', function(){
 		});
 
 		describe('::inflate', function(){
-			it('should work with a single field', function(){
-				const model = new Model('test-1', {
+			it('should work with a single field', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							onInflate: function(tgt, src){
@@ -134,14 +144,14 @@ describe('src/model.js', function(){
 						world: 'zwei'
 					})
 				).to.deep.equal({
-					foo: 'eins',
-					bar: 'eins',
-					world: 'zwei'
+					foo: 'eins'
 				});
 			});
 
-			it('should work with multiple fields', function(){
-				const model = new Model('test-1', {
+			it('should work with multiple fields', async function(){
+				const model = new Model('test-1'); 
+
+				await model.configure({
 					fields: {
 						eins: {
 							onInflate: function(tgt, src){
@@ -163,17 +173,17 @@ describe('src/model.js', function(){
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					bar: 'eins',
-					hello: 'zwei',
-					world: 'zwei'
+					hello: 'zwei'
 				});
 			});
 
-			it('should work with a mutation', function(){
-				const model = new Model('test-1', {
+			it('should work with a mutation', async function(){
+				const model = new Model('test-1'); 
+
+				await model.configure({
 					fields: {
 						eins: {
-							internal: 'one',
+							reference: 'one',
 							onInflate: function(tgt, src, setter, getter){
 								let value = getter(src);
 
@@ -185,19 +195,20 @@ describe('src/model.js', function(){
 						zwei: {
 						},
 						drei: {
-							internal: 'woot'
+							reference: 'woot'
 						}
 					}
 				});
 
-				expect(
-					model.actions.inflate({
-						one: 'eins',
-						world: 'foo',
-						zwei: 'bar',
-						woot: 'woot'
-					})
-				).to.deep.equal({
+				const res = model.actions.inflate({
+					one: 'eins',
+					world: 'foo',
+					zwei: 'bar',
+					woot: 'woot'
+				});
+
+				expect(res)
+				.to.deep.equal({
 					eins: 'eins-- 1',
 					zwei: 'bar',
 					drei: 'woot'
@@ -206,8 +217,10 @@ describe('src/model.js', function(){
 		});
 
 		describe('::deflate', function(){
-			it('should work with a single field', function(){
-				const model = new Model('test-1', {
+			it('should work with a single field', async function(){
+				const model = new Model('test-1'); 
+
+				await model.configure({
 					fields: {
 						eins: {
 							onDeflate: function(tgt, src){
@@ -225,14 +238,14 @@ describe('src/model.js', function(){
 						world: 'zwei'
 					})
 				).to.deep.equal({
-					foo: 'eins',
-					bar: 'eins',
-					world: 'zwei'
+					foo: 'eins'
 				});
 			});
 
-			it('should work with multiple fields', function(){
-				const model = new Model('test-1', {
+			it('should work with multiple fields', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							onDeflate: function(tgt, src){
@@ -254,17 +267,17 @@ describe('src/model.js', function(){
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					bar: 'eins',
-					hello: 'zwei',
-					world: 'zwei'
+					hello: 'zwei'
 				});
 			});
 
-			it('should work with a mutation', function(){
-				const model = new Model('test-1', {
+			it('should work with a mutation', async function(){
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
-							internal: 'one',
+							storagePath: 'one',
 							onDeflate: function(tgt, src, setter, getter){
 								let value = getter(src);
 
@@ -276,7 +289,7 @@ describe('src/model.js', function(){
 						zwei: {
 						},
 						drei: {
-							internal: 'woot'
+							storagePath: 'woot'
 						}
 					}
 				});
@@ -298,8 +311,10 @@ describe('src/model.js', function(){
 
 		describe('via type', function(){ 
 			describe('json', function(){
-				it('should properly inflate', function(){
-					const model = new Model('test-1', {
+				it('should properly inflate', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
 						fields: {
 							eins: {
 								type: 'json'
@@ -318,8 +333,10 @@ describe('src/model.js', function(){
 					});
 				});
 
-				it('should properly deflate', function(){
-					const model = new Model('test-1', {
+				it('should properly deflate', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
 						fields: {
 							eins: {
 								type: 'json'
@@ -342,8 +359,10 @@ describe('src/model.js', function(){
 	});
 
 	describe('.properties', function(){
-		it('should expand default properties correctly', function(){
-			const model = new Model('test-1', {
+		it('should expand default properties correctly', async function(){
+			const model = new Model('test-1');
+
+			await model.configure({
 				fields: {
 					eins: {
 						create: false,
@@ -399,8 +418,10 @@ describe('src/model.js', function(){
 	});
 
 	describe('::getKey', function(){
-		it('pull in a singular value', function(){
-			const model = new Model('test-1', {
+		it('pull in a singular value', async function(){
+			const model = new Model('test-1'); 
+
+			await model.configure({
 				fields: {
 					eins: {
 						create: false,
@@ -421,11 +442,13 @@ describe('src/model.js', function(){
 			).to.deep.equal(1);
 		});
 
-		it('fail on multiple keys', function(){
+		it('fail on multiple keys', async function(){
 			let failure = false;
 
 			try {
-				new Model('test-1', {
+				const model = new Model('test-1');
+
+				await model.configure({
 					fields: {
 						eins: {
 							key: true
@@ -445,8 +468,10 @@ describe('src/model.js', function(){
 	});
 
 	describe('::getIndex', function(){
-		it('pull in a singlar value', function(){
-			const model = new Model('test-1', {
+		it('pull in a singlar value', async function(){
+			const model = new Model('test-1'); 
+
+			await model.configure({
 				fields: {
 					eins: {
 						create: false,
@@ -468,8 +493,10 @@ describe('src/model.js', function(){
 			).to.deep.equal({drei: 3});
 		});
 
-		it('pull in a multiple values', function(){
-			const model = new Model('test-1', {
+		it('pull in a multiple values', async function(){
+			const model = new Model('test-1');
+
+			await model.configure({
 				fields: {
 					eins: {
 						create: false,
@@ -496,8 +523,10 @@ describe('src/model.js', function(){
 	});
 
 	describe('::cleanDelta', function(){
-		it('pull in a singlar value', function(){
-			const model = new Model('test-1', {
+		it('pull in a singlar value', async function(){
+			const model = new Model('test-1');
+
+			await model.configure({
 				fields: {
 					eins: {
 						create: false,
@@ -523,8 +552,10 @@ describe('src/model.js', function(){
 	});
 
 	describe('::getChanges', function(){
-		it('pull in a singlar value', function(){
-			const model = new Model('test-1', {
+		it('pull in a singlar value', async function(){
+			const model = new Model('test-1'); 
+
+			await model.configure({
 				fields: {
 					eins: {
 						create: false,
@@ -555,8 +586,10 @@ describe('src/model.js', function(){
 	});
 
 	describe('::getChangeType', function(){
-		it('pull in a singlar value', function(){
-			const model = new Model('test-1', {
+		it('pull in a singlar value', async function(){
+			const model = new Model('test-1');
+
+			await model.configure({
 				fields: {
 					eins: {
 						update: false

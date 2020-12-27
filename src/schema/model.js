@@ -1,5 +1,5 @@
 
-const {Schema} = require('./schema.js');
+const {Structure} = require('./structure.js');
 
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -33,12 +33,11 @@ function compareChanges(was, now){
 	return was;
 }
 
-class Model extends Schema {
-	constructor(name, settings) {
-		super();
-		
-		this.name = name;
-		this.schema = settings.schema || name;
+class Model extends Structure {
+	async configure(settings){
+		await super.configure(settings);
+
+		this.schema = settings.schema || this.name;
 		this.settings = settings;
 
 		const fields = settings.fields;
@@ -60,20 +59,10 @@ class Model extends Schema {
 				};
 			}
 
-			// I'm doing this for the future, but I'm not fully fleshing out out
-			// right now
-			field.model = this;
-			
-			field.external = property;
-
-			if (!field.internal){
-				field.internal = property;
-			}
-
-			this.addField(field);
+			this.addField(property, field);
 		}
 
-		this.build();
+		return this.build();
 	}
 
 	getKey(delta){
@@ -127,7 +116,7 @@ class Model extends Schema {
 		const fields = (await this.testFields('read', ctx))
 		.map(
 			field => ({
-				path: field.internal
+				path: field.storagePath
 			})
 		);
 

@@ -1,21 +1,20 @@
 
 class Router {
-	constructor(path, routes = []){
-		this.path = '';
-		this.routes = routes;
+	constructor(path, nexus, controller){
+		this.path = path;
+		this.nexus = nexus;
+		this.controller = controller;
 	}
 
-	addRoute(route){
-		this.routes.push(route);
+	getRoutes(){
+		return this.controller.getRoutes(this.nexus);
 	}
 
-	addRouter(router){
-		this.routes.push(router);
-	}
-
-	addController(controller){
-		controller.getRoutes()
-		.forEach(route => this.addRoute(route));
+	toJSON(){
+		return {
+			path: this.path,
+			routes: this.controller.toJSON()
+		};
 	}
 }
 

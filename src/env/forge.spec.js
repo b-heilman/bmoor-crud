@@ -2,13 +2,13 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Bus} = require('../bus.js');
-const {Nexus} = require('../structure/nexus.js');
+const {Bus} = require('../server/bus.js');
+const {Nexus} = require('./nexus.js');
 const {Context} = require('../server/context.js');
 
 const sut = require('./forge.js');
 
-describe('src/structure/forge.js', function(){
+describe('src/env/forge.js', function(){
 	let bus = null;
 	let stubs = null;
 	let nexus = null;
@@ -46,51 +46,23 @@ describe('src/structure/forge.js', function(){
 
 			nexus.setModel('service-1', {
 				fields: {
-					eins: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
+					id: {
+						key: true,
+						read: true
 					},
-					zwei: true,
-					drei: false,
-					fier: {
-						create: true,
-						read: true,
-						update: false
-					},
-					funf: {
-						create: true,
-						read: true,
-						update: false,
-						index: true
-					}
+					foo: true,
+					hello: false
 				}
 			});
 
 			nexus.setModel('service-2', {
 				fields: {
-					eins: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
+					id: {
+						key: true,
+						read: true
 					},
-					zwei: true,
-					drei: false,
-					fier: {
-						create: true,
-						read: true,
-						update: false
-					},
-					funf: {
-						create: true,
-						read: true,
-						update: false,
-						index: true
-					}
+					foo: true,
+					hello: true
 				}
 			});
 
@@ -104,17 +76,18 @@ describe('src/structure/forge.js', function(){
 		describe('::configureService', function(){
 			it('should allow for the subscription of afterCreate events', async function(){
 				interface1.execute = () => Promise.resolve([{
-					foo: 'bar'
+					foo: 'bar',
+					id: 10
 				}]);
 
 				bus.broadcast.on('service-1.create', function(was, datum, myCtx){
 					expect(datum)
-					.to.deep.equal({foo: 'bar'});
+					.to.deep.equal({id:10, foo: 'bar'});
 
 					expect(ctx)
 					.to.equal(myCtx);
 
-					myCtx.addChange('foo', 'bar', {hello: 'world'});
+					myCtx.addChange('foo', 'bar', 2, {hello: 'world'});
 				});
 
 				await forge.configureService('service-1');
@@ -122,19 +95,21 @@ describe('src/structure/forge.js', function(){
 				const res = await service1.create({eins: 1}, ctx);
 
 				expect(res)
-				.to.deep.equal({foo: 'bar'});
+				.to.deep.equal({id:10, foo: 'bar'});
 
 				expect(ctx.getChanges())
 				.to.deep.equal([{
 					model: 'foo',
 					action: 'bar',
+					key: 2,
 					from: {hello: 'world'},
 					to: null,
 					md: {}
 				}, {
 					model: 'service-1',
 					action: 'create',
-					to: {foo: 'bar'},
+					key: 10,
+					to: {id: 10, foo: 'bar'},
 					from: null,
 					md: {}
 				}]);
@@ -142,17 +117,18 @@ describe('src/structure/forge.js', function(){
 
 			it('should allow for the subscription of afterUpdate events', async function(){
 				interface1.execute = () => Promise.resolve([{
+					id: 20,
 					foo: 'bar'
 				}]);
 
 				bus.broadcast.on('service-1.update', function(was, datum, myCtx){
 					expect(datum)
-					.to.deep.equal({foo: 'bar'});
+					.to.deep.equal({id: 20, foo: 'bar'});
 
 					expect(ctx)
 					.to.equal(myCtx);
 
-					myCtx.addChange('foo', 'bar', {hello: 'world'});
+					myCtx.addChange('foo', 'bar', 3, {hello: 'world'});
 				});
 
 				await forge.configureService('service-1');
@@ -160,20 +136,28 @@ describe('src/structure/forge.js', function(){
 				const res = await service1.update(1, {eins: 1}, ctx);
 
 				expect(res)
-				.to.deep.equal({foo: 'bar'});
+				.to.deep.equal({id: 20,foo: 'bar'});
 
 				expect(ctx.getChanges())
 				.to.deep.equal([{
 					model: 'foo',
 					action: 'bar',
+					key: 3,
 					from: {hello: 'world'},
 					to: null,
 					md: {}
 				}, {
 					model: 'service-1',
 					action: 'update',
-					to: {foo: 'bar'},
-					from: {foo: 'bar'},
+					key: 1,
+					to: {
+						id: 20,
+						foo: 'bar'
+					},
+					from: {
+						id: 20,
+						foo: 'bar'
+					},
 					md: {}
 				}]);
 			});
@@ -190,7 +174,7 @@ describe('src/structure/forge.js', function(){
 					expect(ctx)
 					.to.equal(myCtx);
 
-					myCtx.addChange('foo', 'bar', {hello: 'world'});
+					myCtx.addChange('foo', 'bar', 3, {hello: 'world'});
 				});
 
 				await forge.configureService('service-1');
@@ -204,12 +188,14 @@ describe('src/structure/forge.js', function(){
 				.to.deep.equal([{
 					model: 'foo',
 					action: 'bar',
+					key: 3,
 					from: {hello: 'world'},
 					to: null,
 					md: {}
 				}, {
 					model: 'service-1',
 					action: 'delete',
+					key: 1,
 					to: null,
 					from: {foo: 'bar'},
 					md: {}
@@ -323,10 +309,12 @@ describe('src/structure/forge.js', function(){
 		describe('::configureService should play nice with ::subscribe', function(){
 			it('should work for create', async function(){
 				interface1.execute = () => Promise.resolve([{
+					id: 30,
 					foo: 'bar'
 				}]);
 
 				interface2.execute = () => Promise.resolve([{
+					id: 31,
 					hello: 'world'
 				}]);
 
@@ -340,7 +328,7 @@ describe('src/structure/forge.js', function(){
 						.to.equal(service2);
 
 						expect(datum)
-						.to.deep.equal({foo: 'bar'});
+						.to.deep.equal({id: 30, foo: 'bar'});
 
 						return service.create({'this-is': 'junk'}, myCtx);
 					}
@@ -352,25 +340,35 @@ describe('src/structure/forge.js', function(){
 				.to.deep.equal([{
 					model: 'service-2',
 					action: 'create',
+					key: 31,
 					from: null,
-					to: {hello: 'world'},
+					to: {
+						id: 31,
+						hello: 'world'
+					},
 					md: {}
 				}, {
 					model: 'service-1',
 					action: 'create',
+					key: 30,
 					from: null,
-					to: {foo: 'bar'},
+					to: {
+						id: 30,
+						foo: 'bar'
+					},
 					md: {}
 				}]);
 			});
 
 			it('should work for update', async function(){
 				interface1.execute = () => Promise.resolve([{
-					foo: 'bar'
+					foo: 'bar',
+					id: 40
 				}]);
 
 				interface2.execute = () => Promise.resolve([{
-					hello: 'world'
+					hello: 'world',
+					id: 41
 				}]);
 
 				await forge.configureService('service-1');
@@ -383,7 +381,7 @@ describe('src/structure/forge.js', function(){
 						.to.equal(service2);
 
 						expect(datum)
-						.to.deep.equal({foo: 'bar'});
+						.to.deep.equal({id: 40, foo: 'bar'});
 
 						return service.create({'this-is': 'junk'}, myCtx);
 					}
@@ -395,24 +393,37 @@ describe('src/structure/forge.js', function(){
 				.to.deep.equal([{
 					model: 'service-2',
 					action: 'create',
+					key: 41,
 					from: null,
-					to: {hello: 'world'},
+					to: {
+						id: 41,
+						hello: 'world'
+					},
 					md: {}
 				}, {
 					model: 'service-1',
 					action: 'update',
-					to: {foo: 'bar'},
-					from: {foo: 'bar'},
+					key: 1,
+					to: {
+						id: 40,
+						foo: 'bar'
+					},
+					from: {
+						id: 40,
+						foo: 'bar'
+					},
 					md: {}
 				}]);
 			});
 
 			it('should work for delete', async function(){
 				interface1.execute = () => Promise.resolve([{
+					id: 100,
 					foo: 'bar'
 				}]);
 
 				interface2.execute = () => Promise.resolve([{
+					id: 101,
 					hello: 'world'
 				}]);
 
@@ -426,7 +437,7 @@ describe('src/structure/forge.js', function(){
 						.to.equal(service2);
 
 						expect(was)
-						.to.deep.equal({foo: 'bar'});
+						.to.deep.equal({id: 100, foo: 'bar'});
 
 						return service.create({'this-is': 'junk'}, myCtx);
 					}
@@ -438,14 +449,22 @@ describe('src/structure/forge.js', function(){
 				.to.deep.equal([{
 					model: 'service-2',
 					action: 'create',
+					key: 101,
 					from: null,
-					to: {hello: 'world'},
+					to: {
+						id: 101,
+						hello: 'world'
+					},
 					md: {}
 				}, {
 					model: 'service-1',
 					action: 'delete',
+					key: 1,
 					to: null,
-					from: {foo: 'bar'},
+					from: {
+						id: 100,
+						foo: 'bar'
+					},
 					md: {}
 				}]);
 			});
@@ -840,17 +859,12 @@ describe('src/structure/forge.js', function(){
 						execute: stubs.execute
 					})
 				},
-				model: {
-					directory: 'model-dir'
-				},
-				decorator: {
-					directory: 'decorator-dir'
-				},
-				hook: {
-					directory: 'hook-dir'
-				},
-				action: {
-					directory: 'action-dir'
+				crud: {
+					model: 'model-dir',
+					decorator: 'decorator-dir',
+					hook: 'hook-dir',
+					effect: 'effect-dir',
+					composite: 'comp-dir'
 				}
 			});
 
@@ -890,6 +904,8 @@ describe('src/structure/forge.js', function(){
 			stubs.getFile.onCall(4)
 			.resolves([]);
 
+			// this overloads what settings are returned
+			// for tests below.  So service-1 is not real
 			stubs.getSettings = sinon.stub(loader, 'getSettings');
 			
 			stubs.getSettings.withArgs('model-path-1')
@@ -950,26 +966,37 @@ describe('src/structure/forge.js', function(){
 				callback: stubs.action
 			}]);
 
-			await forge.install(cfg);
+			await forge.install(cfg.sub('connectors'), cfg.sub('crud'));
 
+			// this method is not real
 			service = await nexus.loadService('service-1');
 		});
 
 		it('should properly define the models', function(){
-			expect(service.schema.fields.length)
+			expect(service.structure.fields.length)
 			.to.equal(2);
+
+			expect(service.structure.fields[0].path)
+			.to.equal('id');
+			
+			expect(service.structure.fields[1].path)
+			.to.equal('name');
 		});
 
 		describe('the service', function(){
 			it('should correctly run create', async function(){
 				stubs.execute.resolves([{
-					foo: 'bar'
+					name: 'something',
+					junk: 'value'
 				}]);
 
-				const res = await service.create({eins: 1}, ctx);
+				const res = await service.create(
+					{foo:'bar2', eins: 1}, 
+					ctx
+				);
 
 				expect(res)
-				.to.deep.equal({foo: 'bar'});
+				.to.deep.equal({name: 'something'});
 			});
 		});
 

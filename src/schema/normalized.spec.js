@@ -2,10 +2,10 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Nexus} = require('../structure/nexus.js');
+const {Nexus} = require('../env/nexus.js');
 const {deflate, inflate} = require('./normalized.js');
 
-describe('src/synthetics/normalized', function(){
+describe('src/schema/normalized', function(){
 	let stubs = null;
 	let nexus = null;
 
@@ -462,7 +462,7 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							hello: 'world'
 						}]
 					});
@@ -498,11 +498,11 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							foo: 'bar'
 						},{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							foo: 'bar2'
 						}]
 					});
@@ -552,18 +552,18 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-3',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 1
 						}],
 						'class-2': [{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 2,
 							class1Id: 'ref-3'
 						}],
 						'class-3': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 3,
 							class2Id: 'ref-1'
 						}]
@@ -637,33 +637,33 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-6',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 1
 						}],
 						'class-2': [{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 2,
 							class1Id: 'ref-6'
 						}, {
 							$ref: 'ref-4',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 3,
 							class1Id: 'ref-6'
 						}],
 						'class-3': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 4,
 							class2Id: 'ref-1'
 						},{
 							$ref: 'ref-2',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 5,
 							class2Id: null
 						},{
 							$ref: 'ref-3',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 6,
 							class2Id: 'ref-4'
 						}]
@@ -705,12 +705,12 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 1
 						}],
 						'class-4': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 2,
 							class1Id: 'ref-1'
 						}]
@@ -756,17 +756,17 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 1
 						}],
 						'class-4': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 2,
 							class1Id: 'ref-1'
 						}, {
 							$ref: 'ref-2',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 3,
 							class1Id: 'ref-1'
 						}]
@@ -833,24 +833,24 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-2',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 1
 						}],
 						'class-2': [{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 2,
 							class1Id: 'ref-2'
 						}],
 						'class-3': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 3,
 							class2Id: 'ref-1'
 						}],
 						'class-4': [{
 							$ref: 'ref-3',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 4,
 							class1Id: 'ref-2'
 						}]
@@ -919,7 +919,152 @@ describe('src/synthetics/normalized', function(){
 						}],
 						'class-3': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
+							n: 3,
+							class2Id: 'ref-1'
+						}]
+					});
+
+					done();
+				}).catch(done);
+			});
+
+			it('should properly allow the ensuring of a table', function(done){
+				stubs.class1 = sinon.stub(class1, 'query')
+				.resolves([{
+					n: 1,
+					id: 123
+				}]);
+
+				stubs.class2 = sinon.stub(class2, 'query')
+				.resolves([{
+					n: 2,
+					id: 234,
+					class1Id: 123
+				}]);
+
+				stubs.class3 = sinon.stub(class3, 'read')
+				.resolves({
+					n: 3,
+					id: 345,
+					class2Id: 234
+				});
+
+				stubs.class4 = sinon.stub(class4, 'query')
+				.resolves([{
+					n: 4,
+					id: 456,
+					class1Id: 123
+				}]);
+
+				inflate(
+					'class-3', 
+					{
+						keys: [345], 
+						ensure: ['class-2'],
+						stub: ['class-1']
+					}, 
+					nexus, 
+					{}
+				).then(instructions => {
+					expect(stubs.class1.getCall(0).args[0])
+					.to.deep.equal({id:123});
+
+					expect(stubs.class2.getCall(0).args[0])
+					.to.deep.equal({id:234});
+
+					expect(stubs.class3.getCall(0).args[0])
+					.to.equal(345);
+
+					expect(stubs.class4.getCall(0))
+					.to.equal(null);
+
+					expect(instructions)
+					.to.deep.equal({
+						'class-1': [{
+							$ref: 'ref-2',
+							$type: 'read',
+							n: 1
+						}],
+						'class-2': [{
+							$ref: 'ref-1',
+							$type: 'read-create',
+							n: 2,
+							class1Id: 'ref-2'
+						}],
+						'class-3': [{
+							$ref: 'ref-0',
+							$type: 'update-create',
+							n: 3,
+							class2Id: 'ref-1'
+						}]
+					});
+
+					done();
+				}).catch(done);
+			});
+
+			it('should properly allow the ensuring with a stub of a table', function(done){
+				stubs.class1 = sinon.stub(class1, 'query')
+				.resolves([{
+					n: 1,
+					id: 123
+				}]);
+
+				stubs.class2 = sinon.stub(class2, 'query')
+				.resolves([{
+					n: 2,
+					id: 234,
+					class1Id: 123
+				}]);
+
+				stubs.class3 = sinon.stub(class3, 'read')
+				.resolves({
+					n: 3,
+					id: 345,
+					class2Id: 234
+				});
+
+				stubs.class4 = sinon.stub(class4, 'query')
+				.resolves([{
+					n: 4,
+					id: 456,
+					class1Id: 123
+				}]);
+
+				inflate(
+					'class-3', 
+					{
+						keys: [345], 
+						ensure: ['class-2'],
+						stub: ['class-2']
+					}, 
+					nexus, 
+					{}
+				).then(instructions => {
+					expect(stubs.class1.getCall(0))
+					.to.equal(null);
+
+					expect(stubs.class2.getCall(0).args[0])
+					.to.deep.equal({id:234});
+
+					expect(stubs.class3.getCall(0).args[0])
+					.to.equal(345);
+
+					expect(stubs.class4.getCall(0))
+					.to.equal(null);
+
+					expect(instructions)
+					.to.deep.equal({
+						'class-2': [{
+							$ref: 'ref-1',
+							$type: 'read-create',
+							n: 2,
+							class1Id: 123
+						}],
+						'class-3': [{
+							$ref: 'ref-0',
+							$type: 'update-create',
 							n: 3,
 							class2Id: 'ref-1'
 						}]
@@ -1095,29 +1240,29 @@ describe('src/synthetics/normalized', function(){
 					.to.deep.equal({
 						'class-1': [{
 							$ref: 'ref-0',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 1
 						}],
 						'class-2': [{
 							$ref: 'ref-1',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 2,
 							class1Id: 'ref-0'
 						}],
 						'class-3': [{
 							$ref: 'ref-4',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 3
 						}],
 						'class-4': [{
 							$ref: 'ref-3',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 4,
 							class3Id: 'ref-4'
 						}],
 						'class-5': [{
 							$ref: 'ref-2',
-							$type: 'create-or-update',
+							$type: 'update-create',
 							n: 5,
 							class2Id: 'ref-1',
 							class4Id: 'ref-3'

@@ -1,4 +1,4 @@
-
+   
 const error = require('bmoor/src/lib/error.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -37,13 +37,19 @@ function operationNotAllowed(operation){
 	});
 }
 
-function runUpdate(ids, service, delta, ctx){
+async function runUpdate(ids, service, delta, ctx){
+	let rtn = null;
+
 	if (ids.length > 1){
 		return Promise.all(ids.map(
-			id => service.update(id, delta, ctx)
+			key => service.update(key, delta, ctx)
 		));
 	} else if (ids.length === 1){
-		return service.update(ids[0], delta, ctx);
+		const key = ids[0];
+
+		ctx.setInfo({key});
+
+		return service.update(key, delta, ctx);
 	} else {
 		throw error.create('called update without id', {
 			code: 'CRUD_CONTROLLER_WRITE_ID',
@@ -51,11 +57,13 @@ function runUpdate(ids, service, delta, ctx){
 			status: 400
 		});
 	}
+
+	return rtn;
 }
 
 class Guard extends Controller {
 	constructor(service, settings){
-		super();
+		super(service.structure);
 		
 		this.service = service;
 		this.settings = settings;
@@ -117,10 +125,18 @@ class Guard extends Controller {
 	async write(ctx){
 		const datum = await ctx.getContent();
 
+		ctx.setInfo({
+			model: this.service.structure.name
+		});
+
 		if (ctx.getMethod() === 'post'){
 			if (!this.settings.create){
 				operationNotAllowed('create');
 			}
+
+			ctx.setInfo({
+				action: 'create'
+			});
 
 			return this.service.create(datum, ctx);
 		} else if (ctx.getMethod() === 'put'){
@@ -129,6 +145,10 @@ class Guard extends Controller {
 			if (!this.settings.update){
 				operationNotAllowed('update');
 			}
+
+			ctx.setInfo({
+				action: 'update'
+			});
 
 			if (!ids){
 				throw error.create('called put without id', {
@@ -153,6 +173,10 @@ class Guard extends Controller {
 				operationNotAllowed('update');
 			}
 
+			ctx.setInfo({
+				action: 'update'
+			});
+
 			if (!ids){
 				throw error.create('called put without id', {
 					code: 'CRUD_CONTROLLER_PATCH_ID',
@@ -172,6 +196,11 @@ class Guard extends Controller {
 	}
 
 	async delete(ctx){
+		ctx.setInfo({
+			model: this.service.structure.name,
+			action: 'delete'
+		});
+
 		if (ctx.getMethod() === 'delete'){
 			if (!this.settings.delete){
 				operationNotAllowed('delete');
@@ -183,7 +212,7 @@ class Guard extends Controller {
 				}
 
 				const queriedIds = (await this.service.query(ctx.getQuery(), ctx))
-					.map(datum => this.service.schema.getKey(datum));
+					.map(datum => this.service.structure.getKey(datum));
 
 				return Promise.all(queriedIds.map(
 					id => this.service.delete(id, ctx)
@@ -228,33 +257,106 @@ class Guard extends Controller {
 		}
 	}
 
-	getRoutes(nexus){
-		const read = this.read.bind(this);
-		const write = this.write.bind(this);
-		const del = this.delete.bind(this);
-
-		return [
+	_buildRoutes(){
+		return [{
 			// create
-			this.prepareRoute(nexus, 'post', '', write),
-
+			route: {
+				path: '',
+				method: 'post'
+			}, 
+			fn: (ctx) => this.write(ctx),
+			hidden: !this.settings.create,
+			structure: this.service
+		}, {
 			// read / readMany
-			this.prepareRoute(nexus, 'get', '/:id', read), 
-
+			route: {
+				path: '/:id',
+				method: 'get'
+			},
+			fn: (ctx) => this.read(ctx),
+			hidden: !this.settings.read,
+			structure: this.service
+		}, {
 			// readAll, query
-			this.prepareRoute(nexus, 'get', '', read),
-
+			route: {
+				path: '',
+				method: 'get'
+			},
+			fn: (ctx) => this.read(ctx),
+			hidden: !this.settingd.read,
+			structure: this.service
+		}, {
 			// update
-			this.prepareRoute(nexus, 'put', '/:id', write),
-
+			route: {
+				path: '/:id',
+				method: 'put'
+			},
+			fn: (ctx) => this.write(ctx),
+			hidden: !this.settings.update,
+			structure: this.service
+		}, {
 			// update
-			this.prepareRoute(nexus, 'patch', '/:id', write), 
-
+			route: {
+				path: '/:id',
+				method: 'patch',
+			},
+			fn: (ctx) => this.write(ctx),
+			hidden: !this.settings.update,
+			structure: this.service
+		}, {
 			// delete
-			this.prepareRoute(nexus, 'delete', '/:id', del),
-
+			route: {
+				path: '/:id',
+				method: 'delete',
+			},
+			fn: (ctx) => this.delete(ctx),
+			hidden: !this.settings.delete,
+			structure: this.service
+		}, {
 			// delete w/ query
-			this.prepareRoute(nexus, 'delete', '', del)
-		];
+			route: {
+				path: '',
+				method: 'delete',
+			},
+			fn: (ctx) => this.delete(ctx),
+			hidden: !(this.settings.delete && this.settings.query),
+			structure: this.service
+		}];
+	}
+
+	getRoutes(nexus){
+		return this._buildRoutes()
+		.map(routeInfo => this.prepareRoute(
+			nexus, 
+			routeInfo
+		));
+	}
+
+	toJSON(){
+		const structure = this.service.structure.toJSON();
+
+		return this._buildRoutes()
+		.filter(routeInfo => !routeInfo.hidden)
+		.map(
+			routeInfo => ({
+				route: routeInfo.route,
+				response: {
+					structure
+				}
+			})
+		);
+		/*
+		
+
+		// this kills me that I'm basically writing this twice, but if I don't 
+		// do this I need to pollute upstream with a lot of data
+		if (this.settings.create){
+			routes.push({
+				path: '',
+				method: post
+			});
+		}
+		*/
 	}
 }
 

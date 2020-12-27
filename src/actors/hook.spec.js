@@ -6,7 +6,7 @@ const {expect} = require('chai');
 // const {Service} = require('./Service.js');
 const {hook} = require('./hook.js');
 
-describe('src/hook.js', function(){
+describe('src/actors/hook.js', function(){
 	let stubs = null;
 
 	beforeEach(function(){

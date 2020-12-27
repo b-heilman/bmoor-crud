@@ -9,9 +9,42 @@ class Network {
 
 	// given a set of targets, see if they all connect, limiting depth of search
 	// this is pretty brute force
-	search(toSearch, count = 999){
+	search(toSearch, depth = 999, settings={}){
+		const joinModels = Object.keys(settings.join||[]).reduce(
+			(agg, model) => {
+				const tables = settings.join[model];
+
+				return tables.reduce(
+					(inner, table) => {
+						let incoming = inner[table];
+
+						if (!incoming){
+							incoming = {};
+
+							inner[table] = incoming;
+						}
+						
+						incoming[model] = true;
+
+						return inner;
+					},
+					agg
+				);
+			}, 
+			{}
+		);
+		
+		const stubModels = (settings.stub||[]).reduce(
+			(agg, table) => {
+				agg[table] = true;
+
+				return agg;
+			},
+			{}
+		);
+
 		// reduce all names to the links for them
-		const models = [...new Set(toSearch)]; // make unique
+		let models = [...new Set(toSearch)]; // make unique
 
 		if (models.length === 1){
 			// I feel a little dirty for this... but...
@@ -20,14 +53,32 @@ class Network {
 			}];
 		}
 
-		const contains = models.reduce(
-			(agg, name, i) => {
+		let contains = models.reduce(
+			(agg, name) => {
+				agg[name] = null;
+
+				return agg;
+			},
+			{}
+		);
+
+		const masterModels = models;
+		const fnFactory = (depthTarget) => {
+			return (agg, name, i) => {
 				const linker = new Linker(this.mapper, name);
 
+				// if stubbed, no linking out
+				if (stubModels[name]){
+					return agg;
+				}
+
 				// run only the following names, it's n!, but the ifs reduce n
-				models.slice(i+1)
+				masterModels.slice(i+1)
 				.forEach(nextName => {
-					let results = linker.search(nextName, count);
+					let results = linker.search(nextName, depthTarget, {
+						allowed: joinModels,
+						block: stubModels
+					});
 
 					if (results){
 						results.forEach(link => {
@@ -43,16 +94,20 @@ class Network {
 				});
 
 				return agg;
-			},
-			models.reduce(
-				(agg, name) => {
-					agg[name] = null;
+			};
+		};
 
-					return agg;
-				},
-				{}
-			)
-		);
+		const filterFn = key => !contains[key];
+
+		for(let depthPos = 1;  depthPos <= depth; depthPos++){
+			contains = models.reduce(fnFactory(depthPos), contains);
+
+			if (Object.values(contains).indexOf(null) === -1){
+				depthPos = depth;
+			}
+
+			models = Object.keys(contains).filter(filterFn);
+		}
 
 		// Do a last can, make sure all links were defined... ensuring all
 		// tables are linked
@@ -69,8 +124,8 @@ class Network {
 	}
 
 	// orders links in a order the ensures requirements come first 
-	requirements(toSearch, count = 3){
-		let links = this.search(toSearch, count);
+	requirements(toSearch, depth = 3){
+		let links = this.search(toSearch, depth);
 
 		if (links.length === 1){
 			return links;
@@ -103,8 +158,8 @@ class Network {
 	}
 
 	// orders with the most linked to node first, and then moves to the leaves
-	anchored(toSearch, count = 3){
-		const links = this.search(toSearch, count);
+	anchored(toSearch, depth = 3){
+		const links = this.search(toSearch, depth);
 
 		if (links.length === 1){
 			return links;

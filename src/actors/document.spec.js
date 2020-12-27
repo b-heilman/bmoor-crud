@@ -2,13 +2,12 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Nexus} = require('../structure/nexus.js');
+const {Nexus, config} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
-
-const normalized = require('./normalized.js');
+const normalized = require('../schema/normalized.js');
 	
-describe('src/synthetics/composite.js', function(){
-	const sut = require('./composite.js');
+describe('src/actors/document.js', function(){
+	const sut = require('./document.js');
 
 	let nexus = null;
 	let stubs = null;
@@ -34,6 +33,8 @@ describe('src/synthetics/composite.js', function(){
 		connector = {
 			execute: stubs.execute
 		};
+
+		config.set('timeout', 500);
 
 		nexus = new Nexus();
 	});
@@ -122,6 +123,11 @@ describe('src/synthetics/composite.js', function(){
 						name: 'test-material',
 						field: 'id'
 					}
+				},
+				mask: {
+					read: true,
+					write: true,
+					update: true
 				}
 			}
 		});
@@ -208,24 +214,28 @@ describe('src/synthetics/composite.js', function(){
 		});
 		await nexus.installService('test-tag', {});
 
-		await nexus.installComposite('test-composite-item', {}, {
+		await nexus.setComposite('test-composite-item', {
 			base: 'test-item',
 			key: 'id',
-			schema: {
-				'id': '$test-item.id',
-				'item': '$test-item.name',
-				'categoryId': '$test-item > $test-category.id',
-				'categoryName':  '$test-item > $test-category.name'
+			fields: {
+				'id': '.id',
+				'item': '.name',
+				'categoryId': '> $test-category.id',
+				'categoryName':  '> $test-category.name'
 			}
 		});
 
-		await nexus.installComposite('test-composite-tag', {}, {
+		await nexus.installDocument('test-composite-item', connector);
+
+		await nexus.setComposite('test-composite-tag', {
 			base: 'test-tag',
 			key: 'id',
-			schema: {
-				'name': '$test-tag.name'
+			fields: {
+				'name': '.name'
 			}
 		});
+
+		await nexus.installDocument('test-composite-tag', connector);
 
 		await nexus.setModel('test-user-family-pivot', {
 			fields: {
@@ -253,69 +263,6 @@ describe('src/synthetics/composite.js', function(){
 		});
 	});
 
-	describe('::constructor', function(){
-		it('should work with a direct link', async function(){
-			await nexus.installComposite('test-composite-ut', {}, {
-				base: 'test-family',
-				key: 'id',
-				schema: {
-					'id': '$test-family.id',
-					'name': '$test-family.name',
-					'items': ['$test-family > $test-category > #test-composite-item']
-				}
-			});
-
-			const comp = await nexus.loadComposite('test-composite-ut');
-
-			expect(comp.subs.length)
-			.to.equal(1);
-
-			expect(comp.subs[0].query)
-			.to.deep.equal({
-				'@familyId$test-category.itemId>@id$test-item': 'id'
-			});
-		});
-
-		it('should work with a hop off an attached model', async function(){
-			await nexus.installComposite('test-composite-ut', {}, {
-				base: 'test-family',
-				key: 'id',
-				schema: {
-					'id': '$test-family.id',
-					'name': '$test-family.name',
-					'categoryName': '$test-family > $test-category.name',
-					'tags': ['$test-family > $test-category > #test-composite-tag']
-				}
-			});
-
-			const comp = await nexus.loadComposite('test-composite-ut');
-
-			expect(comp.subs[0].query)
-			.to.deep.equal({
-				'@categoryId$test-tag': 'sub_0'
-			});
-		});
-
-		it('should work with a jump to the attached schema', async function(){
-			await nexus.installComposite('test-composite-ut', {}, {
-				base: 'test-family',
-				key: 'id',
-				schema: {
-					'id': '$test-family.id',
-					'name': '$test-family.name',
-					'tags': ['$test-family > $test-category > #test-composite-tag']
-				}
-			});
-
-			const comp = await nexus.loadComposite('test-composite-ut');
-
-			expect(comp.subs[0].query)
-			.to.deep.equal({
-				'@familyId$test-category.id>@categoryId$test-tag': 'id'
-			});
-		});
-	});
-
 	describe('::read', function(){
 		it('should properly generate a sql request', async function(){
 			connectorExecute = [{
@@ -324,17 +271,25 @@ describe('src/synthetics/composite.js', function(){
 				'test-category_2': 'category-1'
 			}];
 
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'personName': '$test-item > $test-person.name',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'item': '.name',
+					'personName': '>? $test-person.name',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 			
-			const res = await comp.read(1, context);
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure(connector);
+
+			await doc.link();
+			
+			const res = await doc.read(1, context);
 			
 			expect(stubs.execute.getCall(0).args[0])
 			.to.deep.equal({
@@ -369,7 +324,8 @@ describe('src/synthetics/composite.js', function(){
 								name: 'test-item',
 								remote: 'id',
 								local: 'itemId'
-							}]
+							}],
+							optional: true
 						},
 						schema: 'test-person'
 					},
@@ -410,17 +366,24 @@ describe('src/synthetics/composite.js', function(){
 				'test-category_2': '{"hello":"world"}'
 			}];
 
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'personInfo': '$test-item > $test-person.json',
-					'categoryInfo':  '$test-item > $test-category.json'
+				fields: {
+					'item': '.name',
+					'personInfo': '> $test-person.json',
+					'categoryInfo':  '> $test-category.json'
 				}
 			});
+
+			const comp = await nexus.loadComposite('test-1');
 			
-			const res = await comp.read(1, context);
+			const doc = new sut.Document(comp);
+
+			await doc.configure(connector);
+			await doc.link();
+			
+			const res = await doc.read(1, context);
 			
 			expect(stubs.execute.getCall(0).args[0])
 			.to.deep.equal({
@@ -494,17 +457,24 @@ describe('src/synthetics/composite.js', function(){
 				'test-category_2': '{"hello":"world"}'
 			}];
 
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'personInfo': '$test-item > $test-person.json',
-					'categoryInfo':  '$test-item > $test-category.json'
+				fields: {
+					'item': '.name',
+					'personInfo': '> $test-person.json',
+					'categoryInfo':  '> $test-category.json'
 				}
 			});
 			
-			const res = await comp.read(1, context);
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.read(1, context);
 			
 			expect(stubs.execute.getCall(0).args[0])
 			.to.deep.equal({
@@ -578,14 +548,14 @@ describe('src/synthetics/composite.js', function(){
 		});
 
 		it('with work with join and aliases', async function(){
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'personName': '$test-item > $test-person.name',
-					'ownerName': '$test-item.ownerId > $test-user.name',
-					'creatorName': '$test-item.creatorId > $test-user.name'
+				fields: {
+					'item': '.name',
+					'personName': '> $test-person.name',
+					'ownerName': '.ownerId > $test-user.name',
+					'creatorName': '.creatorId > $test-user.name'
 				}
 			});
 			
@@ -596,7 +566,14 @@ describe('src/synthetics/composite.js', function(){
 				'test-user_3': 'user3'
 			}];
 
-			const res = await comp.read(1, context);
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.read(1, context);
 
 			expect(stubs.execute.getCall(0).args[0])
 			.to.deep.equal({
@@ -686,6 +663,117 @@ describe('src/synthetics/composite.js', function(){
 		});
 	});
 
+	describe('::link', function(){
+		it('should fail without defined properties', async function(){
+			await nexus.setComposite('test-composite-ut', {
+				key: 'id',
+				base: 'test-family',
+				schema: {
+					'id': '.id',
+					'name': '.name',
+					'items': ['> $test-category > #test-composite-item']
+				}
+			});
+
+			const comp = await nexus.loadComposite('test-composite-ut');
+
+			const doc = new sut.Document(comp);
+			await doc.configure({});
+
+			try {
+				await doc.link();
+
+				expect(true)
+				.to.equal(false);
+			} catch (ex){
+				expect(ex.message)
+				.to.equal('No properties found');
+			}
+		});
+
+		it('should work with a direct link - without it in the request', async function(){
+			await nexus.setComposite('test-composite-ut', {
+				key: 'id',
+				base: 'test-family',
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'items': ['> $test-category > #test-composite-item']
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-composite-ut');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure({});
+			await doc.link();
+			
+			expect(doc.subs.length)
+			.to.equal(1);
+
+			const join = doc.subs[0].joins[0];
+			expect(join.path)
+			.to.equal('.familyId$test-category.itemId>.id$test-item');
+
+			expect(join.datumPath)
+			.to.equal('id');
+		});
+
+		it('should work with a hop off an attached model', async function(){
+			await nexus.setComposite('test-composite-ut', {
+				base: 'test-family',
+				key: 'id',
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'categoryName': '> $test-category.name',
+					'tags': ['> $test-category > #test-composite-tag']
+				}
+			});
+
+			const comp = await nexus.loadComposite('test-composite-ut');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure({});
+			await doc.link();
+			
+			const join = doc.subs[0].joins[0];
+			expect(join.path)
+			.to.equal('.categoryId$test-tag');
+
+			expect(join.datumPath)
+			.to.equal('sub_0');
+		});
+
+		it('should work with a jump to the attached schema', async function(){
+			await nexus.setComposite('test-composite-ut', {
+				base: 'test-family',
+				key: 'id',
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'tags': ['> $test-category > #test-composite-tag']
+				}
+			});
+
+			const comp = await nexus.loadComposite('test-composite-ut');
+
+			const doc = new sut.Document(comp);
+			
+			await doc.configure({});
+			await doc.link();
+			
+			const join = doc.subs[0].joins[0];
+			expect(join.path)
+			.to.equal('.familyId$test-category.id>.categoryId$test-tag');
+
+			expect(join.datumPath)
+			.to.equal('id');
+		});
+	});
+
 	describe('::query', function(){
 		it('should properly generate a sql request - setting 1', async function(){
 			connectorExecute = [{
@@ -693,17 +781,24 @@ describe('src/synthetics/composite.js', function(){
 				'test-category_1': 'category-1'
 			}];
 
-			const comp = new sut.Composite(nexus, connector, {
+			await nexus.setComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'item': '.name',
+					'categoryName':  '> $test-category.name'
 				}
 			});
+
+			const comp = await nexus.loadComposite('test-comp');
 			
-			const res = await comp.query({
-				'$test-user.name > @ownerId$test-item': 'shoup'
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.query({
+				'$test-user.name > .ownerId$test-item': 'shoup'
 			}, context);
 			
 			expect(stubs.execute.getCall(0).args[0])
@@ -773,16 +868,23 @@ describe('src/synthetics/composite.js', function(){
 				'test-category_1': 'category-1'
 			}];
 
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'item': '.name',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 			
-			const res = await comp.query({
+			const comp = await nexus.loadComposite('test-comp');
+			
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.query({
 				'$test-category.name': 'foo-bar'
 			}, context);
 			
@@ -836,16 +938,23 @@ describe('src/synthetics/composite.js', function(){
 
 	describe('::normalize', function(){
 		it('should load decode a object push - 1', async function(){
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'item': '.name',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 
-			const res = await comp.normalize({
+			const comp = await nexus.loadComposite('test-comp');
+
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.normalize({
 				item: 'item-1',
 				categoryName: 'category-1'
 			});
@@ -867,18 +976,25 @@ describe('src/synthetics/composite.js', function(){
 		});
 
 		it('should load decode a object push - 2', async function(){
-			const comp = new sut.Composite(nexus, connector, {
+			nexus.setComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'id': '$test-item.id',
-					'item': '$test-item.name',
-					'categoryId': '$test-item > $test-category.id',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'id': '.id',
+					'item': '.name',
+					'categoryId': '> $test-category.id',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 
-			const res = await comp.normalize({
+			const comp = await nexus.loadComposite('test-comp');
+
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.normalize({
 				id: 123,
 				item: 'item-1',
 				categoryId: 456,
@@ -910,12 +1026,12 @@ describe('src/synthetics/composite.js', function(){
 
 			const categories = await nexus.loadService('test-category');
 
-			const comp = new sut.Composite(nexus, connector, {
+			const comp = await nexus.setComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'item': '.name',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 
@@ -931,7 +1047,12 @@ describe('src/synthetics/composite.js', function(){
 				name: 'category-created'
 			});
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.push({
 				item: 'item-1',
 				categoryName: 'category-1'
 			}, {});
@@ -954,14 +1075,14 @@ describe('src/synthetics/composite.js', function(){
 
 			const categories = await nexus.loadService('test-category');
 
-			const comp = new sut.Composite(nexus, connector, {
+			const comp = await nexus.setComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'id': '$test-item.id',
-					'item': '$test-item.name',
-					'categoryId': '$test-item > $test-category.id',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'id': '.id',
+					'item': '.name',
+					'categoryId': '> $test-category.id',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 
@@ -991,7 +1112,12 @@ describe('src/synthetics/composite.js', function(){
 
 			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			const res = await doc.push({
 				id: 123,
 				item: 'item-1',
 				categoryId: 456,
@@ -1039,24 +1165,21 @@ describe('src/synthetics/composite.js', function(){
 		let items = null;
 		let families = null;
 		let categories = null;
-		let comp = null;
 
 		it('should work with a direct link', async function(){
 			items = await nexus.loadService('test-item');
 			families = await nexus.loadService('test-family');
 			categories = await nexus.loadService('test-category');
 
-			await nexus.installComposite('test-composite-ut', {}, {
+			const comp = await nexus.setComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
-				schema: {
-					'id': '$test-family.id',
-					'name': '$test-family.name',
-					'items': ['$test-family > $test-category > #test-composite-item']
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'items': ['> $test-category > #test-composite-item']
 				}
 			});
-
-			comp = await nexus.loadComposite('test-composite-ut');
 
 			stubs.familyRead = sinon.stub(families, 'read')
 			.resolves({
@@ -1110,7 +1233,11 @@ describe('src/synthetics/composite.js', function(){
 				admin: true
 			};
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+
+			const res = await doc.push({
 				id: 12,
 				name: 'family-1',
 				items: [{
@@ -1199,18 +1326,16 @@ describe('src/synthetics/composite.js', function(){
 			families = await nexus.loadService('test-family');
 			categories = await nexus.loadService('test-category');
 
-			await nexus.installComposite('test-composite-ut', {}, {
+			const comp = await nexus.setComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
-				schema: {
-					'id': '$test-family.id',
-					'name': '$test-family.name',
-					'categoryName': '$test-family > $test-category.name',
-					'tags': ['$test-family > $test-category > #test-composite-tag']
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'categoryName': '> $test-category.name',
+					'tags': ['> $test-category > #test-composite-tag']
 				}
 			});
-
-			comp = await nexus.loadComposite('test-composite-ut');
 
 			stubs.familyRead = sinon.stub(families, 'read')
 			.resolves({
@@ -1246,7 +1371,11 @@ describe('src/synthetics/composite.js', function(){
 				admin: true
 			};
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+
+			const res = await doc.push({
 				id: 12,
 				name: 'family-name-1',
 				categoryName: 'category-name-1',
@@ -1311,17 +1440,15 @@ describe('src/synthetics/composite.js', function(){
 			families = await nexus.loadService('test-family');
 			categories = await nexus.loadService('test-category');
 
-			await nexus.installComposite('test-composite-ut', {}, {
+			const comp = await nexus.setComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
-				schema: {
-					'id': '$test-family.id',
-					'name': '$test-family.name',
-					'tags': ['$test-family > $test-category > #test-composite-tag']
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'tags': ['> $test-category > #test-composite-tag']
 				}
 			});
-
-			comp = await nexus.loadComposite('test-composite-ut');
 
 			stubs.familyRead = sinon.stub(families, 'read')
 			.resolves({
@@ -1357,7 +1484,11 @@ describe('src/synthetics/composite.js', function(){
 				admin: true
 			};
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+
+			const res = await doc.push({
 				id: 12,
 				name: 'family-name-1',
 				tags: [{
@@ -1430,33 +1561,46 @@ describe('src/synthetics/composite.js', function(){
 		let comp = null;
 
 		beforeEach(async function(){
-			await nexus.installComposite('test-material', {}, {
+			await nexus.setComposite('test-material', {
 				base: 'test-material',
 				key: 'id',
-				schema: {
-					'id': '$test-material.id',
-					'name': '$test-material.name'
+				fields: {
+					'id': '.id',
+					'name': '.name'
 				}
 			});
+			await nexus.installDocument('test-material', connector);
 
-			await nexus.installComposite('test-composite-material', {}, {
+			await nexus.setComposite('test-composite-material', {
 				base: 'test-item-material',
 				key: 'id',
 				extends: 'test-material',
-				schema: {
-					'pivot': '$test-item-material.id'
+				fields: {
+					'pivot': '.id'
 				}
 			});
+			await nexus.installDocument('test-composite-material', connector);
 
-			await nexus.installComposite('test-composite-ut', {}, {
+			await nexus.setComposite('test-composite-material-2', {
+				base: 'test-item-material',
+				key: 'id',
+				extends: 'test-composite-material',
+				fields: {
+					'mask': '.mask'
+				}
+			});
+			await nexus.installDocument('test-composite-material-2', connector);
+
+			await nexus.setComposite('test-composite-ut', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'id': '$test-item.id',
-					'name': '$test-item.name',
-					'materials': ['$test-item > #test-composite-material']
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'materials': ['> #test-composite-material-2']
 				}
 			});
+			await nexus.installDocument('test-composite-ut', connector);
 		});
 
 		it('should work when creating brand new', async function(){
@@ -1465,7 +1609,7 @@ describe('src/synthetics/composite.js', function(){
 			materials = await nexus.loadService('test-material');
 
 			comp = await nexus.loadComposite('test-composite-ut');
-
+			
 			stubs.itemCreate = sinon.stub(items, 'create')
 			.resolves({
 				id: 'item-1',
@@ -1491,7 +1635,11 @@ describe('src/synthetics/composite.js', function(){
 				admin: true
 			};
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			
+			const res = await doc.push({
 				name: 'item-name-1',
 				materials: [{
 					name: 'material-name-1'
@@ -1517,7 +1665,8 @@ describe('src/synthetics/composite.js', function(){
 					$type: 'create',
 					id: undefined,
 					itemId: 'test-item:1',
-					materialId: 'test-material:2'
+					materialId: 'test-material:2',
+					mask: undefined
 				}]
 			});
 
@@ -1558,7 +1707,8 @@ describe('src/synthetics/composite.js', function(){
 				$type: 'create',
 				id: undefined,
 				itemId: 'item-1',
-				materialId: 'material-1'
+				materialId: 'material-1',
+				mask: undefined
 			});
 		});
 
@@ -1614,11 +1764,16 @@ describe('src/synthetics/composite.js', function(){
 				admin: true
 			};
 
-			const res = await comp.push({
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+
+			const res = await doc.push({
 				id: 'item-id-1',
 				name: 'item-name-10',
 				materials: [{
 					pivot: 'join-1',
+					mask: 'it-is-a-cowl',
 					id: 'material-1',
 					name: 'material-name-10'
 				}]
@@ -1643,7 +1798,8 @@ describe('src/synthetics/composite.js', function(){
 					$type: 'update',
 					id: 'join-1',
 					itemId: 'test-item:1',
-					materialId: 'test-material:2'
+					materialId: 'test-material:2',
+					mask: 'it-is-a-cowl'
 				}]
 			});
 
@@ -1684,18 +1840,19 @@ describe('src/synthetics/composite.js', function(){
 				$type: 'update',
 				id: 'join-1',
 				itemId: 'item-1',
-				materialId: 'material-1'
+				materialId: 'material-1',
+				mask: 'it-is-a-cowl'
 			});
 		});
 	});
 
 	describe('change type - versioning', function(){
-		const changeTypes = require('../model.js').config.get('changeTypes');
+		const changeTypes = require('../schema/model.js').config.get('changeTypes');
 
 		let items = null;
 		let itemMaterials = null;
 		let materials = null;
-		let comp = null;
+		let doc = null;
 
 		beforeEach(async function(){
 			items = await nexus.loadService('test-item');
@@ -1747,41 +1904,42 @@ describe('src/synthetics/composite.js', function(){
 			let changeCb = null;
 
 			beforeEach(async function(){
-				await nexus.installComposite('test-material', {}, {
+				await nexus.setComposite('test-material', {
 					base: 'test-material',
 					key: 'id',
-					schema: {
-						'id': '$test-material.id',
-						'name': '$test-material.name'
+					fields: {
+						'id': '.id',
+						'name': '.name'
 					}
 				});
+				await nexus.installDocument('test-material', connector);
 
-				await nexus.installComposite('test-composite-material', {}, {
+				await nexus.setComposite('test-composite-material', {
 					base: 'test-item-material',
 					key: 'id',
 					extends: 'test-material',
-					schema: {
-						'pivot': '$test-item-material.id'
+					fields: {
+						'pivot': '.id'
 					},
 					getChangeType: async function(doc){
 						return typeCb(doc);
 					}
 				});
+				await nexus.installDocument('test-composite-material', connector);
 
-				await nexus.installComposite('test-composite-ut', {}, {
+				await nexus.setComposite('test-composite-ut', {
 					base: 'test-item',
 					key: 'id',
-					schema: {
-						'id': '$test-item.id',
-						'name': '$test-item.name',
-						'materials': ['$test-item > #test-composite-material']
+					fields: {
+						'id': '.id',
+						'name': '.name',
+						'materials': ['> #test-composite-material']
 					},
 					onChange: async function(type, instructions){
 						return changeCb(type, instructions);
 					}
 				});
-
-				comp = await nexus.loadComposite('test-composite-ut');
+				doc = await nexus.installDocument('test-composite-ut', connector);
 			});
 
 			it('should work with a null type change', async function(){
@@ -1794,7 +1952,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(null);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -1815,7 +1973,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(changeTypes.major);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -1836,7 +1994,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(changeTypes.minor);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -1867,7 +2025,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(changeTypes.major);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -1905,7 +2063,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(changeTypes.major);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -1943,7 +2101,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(changeTypes.major);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -1971,41 +2129,43 @@ describe('src/synthetics/composite.js', function(){
 			let changeCb = null;
 
 			beforeEach(async function(){
-				await nexus.installComposite('test-material', {}, {
+				await nexus.setComposite('test-material', {
 					base: 'test-material',
 					key: 'id',
-					schema: {
-						'id': '$test-material.id',
-						'name': '$test-material.name'
+					fields: {
+						'id': '.id',
+						'name': '.name'
 					},
 					getChangeType: async function(doc){
 						return typeCb(doc);
 					}
 				});
+				await nexus.installDocument('test-material', connector);
 
-				await nexus.installComposite('test-composite-material', {}, {
+				await nexus.setComposite('test-composite-material', {
 					base: 'test-item-material',
 					key: 'id',
 					extends: 'test-material',
-					schema: {
-						'pivot': '$test-item-material.id'
+					fields: {
+						'pivot': '.id'
 					}
 				});
+				await nexus.installDocument('test-composite-material', connector);
 
-				await nexus.installComposite('test-composite-ut', {}, {
+				await nexus.setComposite('test-composite-ut', {
 					base: 'test-item',
 					key: 'id',
-					schema: {
-						'id': '$test-item.id',
-						'name': '$test-item.name',
-						'materials': ['$test-item > #test-composite-material']
+					fields: {
+						'id': '.id',
+						'name': '.name',
+						'materials': ['> #test-composite-material']
 					},
 					onChange: async function(type, instructions){
 						return changeCb(type, instructions);
 					}
 				});
 
-				comp = await nexus.loadComposite('test-composite-ut');
+				doc = await nexus.installDocument('test-composite-ut', connector);
 			});
 
 			it('should work with a null type change', async function(){
@@ -2028,7 +2188,7 @@ describe('src/synthetics/composite.js', function(){
 					.to.equal(changeTypes.major);
 				};
 
-				await comp.push({
+				await doc.push({
 					id: 'item-id-1',
 					name: 'item-name-10',
 					materials: [{
@@ -2053,30 +2213,31 @@ describe('src/synthetics/composite.js', function(){
 	});
 
 	describe('multi tiered', function(){
-		let comp = null;
+		let doc = null;
 
-		const changeTypes = require('../model.js').config.get('changeTypes');
+		const changeTypes = require('../schema/model.js').config.get('changeTypes');
 
 		beforeEach(async function(){
-			await nexus.installComposite('test-material', {}, {
+			await nexus.setComposite('test-material', {
 				base: 'test-material',
 				key: 'id',
-				schema: {
-					'id': '$test-material.id',
-					'name': '$test-material.name'
+				fields: {
+					'id': '.id',
+					'name': '.name'
 				}
 			});
 
 			stubs.getChangeType = sinon.stub();
-			await nexus.installComposite('test-composite-material', {}, {
+			await nexus.setComposite('test-composite-material', {
 				base: 'test-item-material',
 				key: 'id',
 				extends: 'test-material',
-				schema: {
-					'pivot': '$test-item-material.id'
+				fields: {
+					'pivot': '.id'
 				},
 				getChangeType: stubs.getChangeType
 			});
+			await nexus.installDocument('test-composite-material', connector);
 
 			stubs.onChange = sinon.stub()
 			.callsFake(function(type, series){
@@ -2088,28 +2249,29 @@ describe('src/synthetics/composite.js', function(){
 					datum.setField('name', datum.getField('name')+'.2');
 				}
 			});
-			await nexus.installComposite('test-composite-ut', {}, {
+			await nexus.setComposite('test-composite-ut', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'id': '$test-item.id',
-					'name': '$test-item.name',
-					'materials': ['$test-item > #test-composite-material']
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'materials': ['> #test-composite-material']
 				},
 				onChange: stubs.onChange
 			});
+			await nexus.installDocument('test-composite-ut', connector);
 
-			await nexus.installComposite('test-ownership', {}, {
+			await nexus.setComposite('test-ownership', {
 				base: 'test-user',
 				key: 'id',
-				schema: {
-					'id': '$test-user.id',
-					'name': '$test-user.name',
-					'items': ['$test-user.id > @ownerId#test-composite-ut']
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'items': ['.id > .ownerId#test-composite-ut']
 				}
 			});
 
-			comp = await nexus.loadComposite('test-ownership');
+			doc = await nexus.installDocument('test-ownership', connector);
 
 			const users = await nexus.loadService('test-user');
 			const items = await nexus.loadService('test-item');
@@ -2180,7 +2342,7 @@ describe('src/synthetics/composite.js', function(){
 			stubs.getChangeType.onCall(2)
 			.resolves(changeTypes.major);
 
-			await comp.push({
+			await doc.push({
 				id: 'user-id-1',
 				name: 'user-name-10',
 				items: [{

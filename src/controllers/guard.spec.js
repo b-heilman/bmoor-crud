@@ -2,7 +2,7 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Nexus} = require('../structure/nexus.js');
+const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 
 const sut = require('./guard.js');

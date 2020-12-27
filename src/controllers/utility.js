@@ -17,7 +17,7 @@ function camelize(str){
 // actions performed against a class, but a particular instance
 class Utility extends Controller {
 	constructor(service, settings){
-		super();
+		super(service.structure);
 		
 		this.service = service;
 		this.settings = Object.keys(settings)
@@ -71,23 +71,23 @@ class Utility extends Controller {
 		return this.service[fn](...params);
 	}
 
-	getRoutes(nexus){
-		const run = this.route.bind(this);
-		
+	_buildRoutes(){
 		return Object.key(this.settings)
 		.map(key => {
 			const setting = this.settings[key];
 
-			return this.prepareRoute(
-				nexus,
-				setting.method,
-				'/'+key,
-				async function(ctx){
+			return {
+				route: {
+					method: setting.method,
+					path: '/'+key
+				},
+				fn: async (ctx) => {
 					ctx.setParam('utility', key);
 
-					return run(ctx);
+					return this.route(ctx);
 				}
-			);
+				// TODO: structure: ????
+			};
 		});
 	}
 }

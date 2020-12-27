@@ -10,6 +10,13 @@ class Context {
 
 		this.changes = [];
 		this.trackingChanges = true;
+
+		// controller specific properties
+		this.info = {};
+	}
+
+	setInfo(info){
+		this.info = Object.assign(this.info, info);
 	}
 
 	// allow to constructor to do some sort of boot script
@@ -74,11 +81,12 @@ class Context {
 		this.trackingChanges = toggle;
 	}
 
-	addChange(model, action, from, to = null, md={}){
+	addChange(model, action, key, from, to = null, md={}){
 		if (this.trackingChanges){
 			this.changes.push({
 				model,
 				action,
+				key,
 				from,
 				to,
 				md
@@ -86,6 +94,7 @@ class Context {
 		}
 	}
 
+	// server/controller is written to handle the rollback condition
 	getChanges(){
 		return this.changes.slice(0);
 	}

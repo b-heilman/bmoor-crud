@@ -4,8 +4,8 @@ const {create} = require('bmoor/src/lib/error.js');
 
 async function runStatement(view, base, ctx){
 	if (!(view.connector&&view.connector.execute)){
-		console.log('refusing to run ->', view.schema.name, ctx);
-		throw new Error('no connector defined: '+view.schema.name);
+		console.log('refusing to run ->', view.structure.name, ctx);
+		throw new Error('no connector defined: '+view.structure.name);
 	}
 	
 	return await view.connector.execute(base, ctx);
@@ -13,7 +13,7 @@ async function runStatement(view, base, ctx){
 
 async function runMap(arr, view, ctx){
 	const mapFn = view.buildMap(ctx);
-	const inflateFn = view.schema.actions.inflate;
+	const inflateFn = view.structure.actions.inflate;
 
 	let rtn = null;
 
@@ -57,7 +57,7 @@ async function runFilter(arr, view, ctx){
 function buildCleaner(type, fields){
 	const cleaner = fields.reduce(
 		(old, field) => {
-			const op = field[type];
+			const op = field.settings[type]; // TODO: 2/20
 
 			if (typeof(op) === 'string'){
 				if (old){
@@ -65,13 +65,13 @@ function buildCleaner(type, fields){
 						await old(datum, ctx);
 
 						if (!ctx.hasPermission(op)){
-							del(datum, field.external);
+							del(datum, field.path);
 						}
 					};
 				} else {
 					return async function(datum, ctx){
 						if (!ctx.hasPermission(op)){
-							del(datum, field.external);
+							del(datum, field.path);
 						}
 					};
 				}
@@ -94,11 +94,14 @@ function buildCleaner(type, fields){
 }
 
 class View {
-	constructor(schema, connector, settings={}){
-		this.schema = schema;
-		this.settings = settings;
+	constructor(structure){
+		this.structure = structure; 
 		this.cleaners = {};
+	}
+
+	async configure(connector, settings={}){
 		this.connector = connector;
+		this.settings = settings;
 	}
 
 	// returns a function to clean multiple datums from this instance
@@ -112,7 +115,7 @@ class View {
 		let cleaner = this.cleaners[type];
 
 		if (!(type in this.cleaners)){
-			cleaner = buildCleaner(type, this.schema.getFields());
+			cleaner = buildCleaner(type, this.structure.getFields());
 
 			this.cleaners[type] = cleaner;
 		}
@@ -123,7 +126,7 @@ class View {
 	async clean(type, datum, ctx){
 		const cleaner = this.buildCleaner(type);
 
-		datum = this.schema.clean(type, datum);
+		datum = this.structure.clean(type, datum);
 
 		if (cleaner){
 			await cleaner(datum, ctx);
@@ -154,19 +157,18 @@ class View {
 
 	async create(datum, stmt, ctx){
 		if (!this.connector){
-			throw create(`missing create connector for ${this.schema.name}`, {
+			throw create(`missing create connector for ${this.structure.name}`, {
 				code: 'BMOOR_CRUD_VIEW_CREATE_CONNECTOR'
 			});
 		}
 
 		const cleaned = await this.clean('create', datum, ctx);
-
-		const payload = this.schema.actions.create ?
-			this.schema.actions.create(cleaned, cleaned, ctx) : cleaned;
+		const payload = this.structure.actions.create ?
+			this.structure.actions.create(cleaned, cleaned, ctx) : cleaned;
 
 		stmt.method = 'create';
-		stmt.payload = this.schema.actions.deflate ?
-			this.schema.actions.deflate(payload, ctx) : payload;
+		stmt.payload = this.structure.actions.deflate ?
+			this.structure.actions.deflate(payload, ctx) : payload;
 
 		if (this.settings.deflate){
 			stmt.payload = this.settings.deflate(stmt.payload);
@@ -181,7 +183,7 @@ class View {
 
 	async read(stmt, ctx){
 		if (!this.connector){
-			throw create(`missing read connector for ${this.schema.name}`, {
+			throw create(`missing read connector for ${this.structure.name}`, {
 				code: 'BMOOR_CRUD_VIEW_READ_CONNECTOR'
 			});
 		}
@@ -201,19 +203,19 @@ class View {
 
 	async update(delta, tgt, stmt, ctx){
 		if (!this.connector){
-			throw create(`missing update connector for ${this.schema.name}`, {
+			throw create(`missing update connector for ${this.structure.name}`, {
 				code: 'BMOOR_CRUD_VIEW_UPDATE_CONNECTOR'
 			});
 		}
 
 		const cleaned = await this.clean('update', delta, ctx);
 
-		const payload = this.schema.actions.update ?
-			this.schema.actions.update(cleaned, tgt, ctx) : cleaned;
+		const payload = this.structure.actions.update ?
+			this.structure.actions.update(cleaned, tgt, ctx) : cleaned;
 
 		stmt.method = 'update';
-		stmt.payload = this.schema.actions.deflate ?
-			this.schema.actions.deflate(payload, ctx) : payload;
+		stmt.payload = this.structure.actions.deflate ?
+			this.structure.actions.deflate(payload, ctx) : payload;
 
 		return runMap(
 			await runStatement(this, stmt, ctx), 
@@ -224,7 +226,7 @@ class View {
 
 	async delete(stmt, ctx){
 		if (!this.connector){
-			throw create(`missing readMany connector for ${this.schema.name}`, {
+			throw create(`missing readMany connector for ${this.structure.name}`, {
 				code: 'BMOOR_CRUD_VIEW_DELETE_CONNECTOR'
 			});
 		}

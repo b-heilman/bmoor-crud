@@ -2,7 +2,7 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-describe('src/structure/nexus.js', function(){
+describe('src/env/nexus.js', function(){
 	const {Nexus} = require('./nexus.js');
 
 	let nexus = null;
@@ -251,26 +251,8 @@ describe('src/structure/nexus.js', function(){
 			beforeEach(async function(){
 				nexus.setModel('test-13', {
 					fields: {
-						eins: {
-							create: false,
-							read: true,
-							update: false,
-							delete: true,
-							key: true
-						},
-						zwei: true,
-						drei: false,
-						fier: {
-							create: true,
-							read: true,
-							update: false
-						},
-						funf: {
-							create: true,
-							read: true,
-							update: false,
-							index: true
-						}
+						id: true,
+						value: true
 					}
 				});
 
@@ -294,33 +276,15 @@ describe('src/structure/nexus.js', function(){
 
 		describe('model described second', function(){
 			beforeEach(async function(){
-				nexus.installService('test-13', connector)
+				nexus.installService('test-13.5', connector)
 				.then(s => {
 					service = s;
 				});
 
-				await nexus.setModel('test-13', {
+				await nexus.setModel('test-13.5', {
 					fields: {
-						eins: {
-							create: false,
-							read: true,
-							update: false,
-							delete: true,
-							key: true
-						},
-						zwei: true,
-						drei: false,
-						fier: {
-							create: true,
-							read: true,
-							update: false
-						},
-						funf: {
-							create: true,
-							read: true,
-							update: false,
-							index: true
-						}
+						id: true,
+						value: true
 					}
 				});
 			});
@@ -355,26 +319,8 @@ describe('src/structure/nexus.js', function(){
 			beforeEach(async function(){
 				nexus.setModel('test-14', {
 					fields: {
-						eins: {
-							create: false,
-							read: true,
-							update: false,
-							delete: true,
-							key: true
-						},
-						zwei: true,
-						drei: false,
-						fier: {
-							create: true,
-							read: true,
-							update: false
-						},
-						funf: {
-							create: true,
-							read: true,
-							update: false,
-							index: true
-						}
+						id: true,
+						value: true
 					}
 				});
 
@@ -404,26 +350,8 @@ describe('src/structure/nexus.js', function(){
 			beforeEach(async function(){
 				nexus.setModel('test-15', {
 					fields: {
-						eins: {
-							create: false,
-							read: true,
-							update: false,
-							delete: true,
-							key: true
-						},
-						zwei: true,
-						drei: false,
-						fier: {
-							create: true,
-							read: true,
-							update: false
-						},
-						funf: {
-							create: true,
-							read: true,
-							update: false,
-							index: true
-						}
+						id: true,
+						value: true
 					}
 				});
 
@@ -447,7 +375,7 @@ describe('src/structure/nexus.js', function(){
 			});
 		});
 	});
-
+	
 	describe('::applyDecorator', function(){
 		let service = null;
 
@@ -461,26 +389,8 @@ describe('src/structure/nexus.js', function(){
 		beforeEach(async function(){
 			nexus.setModel('test-16', {
 				fields: {
-					eins: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
-					},
-					zwei: true,
-					drei: false,
-					fier: {
-						create: true,
-						read: true,
-						update: false
-					},
-					funf: {
-						create: true,
-						read: true,
-						update: false,
-						index: true
-					}
+					id: true,
+					value: true
 				}
 			});
 
@@ -530,26 +440,8 @@ describe('src/structure/nexus.js', function(){
 		beforeEach(async function(){
 			nexus.setModel('test-17', {
 				fields: {
-					eins: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
-					},
-					zwei: true,
-					drei: false,
-					fier: {
-						create: true,
-						read: true,
-						update: false
-					},
-					funf: {
-						create: true,
-						read: true,
-						update: false,
-						index: true
-					}
+					id: true,
+					value: true
 				}
 			});
 
@@ -789,7 +681,7 @@ describe('src/structure/nexus.js', function(){
 					);
 				} catch(ex){
 					failed = true;
-
+					console.log(ex);
 					expect(ex.code)
 					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_CREATE');
 				}
@@ -1193,7 +1085,7 @@ describe('src/structure/nexus.js', function(){
 		});
 	});
 
-	describe('::installComposite', function(){
+	describe('::installDocument', function(){
 	
 		let connector = null;
 	
@@ -1252,17 +1144,19 @@ describe('src/structure/nexus.js', function(){
 				'test-category_2': 'category-1'
 			}]);
 
-			const comp = await nexus.installComposite('comp-1', connector, {
+			await nexus.setComposite('comp-1', {
 				base: 'test-item',
 				key: 'id',
-				schema: {
-					'item': '$test-item.name',
-					'personName': '$test-item > $test-person.name',
-					'categoryName':  '$test-item > $test-category.name'
+				fields: {
+					'item': '.name',
+					'personName': '> $test-person.name',
+					'categoryName':  '> $test-category.name'
 				}
 			});
 
-			const res = await comp.read(1, {});
+			const doc = await nexus.installDocument('comp-1', connector);
+
+			const res = await doc.read(1, {});
 
 			expect(stubs.execute.getCall(0).args[0])
 			.to.deep.equal({
@@ -1430,40 +1324,46 @@ describe('src/structure/nexus.js', function(){
 					}
 				});
 
-				const comp1 = await nexus.installComposite('comp-1', connector, {
+				await nexus.setComposite('comp-1', {
 					base: 'test-3-hello',
 					key: 'id',
-					schema: {
-						'hello.name': '$test-3-hello.name',
-						'world.name': '$test-3-hello > $test-3-world.name'
+					fields: {
+						'hello.name': '.name',
+						'world.name': '> $test-3-world.name'
 					}
 				});
-				stubs.comp1 = sinon.spy(comp1, 'query');
+				const doc1 = await nexus.installDocument('comp-1', connector);
 
-				const comp2 = await nexus.installComposite('comp-2', connector, {
+				stubs.doc1 = sinon.spy(doc1, 'query');
+
+
+				await nexus.setComposite('comp-2', {
 					base: 'test-2-foo',
 					key: 'id',
-					schema: {
-						'sub': ['$test-2-foo > #comp-1'],
-						'fooName': '$test-2-foo.name',
-						'barName':  '$test-2-foo > $test-2-bar.name'
+					fields: {
+						'sub': ['> #comp-1'],
+						'fooName': '.name',
+						'barName':  '> $test-2-bar.name'
 					}
 				});
-				stubs.comp2 = sinon.spy(comp2, 'query');
+				const doc2 = await nexus.installDocument('comp-2', connector);
+
+				stubs.doc2 = sinon.spy(doc2, 'query');
 			});
 
 			it('should allow composites to chain calls', async function(){
-				const comp3 = await nexus.installComposite('comp-3', connector, {
+				await nexus.setComposite('comp-3', {
 					base: 'test-item',
 					key: 'id',
-					schema: {
-						'item': '$test-item.name',
-						'personName': '$test-item > $test-person.name',
-						'categoryName':  '$test-item > $test-category.name',
-						'link': '$test-item > $test-category.fooId > #comp-2'
+					fields: {
+						'item': '.name',
+						'personName': '> $test-person.name',
+						'categoryName':  '> $test-category.name',
+						'link': '> $test-category.fooId > #comp-2'
 					}
 				});
-
+				const doc3 = await nexus.installDocument('comp-3', connector);
+				
 				// comp-3
 				stubs.execute.onCall(0)
 				.resolves([{
@@ -1488,7 +1388,7 @@ describe('src/structure/nexus.js', function(){
 					'test-3-world_1': 'zwei'
 				}]);
 
-				const res = await comp3.read(1, {});
+				const res = await doc3.read(1, {});
 
 				expect(stubs.execute.getCall(0).args[0])
 				.to.deep.equal({
@@ -1553,9 +1453,9 @@ describe('src/structure/nexus.js', function(){
 					]
 				});
 
-				expect(stubs.comp2.getCall(0).args[0])
+				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
-					'@id$test-2-foo': 456
+					'.id$test-2-foo': 456
 				});
 
 				expect(stubs.execute.getCall(1).args[0])
@@ -1602,9 +1502,9 @@ describe('src/structure/nexus.js', function(){
 					]
 				});
 
-				expect(stubs.comp1.getCall(0).args[0])
+				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					'@fooId$test-3-hello': 123
+					'.fooId$test-3-hello': 123
 				});
 
 				expect(stubs.execute.getCall(2).args[0])
@@ -1668,16 +1568,18 @@ describe('src/structure/nexus.js', function(){
 			});
 
 			it('should allow composites to skip calls', async function(){
-				const comp3 = await nexus.installComposite('comp-3', connector, {
+				await nexus.setComposite('comp-3', {
 					base: 'test-item',
 					key: 'id',
-					schema: {
-						'item': '$test-item.name',
-						'personName': '$test-item > $test-person.name',
-						'categoryName':  '$test-item > $test-category.name',
-						'link': ['$test-item > $test-category.fooId > $test-2-foo > #comp-1']
+					fields: {
+						'item': '.name',
+						'personName': '> $test-person.name',
+						'categoryName':  '> $test-category.name',
+						'link': ['> $test-category.fooId > $test-2-foo > #comp-1']
 					}
 				});
+
+				const doc3 = await nexus.installDocument('comp-3', connector);
 
 				// comp-3
 				stubs.execute.onCall(0)
@@ -1695,7 +1597,7 @@ describe('src/structure/nexus.js', function(){
 					'test-3-world_1': 'zwei'
 				}]);
 
-				const res = await comp3.read(1, {});
+				const res = await doc3.read(1, {});
 
 				expect(stubs.execute.getCall(0).args[0])
 				.to.deep.equal({
@@ -1814,9 +1716,9 @@ describe('src/structure/nexus.js', function(){
 					]
 				});
 
-				expect(stubs.comp1.getCall(0).args[0])
+				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					'@id$test-2-foo.id>@fooId$test-3-hello': 456
+					'.id$test-2-foo.id>.fooId$test-3-hello': 456
 				});
 
 				expect(res)

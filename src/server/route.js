@@ -1,6 +1,6 @@
 
 class Route {
-	constructor(method, path, action, settings = {}){
+	constructor(path, method, action, settings = {}){
 		this.method = method;
 		this.path = path;
 		this.action = action;

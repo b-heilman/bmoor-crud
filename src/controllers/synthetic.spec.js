@@ -2,18 +2,18 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Nexus} = require('../structure/nexus.js');
+const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 
-describe('src/controller/document.js', function(){
-	const sut = require('./document.js');
+describe('src/controller/synthetic.js', function(){
+	const sut = require('./synthetic.js');
 
 	let nexus = null;
 	let stubs = null;
 	
 	let permissions = null;
 
-	let comp = null;
+	let doc = null;
 
 	beforeEach(async function(){
 		permissions = {};
@@ -34,14 +34,16 @@ describe('src/controller/document.js', function(){
 		});
 		await nexus.installService('test-user', {});
 
-		comp = await nexus.installComposite('test-ownership', {}, {
+		nexus.setComposite('test-ownership', {
 			base: 'test-user',
 			key: 'id',
-			schema: {
-				'id': '$test-user.id',
-				'name': '$test-user.name'
+			fields: {
+				'id': '.id',
+				'name': '.name'
 			}
 		});
+
+		doc = await nexus.installDocument('test-ownership', {});
 	});
 
 	afterEach(function(){
@@ -63,15 +65,15 @@ describe('src/controller/document.js', function(){
 
 		describe('::read', function(){
 			beforeEach(function(){
-				stubs.read = sinon.stub(comp, 'read');
+				stubs.read = sinon.stub(doc, 'read');
 			});
 
 			it('should reject if not readable', async function(){
-				const doc = new sut.Document(comp, {readable: false});
+				const synth = new sut.Synthetic(doc, {readable: false});
 
 				let failed = false;
 				try {
-					await doc.route(context);
+					await synth.route(context);
 				} catch(ex){
 					failed = true;
 
@@ -84,11 +86,11 @@ describe('src/controller/document.js', function(){
 			});
 
 			it('should reject if not read permission', async function(){
-				const doc = new sut.Document(comp, {readable: true, read:'can-read'});
+				const synth = new sut.Synthetic(doc, {readable: true, read:'can-read'});
 
 				let failed = false;
 				try {
-					await doc.route(context);
+					await synth.route(context);
 				} catch(ex){
 					failed = true;
 
@@ -101,7 +103,7 @@ describe('src/controller/document.js', function(){
 			});
 
 			it('should succeed if reading by id', async function(){
-				const doc = new sut.Document(comp, {readable: true, read:'can-read'});
+				const synth = new sut.Synthetic(doc, {readable: true, read:'can-read'});
 
 				context.params = {
 					id: 'req-1'
@@ -111,7 +113,7 @@ describe('src/controller/document.js', function(){
 
 				stubs.read.resolves({hello: 'world'});
 
-				const res = await doc.route(context);
+				const res = await synth.route(context);
 
 				const args = stubs.read.getCall(0).args;
 
@@ -126,11 +128,11 @@ describe('src/controller/document.js', function(){
 
 		describe('::query', function(){
 			beforeEach(function(){
-				stubs.query = sinon.stub(comp, 'query');
+				stubs.query = sinon.stub(doc, 'query');
 			});
 
 			it('should succeed if reading by query', async function(){
-				const doc = new sut.Document(comp, {readable: true, read:'can-read'});
+				const synth = new sut.Synthetic(doc, {readable: true, read:'can-read'});
 
 				context.query = {
 					id: 'req-1'
@@ -140,7 +142,7 @@ describe('src/controller/document.js', function(){
 
 				stubs.query.resolves({hello: 'world'});
 
-				const res = await doc.route(context);
+				const res = await synth.route(context);
 
 				const args = stubs.query.getCall(0).args;
 
@@ -163,15 +165,15 @@ describe('src/controller/document.js', function(){
 
 		describe('::push', function(){
 			beforeEach(function(){
-				stubs.push = sinon.stub(comp, 'push');
+				stubs.push = sinon.stub(doc, 'push');
 			});
 
 			it('should reject if not readable', async function(){
-				const doc = new sut.Document(comp, {writable: false});
+				const synth = new sut.Synthetic(doc, {writable: false});
 
 				let failed = false;
 				try {
-					await doc.route(context);
+					await synth.route(context);
 				} catch(ex){
 					failed = true;
 
@@ -184,11 +186,11 @@ describe('src/controller/document.js', function(){
 			});
 
 			it('should reject if not write permission', async function(){
-				const doc = new sut.Document(comp, {writable: true, write:'can-write'});
+				const synth = new sut.Synthetic(doc, {writable: true, write:'can-write'});
 
 				let failed = false;
 				try {
-					await doc.route(context);
+					await synth.route(context);
 				} catch(ex){
 					failed = true;
 
@@ -201,7 +203,7 @@ describe('src/controller/document.js', function(){
 			});
 
 			it('should succeed if writing', async function(){
-				const doc = new sut.Document(comp, {writable: true, read:'can-write'});
+				const synth = new sut.Synthetic(doc, {writable: true, read:'can-write'});
 
 				context.content = {
 					id: 'req-1'
@@ -211,7 +213,7 @@ describe('src/controller/document.js', function(){
 
 				stubs.push.resolves({hello: 'world'});
 
-				const res = await doc.route(context);
+				const res = await synth.route(context);
 
 				const args = stubs.push.getCall(0).args;
 

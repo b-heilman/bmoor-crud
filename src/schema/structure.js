@@ -3,6 +3,8 @@ const {Config} = require('bmoor/src/lib/config.js');
 const {makeGetter, makeSetter} = require('bmoor/src/core.js');
 const {apply} = require('bmoor/src/lib/error.js');
 
+const {Field} = require('./field.js');
+
 const types = new Config({
 	json: {
 		onInflate: function(tgt, src, setter, getter){
@@ -48,7 +50,7 @@ fields: {
 	[externalPath]: <fieldDef>
 }
 
-model: {
+structure: {
 	name: '',
 	type: '',
 	fields: <fields>
@@ -83,65 +85,78 @@ function actionExtend(op, incoming, outgoing, old, oldBefore = true){
 }
 
 function buildActions(actions, field){
-	const external = field.external;
-	const internal = field.alias || field.internal;
+	const path = field.path;
+	const reference = field.reference;
+	const storagePath = field.storagePath;
+	
+	const settings = field.settings;
 
-	if (field.onCreate){
-		actions.create = actionExtend(field.onCreate, external, external, actions.create);
+	if (settings.onCreate){
+		actions.create = actionExtend(settings.onCreate, path, path, actions.create);
 	}
 
-	if (field.onUpdate){
-		actions.update = actionExtend(field.onUpdate, external, external, actions.update);
+	if (settings.onUpdate){
+		actions.update = actionExtend(settings.onUpdate, path, path, actions.update);
 	}
 
 	// inflate are changes out of the database
-	if (field.onInflate){
-		actions.inflate = actionExtend(field.onInflate, internal, external, actions.inflate);
+	if (settings.onInflate){
+		actions.inflate = actionExtend(settings.onInflate, reference, path, actions.inflate);
 	}
 
 	// deflate are changes into the database
-	if (field.onDeflate){
-		actions.deflate = actionExtend(field.onDeflate, external, internal, actions.deflate);
+	if (settings.onDeflate){
+		actions.deflate = actionExtend(settings.onDeflate, path, storagePath, actions.deflate);
 	}
 
-	if (field.internal !== field.external){
-		actions.mutates = true;
+	if (path !== reference){
+		// data changes from internal to external
+		actions.mutatesInflate = true;
+	}
+
+	if (path !== storagePath){
+		// data changes from external to internal
+		actions.mutatesDeflate = true;
 	}
 
 	return actions;
 }
 
 function buildProperties(properties, field){
-	if (field.create){
-		properties.create.push(field.external);
+	const path = field.path;
+
+	const settings = field.settings;
+
+	if (settings.create){
+		properties.create.push(path);
 	}
 
-	if (field.read){
-		properties.read.push(field.external);
+	if (settings.read){
+		properties.read.push(path);
 	}
 
-	if (field.update){
-		properties.update.push(field.external);
+	if (settings.update){
+		properties.update.push(path);
 
-		if (field.updateType){
-			properties.updateType[field.external] = field.updateType;
+		if (settings.updateType){
+			properties.updateType[path] = settings.updateType;
 		}
 	}
 
-	if (field.index){
-		properties.index.push(field.external);
+	if (settings.index){
+		properties.index.push(path);
 	}
 
-	if (field.query){
-		properties.query.push(field.external);
+	if (settings.query){
+		properties.query.push(path);
 	}
 
-	if (field.key){
+	if (settings.key){
 		if (properties.key){
-			throw new Error(`bmoor-data.Model does not support compound keys: (${properties.key}, ${field.external})`);
+			throw new Error(`bmoor-data.Model does not support compound keys: (${properties.key}, ${path})`);
 		}
 
-		properties.key = field.external;
+		properties.key = path;
 	}
 
 	return properties;
@@ -150,19 +165,25 @@ function buildProperties(properties, field){
 function buildInflate(actions, fields){
 	const inflate = actions.inflate;
 
-	if (actions.mutates){
-		const mutator = fields.reduce((old, field) => {
-			if (field.onInflate){
+	const mutator = fields.reduce(
+		(old, field) => {
+			if (field.settings.onInflate){
+				// this means the mapping is handled by the function and is already
+				// being passed in
 				return old;
 			} else {
-				const getter = makeGetter(field.alias || field.internal);
-				const setter = makeSetter(field.external);
+				// alias - cleanup
+				const getter = makeGetter(field.reference);
+				const setter = makeSetter(field.path);
 
 				if (old){
 					return function(src){
 						const tgt = old(src);
 
-						setter(tgt, getter(src));
+						const val = getter(src);
+						if (val !== undefined){
+							setter(tgt, val);
+						}
 
 						return tgt;
 					};
@@ -170,24 +191,30 @@ function buildInflate(actions, fields){
 					return function(src){
 						const tgt = {};
 
-						setter(tgt, getter(src));
+						const val = getter(src);
+						if (val !== undefined){
+							setter(tgt, val);
+						}
 
 						return tgt;
 					};
 				}
 			}
-		}, null);
+		},
+		null
+	);
 
-		if (inflate){
-			return function mutateInflater(datum, ctx){
-				return inflate(mutator(datum), datum, ctx);
-			};
-		} else {
-			return mutator;
-		}
-	} else if (inflate){
-		return function inflater(datum, ctx){
-			return inflate(datum, datum, ctx);
+	if (inflate && mutator){
+		return function mutateInflaterFn(datum, ctx){
+			return inflate(mutator(datum), datum, ctx);
+		};
+	} else if (!mutator){
+		return function inflaterFn(datum, ctx){
+			return inflate({}, datum, ctx);
+		};
+	} else {
+		return function mutatorFn(datum/*, ctx*/){
+			return mutator(datum);
 		};
 	}
 }
@@ -195,19 +222,23 @@ function buildInflate(actions, fields){
 function buildDeflate(actions, fields){
 	const deflate = actions.deflate;
 
-	if (actions.mutates){
-		const mutator = fields.reduce((old, field) => {
-			if (field.onDeflate){
+	const mutator = fields.reduce(
+		(old, field) => {
+			if (field.settings.onDeflate){
 				return old;
 			} else {
-				const getter = makeGetter(field.external);
-				const setter = makeSetter(field.alias || field.internal);
+				const getter = makeGetter(field.path);
+				// alias - cleanup
+				const setter = makeSetter(field.storagePath);
 
 				if (old){
 					return function(src){
 						const tgt = old(src);
 
-						setter(tgt, getter(src));
+						const val = getter(src);
+						if (val !== undefined){
+							setter(tgt, val);
+						}
 
 						return tgt;
 					};
@@ -215,33 +246,49 @@ function buildDeflate(actions, fields){
 					return function(src){
 						const tgt = {};
 
-						setter(tgt, getter(src));
+						const val = getter(src);
+						if (val !== undefined){
+							setter(tgt, val);
+						}
 
 						return tgt;
 					};
 				}
 			}
-		}, null);
+		},
+		null
+	);
 
-		return function mutateDeflater(datum, ctx){
+	if (deflate && mutator){
+		return function mutateDeflaterFn(datum, ctx){
 			return deflate(mutator(datum), datum, ctx);
 		};
-	} else if (deflate){
-		return function deflater(datum, ctx){
-			return deflate(datum, datum, ctx);
+	} else if (!mutator){
+		return function deflaterFn(datum, ctx){
+			return deflate({}, datum, ctx);
+		};
+	} else {
+		return function mutatorFn(datum/*, ctx*/){
+			return mutator(datum);
 		};
 	}
 }
 
-class Schema {
-	constructor(){
+class Structure {
+	constructor(name){
+		this.name = name;
+	}
+
+	configure(settings){
+		this.settings = settings;
+		
 		this.fields = [];
 		this.index = {};
 		this.actions = null;
 		this.properties = null;
 	}
 
-	build(){
+	async build(){
 		if (!this.actions || !this.properties){
 			this.actions = this.fields.reduce(buildActions, {
 				mutates: false
@@ -262,36 +309,47 @@ class Schema {
 		}
 	}
 
-	/***
-	 * 
-	 ***/
-	addField(field){
-		if (field.type){
-			// this allows types to define onCreate, onRead, onUpdate, onDelete
-			Object.assign(field, types.get(field.type)||{});
-		}
-
-		this.index[field.external] = field;
+	assignField(field){
+		this.index[field.path] = field;
 		this.fields.push(field);
 
 		return field;
 	}
 
-	getField(external){
-		return this.index[external];
+	defineField(path, settings){
+		if (settings.type){
+			// this allows types to define onCreate, onRead, onUpdate, onDelete
+			Object.assign(settings, types.get(settings.type)||{});
+		}
+
+		return new Field(path, this, settings);
+	}
+
+	createField(path, settings){
+		return this.assignField(this.defineField(path, settings), settings);
+	}
+
+	async addField(path, settings){
+		return this.createField(path, settings);
+	}
+
+	getField(path){
+		return this.index[path];
 	}
 
 	getFields(){
 		return this.fields;
 	}
 
-	hasModel(model){
+	// TODO: I don't like this... structure is the model
+	// this feels wrong being here... seems like it's only needed by composite?
+	hasStructure(structureName){
 		let found = null;
 
 		for (let i = 0, c = this.fields.length; i < c && !found; i++){
 			const field = this.fields[i];
 
-			if (field.model.name === model){
+			if (field.structure.name === structureName){
 				found = field;
 			}
 		}
@@ -299,15 +357,13 @@ class Schema {
 		return found;
 	}
 
-	findField(model, internal){
-		let found = null;
+	hasField(searchField){
+		let found = false;
 
 		for (let i = 0, c = this.fields.length; i < c && !found; i++){
 			const field = this.fields[i];
 
-			if (field.internal === internal && field.model.name === model){
-				found = field;
-			}
+			found = (field === searchField || field.original === searchField);
 		}
 
 		return found;
@@ -317,7 +373,8 @@ class Schema {
 		return this.fields.reduce(
 			async (prom, field) => {
 				const agg = await prom;
-				const op = field[type];
+				const op = field.settings[type]; // I don't personally like this...
+				                                 // the model should handle this logic
 
 				if (op){
 					if (typeof(op) === 'string'){
@@ -330,12 +387,13 @@ class Schema {
 								code: 'BMOOR_CRUD_SCHEMA_TEST_FIELD',
 								context: {
 									type,
-									external: field.external,
-									model: field.model.name
+									external: field.path,
+									structure: field.structure.name
 								}
 							});
 
 							console.log(ex);
+
 							throw ex;
 						}
 					} else {
@@ -382,6 +440,15 @@ class Schema {
 
 		return this.actions.inflate(datum, ctx);
 	}
+
+	toJSON(){
+		return {
+			name: this,
+			fields: this.fields.map(
+				field => field.toJSON()
+			)
+		};
+	}
 }
 
 module.exports = {
@@ -391,5 +458,5 @@ module.exports = {
 	buildProperties,
 	buildInflate,
 	buildDeflate,
-	Schema
+	Structure
 };

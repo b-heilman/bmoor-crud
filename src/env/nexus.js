@@ -2,26 +2,44 @@
 const {Config} = require('bmoor/src/lib/config.js');
 const {create} = require('bmoor/src/lib/error.js');
 
-const {Model} = require('../model.js');
-const {Service} = require('../service.js');
-const {hook} = require('../hook.js');
+const {hook} = require('../actors/hook.js');
 const {Mapper} = require('../graph/mapper.js');
-const {Composite} = require('../synthetics/composite.js');
+
+const {Model} = require('../schema/model.js');
+const {Service} = require('../actors/service.js');
+const {Composite} = require('../schema/composite.js');
+const {Document} = require('../actors/document.js');
 
 const config = new Config({
-	timeout: 2000
+	timeout: 2000,
+	constructor: {
+		model: Model,
+		service: Service,
+		composite: Composite,
+		document: Document
+	}
 });
 
+const waiting = [];
 async function secure(prom, label){
+	waiting.push(label);
+
 	return new Promise((resolve, reject) => {
 		const timeout = config.get('timeout');
 
 		const clear = setTimeout(function(){
+			console.log('nexus stack', JSON.stringify(waiting, null, 2));
+
 			reject(new Error('lookup timed out: '+label));
 		}, timeout);
 
 		prom.then(
 			success => {
+				const index = waiting.indexOf(label);
+				if (index > -1) {
+					waiting.splice(index, 1);
+				}
+
 				clearTimeout(clear);
 				resolve(success);
 			},
@@ -33,65 +51,105 @@ async function secure(prom, label){
 	});
 }
 
+function getDefined(nexus, type, constructors, ref, args){
+	let model = nexus.getDefined(type, ref);
+
+	if (!model){
+		model = new (constructors.get(type))(...args);
+
+		nexus.setDefined(type, ref, model);
+	}
+
+	return model;
+}
+
+async function setSettings(nexus, type, target, settings, ref){
+	settings.nexus = nexus;
+
+	await target.configure(settings);
+	await nexus.setConfigured(type, ref, target);
+
+	return target;
+}
+
+async function loadTarget(nexus, type, ref){
+	let entity = nexus.getConfigured(type, ref);
+
+	if (!entity){
+		entity = await nexus.awaitConfigured(type, ref);
+	}
+
+	return entity;
+}
+
+// TODO: a better way to debug the stack when something locks us
 class Nexus {
-	constructor(){
-		this.ether = new Config({
-			models: {},
-			services: {},
-			composites: {}
-		});
+	constructor(constructors){
+		this.constructors = constructors || config.sub('constructor');
+
+		this.ether = new Config({});
 		this.mapper = new Mapper();
 	}
 
+	getDefined(type, ref){
+		return this.ether.get(`defined.${type}.${ref}`);
+	}
+
+	setDefined(type, ref, value){
+		return this.ether.set(`defined.${type}.${ref}`, value);
+	}
+
+	getConfigured(type, ref){
+		return this.ether.get(`configured.${type}.${ref}`);
+	}
+
+	setConfigured(type, ref, value){
+		return this.ether.set(`configured.${type}.${ref}`, value);
+	}
+
+	async awaitConfigured(type, ref){
+		const path = `configured.${type}.${ref}`;
+
+		return secure(
+			this.ether.promised(path, res => res),
+			path
+		);
+	}
+
+	getModel(ref){
+		return getDefined(this, 'model', this.constructors, ref, [ref]);
+	}
+
 	async setModel(ref, settings){
-		const path = 'models.'+ref;
-		const model = new Model(ref, settings);
+		const model = await setSettings(this, 'model', this.getModel(ref), settings, ref);
 
 		this.mapper.addModel(model);
-
-		await this.ether.set(path, model);
 
 		return model;
 	}
 
 	async loadModel(ref){
-		const modelPath = 'models.'+ref;
-		
-		let model = this.ether.get(modelPath);
-
-		if (!model){
-			model = await secure(
-				this.ether.promised(modelPath, model => model),
-				modelPath
-			);
-		}
-
-		return model;
+		return loadTarget(this, 'model', ref);
 	}
 
-	async installService(ref, connector){
-		const model = await this.loadModel(ref);
+	getService(ref){
+		return getDefined(this, 'service', this.constructors, ref, [this.getModel(ref)]);
+	}
 
-		const service = new Service(model, connector);
+	async installService(ref, connector, settings = {}){
+		await this.loadModel(ref);
 
-		await this.ether.set('services.'+ref, service);
+		const service = this.getService(ref);
+
+		await service.configure(connector, settings);
+
+		await this.setConfigured('service', ref, service);
 
 		return service;
 	}
 
 	async loadService(ref){
-		const servicePath = 'services.'+ref;
-
-		let service = this.ether.get(servicePath);
-
-		if (!service){
-			service = await secure(
-				this.ether.promised(servicePath, service => service),
-				servicePath
-			);
-		}
-
-		return service;
+		return loadTarget(this, 'service', ref);
 	}
 
 	async applyDecorator(ref, decoration){
@@ -140,7 +198,7 @@ class Nexus {
 						status: 403,
 						code: 'BMOOR_CRUD_NEXUS_ALLOW_CREATE',
 						context: {
-							model: service.schema.name
+							model: service.structure.name
 						}
 					});
 				}
@@ -160,7 +218,7 @@ class Nexus {
 						code: 'BMOOR_CRUD_NEXUS_ALLOW_UPDATE',
 						context: {
 							id,
-							model: service.schema.name
+							model: service.structure.name
 						}
 					});
 				}
@@ -180,7 +238,7 @@ class Nexus {
 						code: 'BMOOR_CRUD_NEXUS_ALLOW_DELETE',
 						context: {
 							id,
-							model: service.schema.name
+							model: service.structure.name
 						}
 					});
 				}
@@ -198,7 +256,7 @@ class Nexus {
 						status: 403,
 						code: 'BMOOR_CRUD_NEXUS_CAN_CREATE',
 						context: {
-							model: service.schema.name
+							model: service.structure.name
 						}
 					});
 				}
@@ -214,7 +272,7 @@ class Nexus {
 						code: 'BMOOR_CRUD_NEXUS_CAN_UPDATE',
 						context: {
 							id,
-							model: service.schema.name
+							model: service.structure.name
 						}
 					});
 				}
@@ -230,7 +288,7 @@ class Nexus {
 						code: 'BMOOR_CRUD_NEXUS_CAN_DELETE',
 						context: {
 							id,
-							model: service.schema.name
+							model: service.structure.name
 						}
 					});
 				}
@@ -240,32 +298,73 @@ class Nexus {
 		return this.applyHook(ref, canCfg);
 	}
 
-	async installComposite(ref, connector, settings){
-		const composite = new Composite(this, connector, settings);
+	getComposite(ref){
+		return getDefined(this, 'composite', this.constructors, ref, [ref]);
+	}
 
-		await composite.ready;
-
-		await this.ether.set('composites.'+ref, composite);
-
-		return composite;
+	async setComposite(ref, settings){
+		return setSettings(this, 'composite', this.getComposite(ref), settings, ref);
 	}
 
 	async loadComposite(ref){
-		const compositePath = 'composites.'+ref;
+		return loadTarget(this, 'composite', ref);
+	}
 
-		let composite = this.ether.get(compositePath);
+	getDocument(ref){
+		return getDefined(this, 'document', this.constructors, ref, [this.getComposite(ref)]);
+	}
 
-		if (!composite){
-			composite = await secure(
-				this.ether.promised(compositePath, composite => composite),
-				compositePath
-			);
-		}
+	async installDocument(ref, connector){
+		await this.loadComposite(ref);
 
-		return composite;
+		const doc = this.getDocument(ref);
+		
+		await doc.configure(connector);
+
+		await this.setConfigured('document', ref, doc);
+		
+		return doc;
+	}
+
+	async loadDocument(ref){
+		return loadTarget(this, 'document', ref);
+	}
+
+	// I'm not putting loads below because nothing should be requiring these...
+	async getGuard(ref){
+		return getDefined(this, 'guard', this.constructors, ref, [ref]);
+	}
+
+	async setGuard(ref, settings){
+		return setSettings(this, 'composite', this.getGuard(ref), settings, ref);
+	}
+
+	async getAction(ref){
+		return getDefined(this, 'action', this.constructors, ref, [ref]);
+	}
+
+	async setAction(ref, settings){
+		return setSettings(this, 'action', this.getAction(ref), settings, ref);
+	}
+
+	async getUtility(ref){
+		return getDefined(this, 'utility', this.constructors, ref, [ref]);
+	}
+
+	async setUtility(ref, settings){
+		return setSettings(this, 'utility', this.getAction(ref), settings, ref);
+	}
+
+	async getSynthetic(ref){
+		return getDefined(this, 'synthetic', this.constructors, ref, [ref]);
+	}
+
+	async setSynthetic(ref, settings){
+		return setSettings(this, 'synthetic', this.getAction(ref), settings, ref);
 	}
 }
 
 module.exports = {
+	config,
 	Nexus
 };

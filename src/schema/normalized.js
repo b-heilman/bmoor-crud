@@ -4,23 +4,23 @@ const {create} = require('bmoor/src/lib/error.js');
 const {Network} = require('../graph/network.js');
 
 async function getDatum(service, query, ctx){
-	let key = service.schema.getKey(query);
+	let key = service.structure.getKey(query);
 
 	// on update, a user might send a query object as the key if they are updating the name
 	// in the body but not referencing by the id
 	if (typeof(key) === 'object'){
 		query = key;
 
-		key = service.schema.getKey(query);
+		key = service.structure.getKey(query);
 	}
 
 	if (key){
 		// if you make key === 0, you're a horrible person
 		return await service.read(key, ctx);
 	} else {
-		if (service.schema.hasIndex()){
+		if (service.structure.hasIndex()){
 			const res = await service.query(
-				service.schema.clean('index',query), 
+				service.structure.clean('index',query), 
 				ctx
 			);
 
@@ -39,18 +39,46 @@ async function install(action, service, master, mapper, ctx){
 	if (action.$type === 'read'){
 		// either search by key, or the whop thing sent in
 		datum = await getDatum(service, action, ctx);
+
+		if (!datum){
+			throw create(`unable to read expected datum of type ${service.structure.name}`, {
+				status: 406,
+				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_READ',
+				context: {
+					name: service.structure.name,
+					action
+				}
+			});
+		}
 	} else if (action.$type === 'update'){
 		// allows you to do something like update by name, but also change the name by overloading
 		// the key
 		const current = await getDatum(service, action, ctx);
 
-		datum = await service.update(service.schema.getKey(current), action, ctx);
-	} else if (action.$type === 'create-or-update'){
+		if (!current){
+			throw create(`unable to update expected datum of type ${service.structure.name}`, {
+				status: 406,
+				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_UPDATE',
+				context: {
+					name: service.structure.name,
+					action
+				}
+			});
+		}
+
+		datum = await service.update(service.structure.getKey(current), action, ctx);
+	} else if (action.$type === 'update-create'){
 		datum = await getDatum(service, action, ctx);
 
 		if (datum){
-			await service.update(service.schema.getKey(datum), action, ctx);
+			await service.update(service.structure.getKey(datum), action, ctx);
 		} else {
+			datum = await service.create(action, ctx);
+		}
+	}  else if (action.$type === 'read-create'){
+		datum = await getDatum(service, action, ctx);
+
+		if (!datum){
 			datum = await service.create(action, ctx);
 		}
 	} else {
@@ -58,7 +86,8 @@ async function install(action, service, master, mapper, ctx){
 	}
 
 	// when this thing is processed, update any references to it
-	mapper.getByDirection(service.schema.name, 'incoming').forEach(
+	mapper.getByDirection(service.structure.name, 'incoming')
+	.forEach(
 		link => master.process(link.name, 
 			target => {
 				if (target.getField(link.remote) === ref){
@@ -292,8 +321,10 @@ async function deflate(schema, nexus, ctx){
 
 	const network = new Network(nexus.mapper);
 
-	const order = network.requirements(references, 1)
-		.map(link => link.name);
+	const order = network.requirements(references, 1, {
+		join: schema.join,
+		stub: schema.stub
+	}).map(link => link.name);
 
 	if (order.length !== references.length){
 		throw new Error('magical pivot tables are not yet supported');
@@ -360,21 +391,32 @@ async function inflate(service, query, nexus, ctx){
 		}, 
 		{}
 	);
-	const stubModels = (query.stub||[]).reduce((agg, table) => {
-		agg[table] = true;
+	const stubModels = (query.stub||[]).reduce( // read
+		(agg, table) => {
+			agg[table] = true;
 
-		return agg;
-	}, {});
+			return agg;
+		},
+		{}
+	);
+	const ensureModels = (query.ensure||[]).reduce( // read-create, no update
+		(agg, table) => {
+			agg[table] = true;
+
+			return agg;
+		},
+		{}
+	);
 	
 	let c = 0;
 	async function getLooking(serviceName, key){
 		const service = await nexus.loadService(serviceName);
-		let s = looking[service.schema.name];
+		let s = looking[service.structure.name];
 
 		if (!s){
 			s = {};
 
-			looking[service.schema.name] = s;
+			looking[service.structure.name] = s;
 		}
 
 		let ref = s[key];
@@ -393,16 +435,16 @@ async function inflate(service, query, nexus, ctx){
 		};
 	}
 
-	async function addDatum(service, datum, type = 'create-or-update'){
-		let s = known[service.schema.name];
+	async function addDatum(service, datum, type = 'update-create'){
+		let s = known[service.structure.name];
 
 		if (!s){
 			s = {};
 
-			known[service.schema.name] = s;
+			known[service.structure.name] = s;
 		}
 
-		const field = service.schema.properties.key;
+		const field = service.structure.properties.key;
 		const key = datum[field];
 
 		delete datum[field];
@@ -419,7 +461,7 @@ async function inflate(service, query, nexus, ctx){
 			rtn = datum;
 			s[key] = rtn;
 
-			await getLooking(service.schema.name, key);
+			await getLooking(service.structure.name, key);
 
 			return {
 				current: rtn,
@@ -434,15 +476,16 @@ async function inflate(service, query, nexus, ctx){
 
 		const datums = await getDatums(service, loading.query, ctx);
 
-		const stubbed = !!stubModels[service.schema.name];
+		const stubbed = !!stubModels[service.structure.name];
+		const ensured = !!ensureModels[service.structure.name];
 
 		await Promise.all(
 			datums.map(async (datum) => { // jshint ignore:line
-				const key = service.schema.getKey(datum);
+				const key = service.structure.getKey(datum);
 				const {current, isNew} = await addDatum(
 					service,
 					datum,
-					stubbed ? 'read' : 'create-or-update'
+					ensured ? 'read-create' : (stubbed ? 'read' : 'update-create')
 				);
 
 				if (!isNew){
@@ -453,7 +496,7 @@ async function inflate(service, query, nexus, ctx){
 				if (!stubbed){
 					// always load outgoing link
 					await Promise.all(
-						nexus.mapper.getByDirection(service.schema.name, 'outgoing')
+						nexus.mapper.getByDirection(service.structure.name, 'outgoing')
 						.map(async (link) => { // jshint ignore:line
 							const fk = current[link.local];
 
@@ -473,13 +516,13 @@ async function inflate(service, query, nexus, ctx){
 						})
 					);
 
-					const {ref} = await getLooking(service.schema.name, key);
+					const {ref} = await getLooking(service.structure.name, key);
 					current.$ref = ref;
 
 					// optionally load incoming links
-					const lookup = joinModels[service.schema.name];
+					const lookup = joinModels[service.structure.name];
 					if (lookup){
-						nexus.mapper.getByDirection(service.schema.name, 'incoming')
+						nexus.mapper.getByDirection(service.structure.name, 'incoming')
 						.forEach(link => {
 							if (lookup[link.name]){
 								toProcess.push({
@@ -527,15 +570,15 @@ async function diagram(service, keys, nexus, ctx){
 	);
 	
 	function addDatum(service, datum){
-		let s = known[service.schema.name];
+		let s = known[service.structure.name];
 		
 		if (!s){
 			s = {};
 
-			known[service.schema.name] = s;
+			known[service.structure.name] = s;
 		}
 
-		const key = service.schema.getKey(datum);
+		const key = service.structure.getKey(datum);
 
 		if (!s[key]){
 			s[key] = datum;
@@ -553,7 +596,7 @@ async function diagram(service, keys, nexus, ctx){
 
 		results.forEach(datum => { // jshint ignore:line
 			if (addDatum(service, datum)){ 
-				nexus.mapper.getByDirection(service.schema.name, 'outgoing')
+				nexus.mapper.getByDirection(service.structure.name, 'outgoing')
 				.forEach(link => {
 					const s = link.name;
 					const r = link.remote;

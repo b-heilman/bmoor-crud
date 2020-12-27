@@ -1,7 +1,7 @@
 
 const expect = require('chai').expect;
 
-const {Model} = require('../model.js');
+const {Model} = require('../schema/model.js');
 const {Mapper} = require('./mapper.js');
 
 describe('src/mapper.js', function(){
@@ -138,8 +138,10 @@ describe('src/mapper.js', function(){
 			mapper = new Mapper();
 		});
 
-		it('pull in a singlar value', function(){
-			const model1 = new Model('test-1', {
+		it('pull in a singlar value', async function(){
+			const model1 = new Model('test-1');
+
+			await model1.configure({
 				fields: {
 					eins: {
 						update: false
@@ -154,7 +156,9 @@ describe('src/mapper.js', function(){
 				}
 			});
 
-			const model2 = new Model('test-2', {
+			const model2 = new Model('test-2');
+
+			await model2.configure({
 				fields: {
 					id: {
 						update: false
@@ -162,7 +166,9 @@ describe('src/mapper.js', function(){
 				}
 			});
 
-			const model3 = new Model('test-3', {
+			const model3 = new Model('test-3');
+
+			await model3.configure({
 				fields: {
 					id: {
 						update: false
@@ -219,8 +225,10 @@ describe('src/mapper.js', function(){
 			mapper = new Mapper();
 		});
 
-		it('pull in a singlar value', function(){
-			const model1 = new Model('test-1', {
+		it('pull in a singlar value', async function(){
+			const model1 = new Model('test-1');
+
+			await model1.configure({
 				fields: {
 					eins: {
 						update: false
@@ -256,7 +264,8 @@ describe('src/mapper.js', function(){
 				}
 			});
 
-			const model2 = new Model('test-2', {
+			const model2 = new Model('test-2');
+			await model2.configure({
 				fields: {
 					id: {
 						update: false
@@ -264,7 +273,8 @@ describe('src/mapper.js', function(){
 				}
 			});
 
-			const model3 = new Model('test-3', {
+			const model3 = new Model('test-3');
+			model3.configure({
 				fields: {
 					id: {
 						update: false

@@ -50,7 +50,7 @@ describe('src/graph/network', function(){
 			expect(
 				network.search(['table-1','table-3','table-4'], 3)
 				.map(t => t.name)
-			).to.deep.equal(['table-1', 'table-3', 'table-4', 'table-2']);
+			).to.deep.equal(['table-1', 'table-3', 'table-4']);
 		});
 
 		it('should pick the shortest route - 3', function(){
@@ -72,7 +72,71 @@ describe('src/graph/network', function(){
 
 			expect(failed)
 			.to.equal(true);
+		});
 
+		describe('with stub', function(){
+			it('should pick the correct route', function(){
+				const mapper = new Mapper();
+
+				mapper.addLink('table-1', 'id', 'table-2', 'eins');
+				mapper.addLink('table-2', 'id', 'table-3', 'zwei');
+				mapper.addLink('table-3', 'id', 'table-4', 'drei');
+				mapper.addLink('table-4', 'id', 'table-5', 'fier');
+				mapper.addLink('table-1', 'id', 'table-5', 'eins');
+
+				const network = new Network(mapper);
+
+				expect(
+					network.search(['table-1','table-3'], 3, {
+						stub: ['table-2']
+					}).map(t => t.name)
+				).to.deep.equal(['table-1', 'table-3', 'table-5', 'table-4']);
+			});
+		});
+
+		describe('with with join', function(){
+			it('should link correctly in the short way', function(){
+				const mapper = new Mapper();
+
+				mapper.addLink('table-1', 'id', 'table-2', 'eins');
+				mapper.addLink('table-2', 'id', 'table-3', 'zwei');
+				mapper.addLink('table-3', 'id', 'table-4', 'drei');
+				mapper.addLink('table-2', 'id', 'table-4', 'zwei');
+				mapper.addLink('table-4', 'id', 'table-5', 'fier');
+				mapper.addLink('table-1', 'id', 'table-5', 'eins');
+
+				const network = new Network(mapper);
+
+				expect(
+					network.search(['table-1','table-3'], 3, {
+						join: {
+							'table-4': ['table-3'] // only table-4 can link to table-3
+						}
+					}).map(t => t.name)
+				).to.deep.equal(['table-1', 'table-3', 'table-2', 'table-4']);
+			});
+
+			it('should link correctly in the long way', function(){
+				const mapper = new Mapper();
+
+				mapper.addLink('table-1', 'id', 'table-2', 'eins');
+				mapper.addLink('table-2', 'id', 'table-3', 'zwei');
+				mapper.addLink('table-3', 'id', 'table-4', 'drei');
+				mapper.addLink('table-2', 'id', 'table-4', 'zwei');
+				mapper.addLink('table-4', 'id', 'table-5', 'fier');
+				mapper.addLink('table-1', 'id', 'table-5', 'eins');
+
+				const network = new Network(mapper);
+
+				expect(
+					network.search(['table-1','table-3'], 3, {
+						join: {
+							'table-4': ['table-3'], // only table-4 can link to table-3
+							'table-3': ['table-2']
+						}
+					}).map(t => t.name)
+				).to.deep.equal(['table-1', 'table-3', 'table-5', 'table-4']);
+			});
 		});
 	});
 

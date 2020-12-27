@@ -1,10 +1,10 @@
 
 const expect = require('chai').expect;
 
-const {Nexus} = require('./structure/nexus.js');
-const {Complex} = require('./complex.js');
+const {Nexus} = require('../env/nexus.js');
+const {Composite} = require('./composite.js');
 
-describe('src/complex.js', function(){
+describe('src/schema/composite.js', function(){
 	let nexus = null;
 
 	beforeEach(async function(){
@@ -151,15 +151,20 @@ describe('src/complex.js', function(){
 
 	describe('::getQuery', function(){
 		it('should work', async function(){
-			const lookup = new Complex(nexus);
+			const lookup = new Composite('foo-bar');
 
-			await lookup.addField('eins', 'test-1', 'name');
-			await lookup.addField('zwei', 'test-2', 'name');
-			await lookup.addField('drei', 'test-2', 'title');
-			await lookup.addField('fier', 'test-3', 'name');
+			await lookup.configure({
+				base: 'test-1',
+				fields: {
+					eins: '.name',
+					zwei: '> $test-2.name',
+					drei: '> $test-2.title',
+					fier: '> $test-2 > $test-3.name'
+				},
+				nexus
+			});
 
-			lookup.setConnection('test-2', 'test-1');
-			lookup.setConnection('test-3', 'test-2');
+			await lookup.link();
 
 			const res = await lookup.getQuery({
 				'$test-1.name': {
@@ -238,15 +243,20 @@ describe('src/complex.js', function(){
 		});
 
 		it('should succeed with a basic alignment', async function(){
-			const lookup = new Complex(nexus);
+			const lookup = new Composite('foo-bar');
 
-			await lookup.addField('eins', 'test-1', 'name');
-			await lookup.addField('zwei', 'test-2', 'name');
-			await lookup.addField('drei', 'test-2', 'title');
-			await lookup.addField('fier', 'test-3', 'name');
+			await lookup.configure({
+				base: 'test-1',
+				fields: {
+					eins: '.name',
+					zwei: '> $test-2.name',
+					drei: '> $test-2.title',
+					fier: '> $test-2 > $test-3.name'
+				},
+				nexus
+			});
 
-			lookup.setConnection('test-2', 'test-1');
-			lookup.setConnection('test-3', 'test-2');
+			await lookup.link();
 
 			expect(await lookup.getQuery())
 			.to.deep.equal({
@@ -311,34 +321,25 @@ describe('src/complex.js', function(){
 		});
 
 		it('should succeed with a alias alignment', async function(){
-			const lookup = new Complex(nexus);
+			const lookup = new Composite('foo-bar');
 
-			await lookup.addField('eins', 'test-1', 'name', {
-				series: 'creator'
-			});
-			await lookup.addField('zwei', 'test-1', 'title', {
-				series: 'creator'
-			});
-
-			await lookup.addField('drei', 'test-5', 'title');
-
-			await lookup.addField('fier', 'test-1', 'name', {
-				series: 'owner'
-			});
-			await lookup.addField('funf', 'test-1', 'title', {
-				series: 'owner'
+			await lookup.configure({
+				base: 'test-5',
+				fields: {
+					eins: '.creator1Id > $creator:test-1.name',
+					zwei: '.creator1Id > $creator:test-1.title',
+					drei: '.title',
+					fier: '.owner1Id > ?$owner:test-1.name',
+					funf: '.owner1Id > ?$owner:test-1.title'
+				},
+				nexus
 			});
 
-			lookup.setConnection('test-5', 'test-1', 'creator1Id', {
-				targetSeries: 'creator'
-			});
-			lookup.setConnection('test-5', 'test-1', 'owner1Id', {
-				targetSeries: 'owner'
-			});
+			await lookup.link();
 			
 			expect(await lookup.getQuery({
-				'@id$creator': 123,
-				'@foo$test-6>@id$test-5': 456
+				'.id$creator': 123,
+				'.foo$test-6>.id$test-5': 456
 			}))
 			.to.deep.equal({
 				'method': 'read',
@@ -400,7 +401,8 @@ describe('src/complex.js', function(){
 								'remote': 'owner1Id',
 								'name': 'test-5',
 								'local': 'id'
-							}]
+							}],
+							optional: true
 						}
 					},
 					{
@@ -426,22 +428,20 @@ describe('src/complex.js', function(){
 	
 	describe('::getInflater', function(){
 		it('should work', async function(){
-			const lookup = new Complex(nexus);
+			const lookup = new Composite('blah');
 
-			/*
-			{
-				eins: $test-1.name as test-1_0,
-				zwei: $test-2.name as test-2_0,
-				drei: $test-2.title as test-2_1,
-				fier: $test-3.name as test-3_0
-			}
-			*/
-			await lookup.addField('eins', 'test-1', 'name');
-			await lookup.addField('zwei', 'test-2', 'name');
-			await lookup.addField('drei', 'test-2', 'title');
-			await lookup.addField('fier', 'test-3', 'name');
+			await lookup.configure({
+				base: 'test-1',
+				fields: {
+					eins: '.name',
+					zwei: '> $test-2.name',
+					drei: '> $test-2.title',
+					fier: '> $test-2 > $test-3.name'
+				},
+				nexus
+			});
 
-			const inflate = lookup.getInflater({});
+			const inflate = await lookup.getInflater({});
 
 			const datum = inflate({
 				'test-1_0': 'field-1',
@@ -460,22 +460,20 @@ describe('src/complex.js', function(){
 		});
 
 		it('should work with types', async function(){
-			const lookup = new Complex(nexus);
+			const lookup = new Composite('blah');
 
-			/*
-			{
-				eins: $test-1.name as test-1_0,
-				zwei: $test-2.name as test-2_0,
-				drei: $test-2.title as test-2_1,
-				fier: $test-3.name as test-3_0
-			}
-			*/
-			await lookup.addField('eins', 'test-1', 'json');
-			await lookup.addField('zwei', 'test-2', 'json');
-			await lookup.addField('drei', 'test-2', 'title');
-			await lookup.addField('fier', 'test-3', 'name');
+			await lookup.configure({
+				base: 'test-1',
+				fields: {
+					eins: '.json',
+					zwei: '> $test-2.json',
+					drei: '> $test-2.title',
+					fier: '> $test-2 > $test-3.name'
+				},
+				nexus
+			});
 
-			const inflate = lookup.getInflater({});
+			const inflate = await lookup.getInflater({});
 
 			const datum = inflate({
 				'test-1_0': '{"foo":"bar"}',
@@ -494,6 +492,176 @@ describe('src/complex.js', function(){
 				},
 				drei: 'field-3',
 				fier: 'field-4'
+			});
+		});
+	});
+
+	describe('schema', function(){
+		it('should define the correct properties', async function(){
+			const comp = new Composite('test');
+
+			await comp.configure({
+				base: 'test-2',
+				key: 'id',
+				fields: {
+					name: '.name',
+					foo: {
+						bar: '.title'
+					}
+				},
+				nexus
+			});
+
+			await comp.link();
+
+			const test = comp.fields.map(
+				field => field.toJSON()
+			);
+
+			expect(test)
+			.to.deep.equal([{
+				path: 'name',
+				storage: {
+					schema: 'test-2',
+					path: 'name'
+				},
+				usage: {
+					type: undefined,
+					description: undefined
+				}
+			}, {
+				path: 'foo.bar',
+				storage: {
+					schema: 'test-2',
+					path: 'title'
+				},
+				usage: {
+					type: undefined,
+					description: undefined
+				}
+			}]);
+		});
+
+		describe('extends', function(){
+			it('should pull in all the extended fields', async function(){
+				await nexus.setComposite('base', {
+					base: 'test-1',
+					key: 'id',
+					fields: {
+						name: '.name'
+					}
+				});
+
+				const comp = new Composite('extends');
+
+				await comp.configure({
+					base: 'test-2',
+					key: 'id',
+					extends: 'base',
+					fields: {
+						myName: '.name'
+					},
+					nexus
+				});
+
+				await comp.link();
+
+				const test = comp.fields.map(
+					field => field.toJSON()
+				);
+
+				expect(test)
+				.to.deep.equal([{
+					path: 'myName',
+					storage: {
+						schema: 'test-2',
+						path: 'name'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
+				}, {
+					path: 'name',
+					storage: {
+						schema: 'test-1',
+						path: 'name'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
+				}]);
+			});
+
+			it('should be able to extend an extension', async function(){
+				await nexus.setComposite('base', {
+					base: 'test-1',
+					key: 'id',
+					fields: {
+						name: '.name'
+					}
+				});
+
+				await nexus.setComposite('extends', {
+					base: 'test-2',
+					key: 'id',
+					extends: 'base',
+					fields: {
+						myName: '.name'
+					}
+				});
+
+				const comp = new Composite('uber-extends');
+
+				await comp.configure({
+					base: 'test-3',
+					key: 'id',
+					extends: 'extends',
+					fields: {
+						reallyMyName: '.name'
+					},
+					nexus
+				});
+
+				await comp.link();
+
+				const test = comp.fields.map(
+					field => field.toJSON()
+				);
+
+				expect(test)
+				.to.deep.equal([{
+					path: 'reallyMyName',
+					storage: {
+						schema: 'test-3',
+						path: 'name'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
+				},{
+					path: 'myName',
+					storage: {
+						schema: 'test-2',
+						path: 'name'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
+				}, {
+					path: 'name',
+					storage: {
+						schema: 'test-1',
+						path: 'name'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
+				}]);
 			});
 		});
 	});
