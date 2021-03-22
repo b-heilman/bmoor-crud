@@ -1,6 +1,6 @@
 {
   "name": "bmoor-crud",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "author": "Brian Heilman <das.ist.junk@gmail.com>",
   "description": "A way of managing models and routes",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "bmoor": "^0.8.12",
     "bmoor-data": "^0.10.3",
     "bmoor-schema": "^0.8.1",
-    "knex": "^0.21.6",
+    "knex": "^0.95.2",
     "mysql": "^2.18.1",
     "rxjs": "^6.6.3"
   },
@@ -26,7 +26,7 @@
     "bmoor-gulp": "^0.1.0",
     "chai": "^4.2.0",
     "gulp": "^4.0.2",
-    "gulp-jsdoc3": "0.3.0",
+    "gulp-jsdoc3": "^3.0.0",
     "gulp-jshint": "^2.1.0",
     "jsdoc": "^3.6.6",
     "jshint": "^2.12.0",
