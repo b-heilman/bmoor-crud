@@ -11,36 +11,52 @@ class Gateway {
 		this.installations = new Config({});
 	}
 
+	async getSettings(directory){
+		return Promise.all(
+			(await loader.getFiles(directory)).map(
+				async (file) => {
+					file.settings = await loader.getSettings(file.path);
+
+					return file;
+				}
+			)
+		);
+	}
+
+	async installGuards(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('guard')))
+			.map(file => this.nexus.setGuard(file.name, file.settings))
+		);
+	}
+
+	async installActions(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('action')))
+			.map(file => this.nexus.setAction(file.name, file.settings))
+		);
+	}
+
+	async installUtilities(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('utility')))
+			.map(file => this.nexus.setUtility(file.name, file.settings))
+		);
+	}
+
+	async installSynthetics(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('synthetic')))
+			.map(file => this.nexus.setSynthetic(file.name, file.settings))
+		);
+	}
+
 	async install(directories){
 		const [guards, actions, utilities, synthetics] = await Promise.all([
-			Promise.all((await loader.getFiles(directories.get('guard'))).map(
-				async (file) => {
-					const settings = await loader.getSettings(file.path);
-
-					return this.nexus.setGuard(file.name, settings);
-				}
-			)),
-			Promise.all((await loader.getFiles(directories.get('action'))).map(
-				async (file) => {
-					const settings = await loader.getSettings(file.path);
-
-					return this.nexus.setAction(file.name, settings);
-				}
-			)),
-			Promise.all((await loader.getFiles(directories.get('utility'))).map(
-				async (file) => {
-					const settings = await loader.getSettings(file.path);
-
-					return this.nexus.setUtility(file.name, settings);
-				}
-			)),
-			Promise.all((await loader.getFiles(directories.get('synthetic'))).map(
-				async (file) => {
-					const settings = await loader.getSettings(file.path);
-
-					return this.nexus.setSynthetic(file.name, settings);
-				}
-			))
+			this.installGuards(directories),
+			this.installActions(directories),
+			this.installUtilities(directories),
+			this.installSynthetics(directories)
 		]);
 
 		this.guards = guards;

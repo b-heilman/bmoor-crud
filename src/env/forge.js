@@ -32,13 +32,6 @@ class Forge {
 		return service;
 	}
 
-	/*
-	[{
-		model:
-		action:
-		callback: function(service, )	
-	}]
-	*/
 	async subscribe(ref, subscriptions){
 		const service = await this.nexus.loadService(ref);
 
@@ -53,6 +46,83 @@ class Forge {
 		);
 	}
 
+	async getSettings(directory){
+		return Promise.all(
+			(await loader.getFiles(directory)).map(
+				async (file) => {
+					file.settings = await loader.getSettings(file.path);
+
+					return file;
+				}
+			)
+		);
+	}
+
+	async installServices(connectors, directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('model')))
+			.map(async (file) => {
+				const settings = file.settings;
+
+				await this.nexus.setModel(
+					file.name,
+					settings
+				);
+
+				const service = await this.nexus.installService(
+					file.name,
+					connectors.get(settings.connector)(settings.connectorSettings)
+				);
+
+				await this.configureService(file.name, settings);
+
+				return service;
+			})
+		);
+	}
+
+	async installDocuments(connectors, directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('composite')))
+			.map(async (file) => {
+				const settings = file.settings;
+
+				await this.nexus.setModel(
+					file.name,
+					settings
+				);
+
+				const doc = await this.nexus.installDocument(
+					file.name,
+					connectors.get(settings.connector)(settings.connectorSettings)
+				);
+
+				return doc;
+			})
+		);
+	}
+
+	async installDecorators(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('decorator')))
+			.map(async (file) => this.nexus.applyDecorator(file.name, file.settings))
+		);
+	}
+
+	async installHooks(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('hook')))
+			.map(async (file) => this.nexus.applyHook(file.name, file.settings))
+		);
+	}
+
+	async installEffects(directories){
+		return Promise.all(
+			(await this.getSettings(directories.get('effect')))
+			.map(async (file) => this.subscribe(file.name, file.settings))
+		);
+	}
+
 	async install(connectors, directories){
 		if (!connectors){
 			throw new Error('no connectors supplied');
@@ -62,85 +132,19 @@ class Forge {
 			throw new Error('no directories supplied');
 		}
 
-		const [models, decorators, hooks, effects, composites] = 
+		const [services, docs] = 
 		await Promise.all([
-			loader.getFiles(directories.get('model')),
-			loader.getFiles(directories.get('decorator')),
-			loader.getFiles(directories.get('hook')),
-			loader.getFiles(directories.get('effect')),
-			loader.getFiles(directories.get('composite'))
+			this.installServices(connectors, directories),
+			this.installDocuments(connectors, directories),
+			this.installDecorators(directories),
+			this.installHooks(directories),
+			this.installEffects(directories)
 		]);
 
 		// install the services, they should be fully hydrated at this point
-		const [modelNames, compositeNames] =
-		await Promise.all([
-			Promise.all(models.map(
-				async (file) => {
-					const settings = await loader.getSettings(file.path);
-
-					await this.nexus.setModel(
-						file.name,
-						settings
-					);
-
-					await this.nexus.installService(
-						file.name,
-						connectors.get(settings.connector)(settings.connectorSettings)
-					);
-
-					await this.configureService(file.name, settings);
-
-					return file.name;
-				}
-			)),
-
-			Promise.all(composites.map(
-				async (file) => {
-					const settings = await loader.getSettings(file.path);
-
-					// so for now, all composites have to come from the same
-					// connector, but I want to change that in the future
-					await this.nexus.setComposite(
-						file.name,
-						settings
-					);
-
-					await this.nexus.installDocument(
-						file.name,
-						connectors.get(settings.connector)(settings.connectorSettings),
-					);
-
-					return file.name;
-				}
-			)),
-
-			Promise.all([
-				Promise.all(decorators.map(
-					async (file) => this.nexus.applyDecorator(
-						file.name,
-						await loader.getSettings(file.path)
-					)
-				)),
-
-				Promise.all(hooks.map(
-					async (file) => this.nexus.applyHook(
-						file.name,
-						await loader.getSettings(file.path)
-					)
-				)),
-
-				Promise.all(effects.map(
-					async (file) => this.subscribe(
-						file.name,
-						await loader.getSettings(file.path)
-					)
-				))
-			])
-		]);
-
 		return {
-			models: modelNames,
-			composites: compositeNames
+			services,
+			documents: docs
 		};
 	}
 }

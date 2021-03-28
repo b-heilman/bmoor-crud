@@ -880,29 +880,30 @@ describe('src/env/forge.js', function(){
 				path: 'model-path-2'
 			}]);
 
-			// decorators
+			// composites
 			stubs.getFile.onCall(1)
+			.resolves([]);
+
+			// decorators
+			stubs.getFile.onCall(2)
 			.resolves([{
 				name: 'service-1',
 				path: 'decorator-path-1'
 			}]);
 
 			// hooks
-			stubs.getFile.onCall(2)
+			stubs.getFile.onCall(3)
 			.resolves([{
 				name: 'service-1',
 				path: 'hook-path-1'
 			}]);
 
 			// actions
-			stubs.getFile.onCall(3)
+			stubs.getFile.onCall(4)
 			.resolves([{
 				name: 'service-1',
 				path: 'action-path-1'
 			}]);
-
-			stubs.getFile.onCall(4)
-			.resolves([]);
 
 			// this overloads what settings are returned
 			// for tests below.  So service-1 is not real
