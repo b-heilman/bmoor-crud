@@ -1163,4 +1163,317 @@ describe('src/env/forge.js', function(){
 			.to.equal(true);
 		});
 	});
+
+	describe('stubbed', function(){
+		const loader = require('../server/loader.js');
+		const {Config} = require('bmoor/src/lib/config.js');
+
+		let ctx = null;
+		let trace = null;
+		let service = null;
+		let permissions =  null;
+
+		beforeEach(async function(){
+			trace = [];
+			permissions = {};
+
+			stubs.execute = sinon.stub();
+
+			ctx = new Context({
+				method: '',
+				permissions
+			});
+
+			const mockery = new Config();
+			const cfg = new Config({
+				connectors: {
+					'http': () => ({
+						execute: stubs.execute
+					})
+				},
+				crud: {
+					model: 'model-dir',
+					decorator: 'decorator-dir',
+					hook: 'hook-dir',
+					effect: 'effect-dir',
+					composite: 'comp-dir'
+				}
+			});
+
+			stubs.getFile = sinon.stub(loader, 'getFiles');
+
+			// models
+			mockery.set('model', [{
+				name: 'service-1',
+				path: 'model-path-1',
+				settings: {
+					connector: 'http',
+					fields: {
+						id: {
+							create: false,
+							read: true,
+							update: false,
+							delete: true,
+							key: true
+						},
+						name: true
+					},
+					security: {
+						filter: 'can-read'
+					}
+				}
+			},{
+				name: 'service-2',
+				path: 'model-path-2',
+				settings: {
+					connector: 'http',
+					fields: {
+						id: {
+							create: false,
+							read: true,
+							update: false,
+							delete: true,
+							key: true
+						},
+						name: true
+					}
+				}
+			}]);
+
+			// composites
+			mockery.set('composite', []);
+
+			// decorators
+			mockery.set('decorator', [{
+				name: 'service-1',
+				path: 'decorator-path-1',
+				settings: {
+					hello: function(){
+						expect(this.create)
+						.to.not.equal(undefined);
+
+						return 'world';
+					}
+				}
+			}]);
+
+			// hooks
+			mockery.set('hook', [{
+				name: 'service-1',
+				path: 'hook-path-1',
+				settings: {
+					afterCreate: async function(){
+						trace.push(1);
+					}
+				}
+			}]);
+
+			// actions
+			stubs.action = sinon.stub();
+			mockery.set('effect', [{
+				name: 'service-1',
+				path: 'action-path-1',
+				settings: [{
+					model: 'service-2',
+					action: 'update',
+					callback: stubs.action
+				}]
+			}]);
+
+			await forge.install(cfg.sub('connectors'), cfg.sub('crud'), mockery);
+
+			// this method is not real
+			service = await nexus.loadService('service-1');
+		});
+
+		it('should properly define the models', function(){
+			expect(service.structure.fields.length)
+			.to.equal(2);
+
+			expect(service.structure.fields[0].path)
+			.to.equal('id');
+			
+			expect(service.structure.fields[1].path)
+			.to.equal('name');
+		});
+
+		describe('the service', function(){
+			it('should correctly run create', async function(){
+				stubs.execute.resolves([{
+					name: 'something',
+					junk: 'value'
+				}]);
+
+				const res = await service.create(
+					{foo:'bar2', eins: 1}, 
+					ctx
+				);
+
+				expect(res)
+				.to.deep.equal({name: 'something'});
+			});
+		});
+
+		it('should properly apply the security', async function(){
+			it('should correctly run read', async function(){
+				permissions['can-read'] = true;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.read(1, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+
+			it('should fail to run read without correct permissions', async function(){
+				permissions['can-read'] = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				let failed = false;
+				try {
+					const res = await service.read(1, ctx);
+
+					expect(res)
+					.to.deep.equal({foo: 'bar'});
+				} catch(ex){
+					failed = true;
+
+					expect(ex.code)
+					.to.equal('BMOOR_CRUD_SERVICE_READ_FILTER');
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+
+			it('should correctly run update', async function(){
+				permissions['can-read'] = true;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.update(12, {eins: 1}, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+
+			it('should fail to run update without correct permissions', async function(){
+				permissions['can-read'] = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				let failed = false;
+				try {
+					const res = await service.update(12, {}, ctx);
+
+					expect(res)
+					.to.deep.equal({foo: 'bar'});
+				} catch(ex){
+					failed = true;
+
+					expect(ex.code)
+					.to.equal('BMOOR_CRUD_SERVICE_READ_FILTER');
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+
+			it('should correctly run delete', async function(){
+				permissions['can-read'] = true;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.delete(12, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+			});
+
+			it('should fail to run delete without correct permissions', async function(){
+				permissions['can-read'] = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				let failed = false;
+				try {
+					const res = await service.delete(12, ctx);
+
+					expect(res)
+					.to.deep.equal({foo: 'bar'});
+				} catch(ex){
+					failed = true;
+
+					expect(ex.code)
+					.to.equal('BMOOR_CRUD_SERVICE_READ_FILTER');
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+		});
+
+		it('should properly apply the decorator', async function(){
+			expect(service.hello())
+			.to.equal('world');
+		});
+
+		it('should properly apply the hooks', async function(){
+			it('should correctly run create', async function(){
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				const res = await service.create({eins: 1}, ctx);
+
+				expect(res)
+				.to.deep.equal({foo: 'bar'});
+
+				expect(trace)
+				.to.deep.equal([1]);
+			});
+		});
+
+		it('should properly apply the actions', async function(){
+			permissions['can-read'] = true;
+
+			stubs.execute.resolves([{
+				foo: 'bar'
+			}]);
+			//--------- for the update
+
+			const otherService = await nexus.loadService('service-2');
+
+			let called = false;
+
+			stubs.action.callsFake(function(myService, from, to, myCtx){
+				called = true;
+
+				expect(service)
+				.to.equal(myService);
+
+				expect(ctx)
+				.to.equal(myCtx);
+			});
+
+			await otherService.update(13, {name: 'ok'}, ctx);
+
+			expect(called)
+			.to.equal(true);
+		});
+	});
 });

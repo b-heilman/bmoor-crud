@@ -78,6 +78,10 @@ class Controller {
 		this.structure = structure;
 	}
 
+	async configure(settings){
+		this.settings = settings;
+	}
+
 	prepareRoute(nexus, settings={}){
 		return new Route(
 			settings.route.path,

@@ -5,6 +5,7 @@ const {Config} = require('bmoor/src/lib/config.js');
 const {Bus} = require('../server/bus.js');
 const {Forge} = require('./forge.js');
 const {Nexus} = require('./nexus.js');
+const {Gateway} =  require('./gateway.js');
 
 const {Model} = require('../schema/model.js');
 const {Service} = require('../actors/service.js');
@@ -17,55 +18,59 @@ const {Synthetic} = require('../controllers/synthetic.js');
 
 const config = new Config({
 	connectors: {},
-	crud: {
-		model: 'models/',
-		decorator: 'decorators/',
-		hook: 'hooks/',
-		effect: 'effects/',
-		composite: 'composites/'
+	stubs: {
+		model: null
 	},
-	server: {
-		guard: 'guards/'
+	directories: {
+		model: '/models',
+		decorator: '/decorators',
+		hook: '/hooks',
+		effect: '/effects',
+		composite: '/composites',
+		guard: '/guards',
+		action: '/actions',
+		utility: '/utilities',
+		document: '/documents'
 	},
 	constructors: {
-		crud: {
-			Model,
-			Service,
-			Composite,
-			Document
-		},
-		controller: {
-			Guard,
-			Action,
-			Utility,
-			Synthetic
-		}
+		model: Model,
+		service: Service,
+		composite: Composite,
+		document: Document,
+		guard: Guard,
+		action: Action,
+		utility: Utility,
+		synthetic: Synthetic
 	}
 });
 
 class Bootstrap {
-	constructor(cfg){
+	constructor(cfg = config){
 		this.bus = new Bus();
 		this.config = cfg;
-		this.nexus = new Nexus(cfg.sub('constructors.crud'));
+		this.nexus = new Nexus(cfg.sub('constructors'));
 		this.forge = new Forge(this.nexus, this.bus);
+		this.gateway = new Gateway(this.nexus);
 	}
 
-	async crud(){
+	async installCrud(){
 		return this.forge.install(
 			this.config.sub('connectors'), 
-			this.config.sub('crud')
+			this.config.sub('directories'),
+			this.config.sub('stubs')
 		);
 	}
 
-	async server(){
-		return this.config.sub('server');
+	async installControllers(){
+		return this.gateway.install(
+			this.config.sub('directories'),
+			this.config.sub('stubs')
+		);
 	}
 
-	async boot(){
-		await this.crud();
-
-		return this.server();
+	async install(){
+		this.crud = await this.installCrud();
+		this.controllers = await this.installControllers();
 	}
 }
 

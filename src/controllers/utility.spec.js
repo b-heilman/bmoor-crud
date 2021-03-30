@@ -60,7 +60,9 @@ describe('src/controller/utility.js', function(){
 				return 'eins-zwei';
 			};
 
-			const utility = new Utility(service, {
+			const utility = new Utility(service);
+
+			await utility.configure({
 				'foo-bar': {
 					method: 'get'
 				}
@@ -95,7 +97,9 @@ describe('src/controller/utility.js', function(){
 				return 'eins-zwei';
 			};
 
-			const utility = new Utility(service, {
+			const utility = new Utility(service);
+
+			await utility.configure({
 				'foo-bar': {
 					method: 'get',
 					permission: 'oh-boy'
@@ -152,7 +156,9 @@ describe('src/controller/utility.js', function(){
 				return 'eins-zwei';
 			};
 
-			const utility = new Utility(service, {
+			const utility = new Utility(service);
+
+			await utility.configure({
 				'foo-bar': {
 					method: 'get',
 					permission: 'oh-boy'
@@ -203,7 +209,9 @@ describe('src/controller/utility.js', function(){
 
 		let called = false;
 
-		const utility = new Utility(service, {
+		const utility = new Utility(service);
+
+		await utility.configure({
 			'foo-bar': {
 				method: 'get',
 				permission: 'oh-boy'
@@ -249,7 +257,9 @@ describe('src/controller/utility.js', function(){
 
 		let called = false;
 
-		const utility = new Utility(service, {
+		const utility = new Utility(service);
+
+		await utility.configure({
 			'foo-bar': {
 				method: 'get',
 				permission: 'oh-boy'
@@ -292,7 +302,9 @@ describe('src/controller/utility.js', function(){
 
 		let called = false;
 
-		const utility = new Utility(service, {
+		const utility = new Utility(service);
+
+		await utility.configure({
 			'foo-bar': {
 				method: 'get',
 				permission: 'oh-boy'

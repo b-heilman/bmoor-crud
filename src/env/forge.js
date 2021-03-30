@@ -2,6 +2,19 @@
 const {hook} = require('../actors/hook.js');
 const loader = require('../server/loader.js');
 
+async function load(type, directories, stubs = null){
+	if (stubs){
+		const stub = stubs.get(type);
+
+		if (stub){
+			return stub;
+		}
+	}
+
+	console.log('->', type);
+	return loader.loadFiles(directories.get(type));
+}
+
 // this is our building object, it produces all the little things running in the system
 class Forge {
 	constructor(nexus, messageBus){
@@ -46,21 +59,9 @@ class Forge {
 		);
 	}
 
-	async getSettings(directory){
+	async installServices(connectors, directories, stubs){
 		return Promise.all(
-			(await loader.getFiles(directory)).map(
-				async (file) => {
-					file.settings = await loader.getSettings(file.path);
-
-					return file;
-				}
-			)
-		);
-	}
-
-	async installServices(connectors, directories){
-		return Promise.all(
-			(await this.getSettings(directories.get('model')))
+			(await load('model', directories, stubs))
 			.map(async (file) => {
 				const settings = file.settings;
 
@@ -81,9 +82,9 @@ class Forge {
 		);
 	}
 
-	async installDocuments(connectors, directories){
+	async installDocuments(connectors, directories, stubs){
 		return Promise.all(
-			(await this.getSettings(directories.get('composite')))
+			(await load('composite', directories, stubs))
 			.map(async (file) => {
 				const settings = file.settings;
 
@@ -102,28 +103,28 @@ class Forge {
 		);
 	}
 
-	async installDecorators(directories){
+	async installDecorators(directories, stubs){
 		return Promise.all(
-			(await this.getSettings(directories.get('decorator')))
+			(await load('decorator', directories, stubs))
 			.map(async (file) => this.nexus.applyDecorator(file.name, file.settings))
 		);
 	}
 
-	async installHooks(directories){
+	async installHooks(directories, stubs){
 		return Promise.all(
-			(await this.getSettings(directories.get('hook')))
+			(await load('hook', directories, stubs))
 			.map(async (file) => this.nexus.applyHook(file.name, file.settings))
 		);
 	}
 
-	async installEffects(directories){
+	async installEffects(directories, stubs){
 		return Promise.all(
-			(await this.getSettings(directories.get('effect')))
+			(await load('effect', directories, stubs))
 			.map(async (file) => this.subscribe(file.name, file.settings))
 		);
 	}
 
-	async install(connectors, directories){
+	async install(connectors, directories, stubs){
 		if (!connectors){
 			throw new Error('no connectors supplied');
 		}
@@ -134,11 +135,11 @@ class Forge {
 
 		const [services, docs] = 
 		await Promise.all([
-			this.installServices(connectors, directories),
-			this.installDocuments(connectors, directories),
-			this.installDecorators(directories),
-			this.installHooks(directories),
-			this.installEffects(directories)
+			this.installServices(connectors, directories, stubs),
+			this.installDocuments(connectors, directories, stubs),
+			this.installDecorators(directories, stubs),
+			this.installHooks(directories, stubs),
+			this.installEffects(directories, stubs)
 		]);
 
 		// install the services, they should be fully hydrated at this point

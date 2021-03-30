@@ -62,11 +62,10 @@ async function runUpdate(ids, service, delta, ctx){
 }
 
 class Guard extends Controller {
-	constructor(service, settings){
+	constructor(service){
 		super(service.structure);
 		
 		this.service = service;
-		this.settings = settings;
 	}
 
 	async read(ctx){

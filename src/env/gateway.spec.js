@@ -28,11 +28,12 @@ describe('src/env/gateway.js', function(){
 	});
 
 	afterEach(function(){
-		for(let key in stubs){
-			if (stubs[key].restore){
-				stubs[key].restore();
+		Object.values(stubs)
+		.forEach(stub => {
+			if (stub.restore){
+				stub.restore();
 			}
-		}
+		});
 	});
 
 	it('should load everything correctly', async function(){
@@ -168,6 +169,118 @@ describe('src/env/gateway.js', function(){
 			synthetics: [{
 				iAm: 'a synthetic'
 			}]
+		});
+	});
+
+	describe('stubbed', function(){
+		it('should load everything correctly', async function(){
+			const directories = new Config();
+			const mockery = new Config();
+
+			//--- guard ---
+			mockery.set('guard', [
+				{
+					name: 'a-guard',
+					settings: {
+						option: 1
+					}
+				}
+			]);
+
+			stubs.setGuard
+			.resolves({
+				iAm: 'a guard'
+			});
+
+			//--- action ---
+			mockery.set('action', [
+				{
+					name: 'a-action',
+					settings: {
+						option: 2
+					}
+				}
+			]);
+
+			stubs.setAction
+			.resolves({
+				iAm: 'a action'
+			});
+
+			//--- utility ---
+			mockery.set('utility', [
+				{
+					name: 'a-utility',
+					settings: {
+						option: 3
+					}
+				}
+			]);
+
+			stubs.setUtility
+			.resolves({
+				iAm: 'a utility'
+			});
+
+			//--- synthetic ---
+			mockery.set('synthetic', [
+				{
+					name: 'a-synthetic',
+					settings: {
+						option: 4
+					}
+				}
+			]);
+
+			stubs.setSynthetic
+			.resolves({
+				iAm: 'a synthetic'
+			});
+
+			const gateway = new sut.Gateway(stubbedNexus);
+
+			const res = await gateway.install(directories, mockery);
+
+			//--- results ---
+			expect(stubs.setGuard.getCall(0).args)
+			.to.deep.equal([
+				'a-guard',
+				{ option: 1 }
+			]);
+
+			expect(stubs.setAction.getCall(0).args)
+			.to.deep.equal([
+				'a-action',
+				{ option: 2 }
+			]);
+
+			expect(stubs.setUtility.getCall(0).args)
+			.to.deep.equal([
+				'a-utility',
+				{ option: 3 }
+			]);
+
+			expect(stubs.setSynthetic.getCall(0).args)
+			.to.deep.equal([
+				'a-synthetic',
+				{ option: 4 }
+			]);
+
+			expect(res)
+			.to.deep.equal({
+				guards: [{
+					iAm: 'a guard'
+				}],
+				actions: [{
+					iAm: 'a action'
+				}],
+				utilities: [{
+					iAm: 'a utility'
+				}],
+				synthetics: [{
+					iAm: 'a synthetic'
+				}]
+			});
 		});
 	});
 });

@@ -4,7 +4,8 @@ const fs = require('fs');
 const {Config} = require('bmoor/src/lib/config.js');
 
 const config = new Config({
-	match: /(?<!spec)\.js/
+	match: /(?<!spec)\.js/,
+	stubs: {}
 });
 
 async function gatherFiles(dir, namespace, regEx){
@@ -41,12 +42,31 @@ async function gatherFiles(dir, namespace, regEx){
 	}
 }
 
-module.exports = {
-	getFiles: async function(dir){
-		return gatherFiles(dir, null, config.get('match'));
-	},
+async function getFiles(dir){
+	return gatherFiles(dir, null, config.get('match'));
+}
 
-	getSettings: function(file){
-		return require(file);
-	}
+function getSettings(file){
+	return require(file);
+}
+
+const loader = {
+	getFiles,
+	getSettings
 };
+
+async function loadFiles(dir){
+	return Promise.all(
+		(await loader.getFiles(dir)).map(
+			async (file) => {
+				file.settings = await loader.getSettings(file.path);
+
+				return file;
+			}
+		)
+	);
+}
+
+loader.loadFiles = loadFiles;
+
+module.exports = loader;

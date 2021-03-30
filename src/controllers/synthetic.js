@@ -4,10 +4,13 @@ const error = require('bmoor/src/lib/error.js');
 const {Controller} = require('../server/controller.js');
 
 class Synthetic extends Controller {
-	constructor(composite, settings){
+	constructor(composite){
 		super(composite.structure);
 		
 		this.composite = composite;
+	}
+
+	async configure(settings){
 		this.settings = settings;
 	}
 

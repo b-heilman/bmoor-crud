@@ -60,7 +60,9 @@ describe('src/controller/action.js', function(){
 				return 'eins-zwei';
 			};
 
-			const action = new Action(service, {
+			const action = new Action(service);
+
+			await action.configure({
 				'foo-bar': {
 					method: 'get'
 				}
@@ -95,7 +97,9 @@ describe('src/controller/action.js', function(){
 				return 'eins-zwei';
 			};
 
-			const action = new Action(service, {
+			const action = new Action(service);
+
+			await action.configure({
 				'foo-bar': {
 					method: 'get',
 					permission: 'oh-boy'
@@ -152,7 +156,9 @@ describe('src/controller/action.js', function(){
 				return 'eins-zwei';
 			};
 
-			const action = new Action(service, {
+			const action = new Action(service);
+
+			await action.configure({
 				'foo-bar': {
 					method: 'get',
 					permission: 'oh-boy'
@@ -203,7 +209,9 @@ describe('src/controller/action.js', function(){
 
 		let called = false;
 
-		const action = new Action(service, {
+		const action = new Action(service);
+
+		await action.configure({
 			'foo-bar': {
 				method: 'get',
 				permission: 'oh-boy'
@@ -249,7 +257,9 @@ describe('src/controller/action.js', function(){
 
 		let called = false;
 
-		const action = new Action(service, {
+		const action = new Action(service);
+
+		await action.configure({
 			'foo-bar': {
 				method: 'get',
 				permission: 'oh-boy'
@@ -292,7 +302,9 @@ describe('src/controller/action.js', function(){
 
 		let called = false;
 
-		const action = new Action(service, {
+		const action = new Action(service);
+
+		await action.configure({
 			'foo-bar': {
 				method: 'get',
 				permission: 'oh-boy'

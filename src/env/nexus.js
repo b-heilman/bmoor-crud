@@ -12,7 +12,7 @@ const {Document} = require('../actors/document.js');
 
 const config = new Config({
 	timeout: 2000,
-	constructor: {
+	constructors: {
 		model: Model,
 		service: Service,
 		composite: Composite,
@@ -55,7 +55,13 @@ function getDefined(nexus, type, constructors, ref, args){
 	let model = nexus.getDefined(type, ref);
 
 	if (!model){
-		model = new (constructors.get(type))(...args);
+		const Build = constructors.get(type);
+
+		if (!Build){
+			throw new Error(`Unknown constructor: ${type}`);
+		}
+
+		model = new Build(...args);
 
 		nexus.setDefined(type, ref, model);
 	}
@@ -85,7 +91,7 @@ async function loadTarget(nexus, type, ref){
 // TODO: a better way to debug the stack when something locks us
 class Nexus {
 	constructor(constructors){
-		this.constructors = constructors || config.sub('constructor');
+		this.constructors = constructors || config.sub('constructors');
 
 		this.ether = new Config({});
 		this.mapper = new Mapper();
@@ -331,32 +337,32 @@ class Nexus {
 	}
 
 	// I'm not putting loads below because nothing should be requiring these...
-	async getGuard(ref){
-		return getDefined(this, 'guard', this.constructors, ref, [ref]);
+	getGuard(ref){
+		return getDefined(this, 'guard', this.constructors, ref, [this.getService(ref)]);
 	}
 
 	async setGuard(ref, settings){
 		return setSettings(this, 'composite', this.getGuard(ref), settings, ref);
 	}
 
-	async getAction(ref){
-		return getDefined(this, 'action', this.constructors, ref, [ref]);
+	getAction(ref){
+		return getDefined(this, 'action', this.constructors, ref, [this.getService(ref)]);
 	}
 
 	async setAction(ref, settings){
 		return setSettings(this, 'action', this.getAction(ref), settings, ref);
 	}
 
-	async getUtility(ref){
-		return getDefined(this, 'utility', this.constructors, ref, [ref]);
+	getUtility(ref){
+		return getDefined(this, 'utility', this.constructors, ref, [this.getService(ref)]);
 	}
 
 	async setUtility(ref, settings){
 		return setSettings(this, 'utility', this.getAction(ref), settings, ref);
 	}
 
-	async getSynthetic(ref){
-		return getDefined(this, 'synthetic', this.constructors, ref, [ref]);
+	getSynthetic(ref){
+		return getDefined(this, 'synthetic', this.constructors, ref, [this.getService(ref)]);
 	}
 
 	async setSynthetic(ref, settings){

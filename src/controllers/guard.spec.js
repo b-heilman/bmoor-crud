@@ -47,7 +47,9 @@ describe('src/controller/guard.js', function(){
 			const {Guard} = sut;
 
 			beforeEach(async function(){
-				controller = new Guard(service, {
+				controller = new Guard(service);
+
+				await controller.configure({
 					read: true,
 					query: true,
 					create: true,
@@ -610,7 +612,9 @@ describe('src/controller/guard.js', function(){
 			const {Guard} = sut;
 
 			beforeEach(async function(){
-				controller = new Guard(service, {
+				controller = new Guard(service);
+
+				await controller.configure({
 					read: true,
 					query: false,
 					create: true,
@@ -684,7 +688,9 @@ describe('src/controller/guard.js', function(){
 			const {Guard} = sut;
 
 			beforeEach(async function(){
-				controller = new Guard(service, {
+				controller = new Guard(service);
+
+				await controller.configure({
 					read: false,
 					query: true,
 					create: false,

@@ -16,10 +16,13 @@ function camelize(str){
 
 // actions performed against a class, but a particular instance
 class Action extends Controller {
-	constructor(service, settings){
+	constructor(service){
 		super(service.structure);
 		
 		this.service = service;
+	}
+
+	async configure(settings){
 		this.settings = Object.keys(settings)
 		.reduce((agg, key) => {
 			agg[key.toLowerCase()] = settings[key];

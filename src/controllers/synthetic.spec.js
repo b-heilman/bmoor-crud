@@ -69,7 +69,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should reject if not readable', async function(){
-				const synth = new sut.Synthetic(doc, {readable: false});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({readable: false});
 
 				let failed = false;
 				try {
@@ -86,7 +88,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should reject if not read permission', async function(){
-				const synth = new sut.Synthetic(doc, {readable: true, read:'can-read'});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({readable: true, read:'can-read'});
 
 				let failed = false;
 				try {
@@ -103,7 +107,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should succeed if reading by id', async function(){
-				const synth = new sut.Synthetic(doc, {readable: true, read:'can-read'});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({readable: true, read:'can-read'});
 
 				context.params = {
 					id: 'req-1'
@@ -132,7 +138,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should succeed if reading by query', async function(){
-				const synth = new sut.Synthetic(doc, {readable: true, read:'can-read'});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({readable: true, read:'can-read'});
 
 				context.query = {
 					id: 'req-1'
@@ -169,7 +177,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should reject if not readable', async function(){
-				const synth = new sut.Synthetic(doc, {writable: false});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({writable: false});
 
 				let failed = false;
 				try {
@@ -186,7 +196,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should reject if not write permission', async function(){
-				const synth = new sut.Synthetic(doc, {writable: true, write:'can-write'});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({writable: true, write:'can-write'});
 
 				let failed = false;
 				try {
@@ -203,7 +215,9 @@ describe('src/controller/synthetic.js', function(){
 			});
 
 			it('should succeed if writing', async function(){
-				const synth = new sut.Synthetic(doc, {writable: true, read:'can-write'});
+				const synth = new sut.Synthetic(doc);
+
+				await synth.configure({writable: true, read:'can-write'});
 
 				context.content = {
 					id: 'req-1'
