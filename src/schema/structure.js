@@ -442,8 +442,10 @@ class Structure {
 	}
 
 	toJSON(){
+		console.log('--structure--', this.name);
 		return {
-			name: this,
+			$schema: 'bmoor-crud:structure',
+			name: this.name,
 			fields: this.fields.map(
 				field => field.toJSON()
 			)

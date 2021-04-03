@@ -44,7 +44,7 @@ describe('src/env/forge.js', function(){
 		beforeEach(async function(){
 			ctx = new Context({method: ''});
 
-			nexus.setModel('service-1', {
+			nexus.configureModel('service-1', {
 				fields: {
 					id: {
 						key: true,
@@ -55,7 +55,7 @@ describe('src/env/forge.js', function(){
 				}
 			});
 
-			nexus.setModel('service-2', {
+			nexus.configureModel('service-2', {
 				fields: {
 					id: {
 						key: true,
@@ -69,8 +69,8 @@ describe('src/env/forge.js', function(){
 			interface1 = {};
 			interface2 = {};
 
-			service1 = await nexus.installService('service-1', interface1);
-			service2 = await nexus.installService('service-2', interface2);
+			service1 = await nexus.configureService('service-1', interface1);
+			service2 = await nexus.configureService('service-2', interface2);
 		});
 
 		describe('::configureService', function(){
@@ -481,7 +481,7 @@ describe('src/env/forge.js', function(){
 		beforeEach(async function(){
 			ctx = new Context({method: ''});
 
-			nexus.setModel('service-1', {
+			nexus.configureModel('service-1', {
 				fields: {
 					eins: {
 						create: true,
@@ -502,7 +502,7 @@ describe('src/env/forge.js', function(){
 				execute: sinon.stub().resolves([{foo: 'bar'}])
 			};
 
-			service1 = await nexus.installService('service-1', interface1);
+			service1 = await nexus.configureService('service-1', interface1);
 
 			// await forge.secure('service-1');
 		});

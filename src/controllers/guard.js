@@ -265,7 +265,7 @@ class Guard extends Controller {
 			}, 
 			fn: (ctx) => this.write(ctx),
 			hidden: !this.settings.create,
-			structure: this.service
+			structure: this.service.structure
 		}, {
 			// read / readMany
 			route: {
@@ -274,7 +274,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.read(ctx),
 			hidden: !this.settings.read,
-			structure: this.service
+			structure: this.service.structure
 		}, {
 			// readAll, query
 			route: {
@@ -282,8 +282,8 @@ class Guard extends Controller {
 				method: 'get'
 			},
 			fn: (ctx) => this.read(ctx),
-			hidden: !this.settingd.read,
-			structure: this.service
+			hidden: !this.settings.read,
+			structure: this.service.structure
 		}, {
 			// update
 			route: {
@@ -292,7 +292,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.write(ctx),
 			hidden: !this.settings.update,
-			structure: this.service
+			structure: this.service.structure
 		}, {
 			// update
 			route: {
@@ -301,7 +301,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.write(ctx),
 			hidden: !this.settings.update,
-			structure: this.service
+			structure: this.service.structure
 		}, {
 			// delete
 			route: {
@@ -310,7 +310,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.delete(ctx),
 			hidden: !this.settings.delete,
-			structure: this.service
+			structure: this.service.structure
 		}, {
 			// delete w/ query
 			route: {
@@ -319,7 +319,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.delete(ctx),
 			hidden: !(this.settings.delete && this.settings.query),
-			structure: this.service
+			structure: this.service.structure
 		}];
 	}
 
@@ -329,33 +329,6 @@ class Guard extends Controller {
 			nexus, 
 			routeInfo
 		));
-	}
-
-	toJSON(){
-		const structure = this.service.structure.toJSON();
-
-		return this._buildRoutes()
-		.filter(routeInfo => !routeInfo.hidden)
-		.map(
-			routeInfo => ({
-				route: routeInfo.route,
-				response: {
-					structure
-				}
-			})
-		);
-		/*
-		
-
-		// this kills me that I'm basically writing this twice, but if I don't 
-		// do this I need to pollute upstream with a lot of data
-		if (this.settings.create){
-			routes.push({
-				path: '',
-				method: post
-			});
-		}
-		*/
 	}
 }
 

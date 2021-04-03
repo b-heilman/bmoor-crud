@@ -10,7 +10,7 @@ describe('src/schema/composite.js', function(){
 	beforeEach(async function(){
 		nexus = new Nexus();
 
-		await nexus.setModel('test-1', {
+		await nexus.configureModel('test-1', {
 			fields: {
 				id: {
 					read: true
@@ -27,7 +27,7 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-		await nexus.setModel('test-2', {
+		await nexus.configureModel('test-2', {
 			fields: {
 				id: {
 					read: true
@@ -51,7 +51,7 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-		await nexus.setModel('test-3', {
+		await nexus.configureModel('test-3', {
 			fields: {
 				id: {
 					read: true
@@ -72,7 +72,7 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-		await nexus.setModel('test-pivot', {
+		await nexus.configureModel('test-pivot', {
 			fields: {
 				id: {
 					read: true
@@ -94,7 +94,7 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-		await nexus.setModel('test-4', {
+		await nexus.configureModel('test-4', {
 			fields: {
 				id: {
 					read: true
@@ -108,7 +108,7 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-		await nexus.setModel('test-5', {
+		await nexus.configureModel('test-5', {
 			fields: {
 				id: {
 					read: true
@@ -136,7 +136,7 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-		await nexus.setModel('test-6', {
+		await nexus.configureModel('test-6', {
 			fields: {
 				table5Id: {
 					read: true,
@@ -544,7 +544,7 @@ describe('src/schema/composite.js', function(){
 
 		describe('extends', function(){
 			it('should pull in all the extended fields', async function(){
-				await nexus.setComposite('base', {
+				await nexus.configureComposite('base', {
 					base: 'test-1',
 					key: 'id',
 					fields: {
@@ -595,7 +595,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			it('should be able to extend an extension', async function(){
-				await nexus.setComposite('base', {
+				await nexus.configureComposite('base', {
 					base: 'test-1',
 					key: 'id',
 					fields: {
@@ -603,7 +603,7 @@ describe('src/schema/composite.js', function(){
 					}
 				});
 
-				await nexus.setComposite('extends', {
+				await nexus.configureComposite('extends', {
 					base: 'test-2',
 					key: 'id',
 					extends: 'base',

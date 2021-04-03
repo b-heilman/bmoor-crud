@@ -70,8 +70,6 @@ function getDefined(nexus, type, constructors, ref, args){
 }
 
 async function setSettings(nexus, type, target, settings, ref){
-	settings.nexus = nexus;
-
 	await target.configure(settings);
 	await nexus.setConfigured(type, ref, target);
 
@@ -126,7 +124,7 @@ class Nexus {
 		return getDefined(this, 'model', this.constructors, ref, [ref]);
 	}
 
-	async setModel(ref, settings){
+	async configureModel(ref, settings){
 		const model = await setSettings(this, 'model', this.getModel(ref), settings, ref);
 
 		this.mapper.addModel(model);
@@ -142,7 +140,7 @@ class Nexus {
 		return getDefined(this, 'service', this.constructors, ref, [this.getModel(ref)]);
 	}
 
-	async installService(ref, connector, settings = {}){
+	async configureService(ref, connector, settings = {}){
 		await this.loadModel(ref);
 
 		const service = this.getService(ref);
@@ -158,7 +156,7 @@ class Nexus {
 		return loadTarget(this, 'service', ref);
 	}
 
-	async applyDecorator(ref, decoration){
+	async configureDecorator(ref, decoration){
 		const service = await this.loadService(ref);
 
 		service.decorate(decoration);
@@ -166,7 +164,7 @@ class Nexus {
 		return service;
 	}
 
-	async applyHook(ref, settings){
+	async configureHook(ref, settings){
 		const service = await this.loadService(ref);
 
 		hook(service, settings);
@@ -177,7 +175,7 @@ class Nexus {
 	// isAdmin can be defined on each model, allowing a new permission to be the admin permission 
 	// for each model.  I am hoping this simplifies things rather than allowing an array to be passed
 	// to has permission
-	async applySecurity(ref, settings){
+	async configureSecurity(ref, settings){
 		const accessCfg = {};
 
 		// filters on data read out of the db
@@ -251,7 +249,7 @@ class Nexus {
 			};
 		}
 
-		await this.applyHook(ref, accessCfg);
+		await this.configureHook(ref, accessCfg);
 
 		const canCfg = {};
 
@@ -301,14 +299,16 @@ class Nexus {
 			};
 		}
 
-		return this.applyHook(ref, canCfg);
+		return this.configureHook(ref, canCfg);
 	}
 
 	getComposite(ref){
 		return getDefined(this, 'composite', this.constructors, ref, [ref]);
 	}
 
-	async setComposite(ref, settings){
+	async configureComposite(ref, settings){
+		settings.nexus = this;
+		console.log('--> setting composite', ref);
 		return setSettings(this, 'composite', this.getComposite(ref), settings, ref);
 	}
 
@@ -320,15 +320,16 @@ class Nexus {
 		return getDefined(this, 'document', this.constructors, ref, [this.getComposite(ref)]);
 	}
 
-	async installDocument(ref, connector){
+	async configureDocument(ref, connector, settings = {}){
+		console.log('document configure -->', ref);
 		await this.loadComposite(ref);
 
 		const doc = this.getDocument(ref);
-		
-		await doc.configure(connector);
+		console.log('document configuring -->', ref);
+		await doc.configure(connector, settings);
 
 		await this.setConfigured('document', ref, doc);
-		
+		console.log('document configured -->', ref);
 		return doc;
 	}
 
@@ -341,7 +342,7 @@ class Nexus {
 		return getDefined(this, 'guard', this.constructors, ref, [this.getService(ref)]);
 	}
 
-	async setGuard(ref, settings){
+	async configureGuard(ref, settings){
 		return setSettings(this, 'composite', this.getGuard(ref), settings, ref);
 	}
 
@@ -349,7 +350,7 @@ class Nexus {
 		return getDefined(this, 'action', this.constructors, ref, [this.getService(ref)]);
 	}
 
-	async setAction(ref, settings){
+	async configureAction(ref, settings){
 		return setSettings(this, 'action', this.getAction(ref), settings, ref);
 	}
 
@@ -357,16 +358,20 @@ class Nexus {
 		return getDefined(this, 'utility', this.constructors, ref, [this.getService(ref)]);
 	}
 
-	async setUtility(ref, settings){
-		return setSettings(this, 'utility', this.getAction(ref), settings, ref);
+	async configureUtility(ref, settings){
+		return setSettings(this, 'utility', this.getUtility(ref), settings, ref);
 	}
 
 	getSynthetic(ref){
-		return getDefined(this, 'synthetic', this.constructors, ref, [this.getService(ref)]);
+		return getDefined(this, 'synthetic', this.constructors, ref, [this.getDocument(ref)]);
 	}
 
-	async setSynthetic(ref, settings){
-		return setSettings(this, 'synthetic', this.getAction(ref), settings, ref);
+	async configureSynthetic(ref, settings){
+		return setSettings(this, 'synthetic', this.getSynthetic(ref), settings, ref);
+	}
+
+	toJSON(){
+		console.trace();
 	}
 }
 

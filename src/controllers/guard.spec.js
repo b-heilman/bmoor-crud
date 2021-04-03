@@ -18,7 +18,7 @@ describe('src/controller/guard.js', function(){
 
 		nexus = new Nexus();
 
-		nexus.setModel('service-1', {
+		nexus.configureModel('service-1', {
 			fields: {
 				eins: {
 					create: false,
@@ -37,7 +37,7 @@ describe('src/controller/guard.js', function(){
 
 		interface = {};
 			
-		service = await nexus.installService('service-1', interface);
+		service = await nexus.configureService('service-1', interface);
 	});
 
 	describe('::Controller', function(){

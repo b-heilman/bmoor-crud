@@ -49,7 +49,7 @@ describe('src/actors/document.js', function(){
 	});
 
 	beforeEach(async function(){
-		await nexus.setModel('test-user', {
+		await nexus.configureModel('test-user', {
 			fields: {
 				id: {
 					read: true,
@@ -58,9 +58,9 @@ describe('src/actors/document.js', function(){
 				name: true
 			}
 		});
-		await nexus.installService('test-user', {});
+		await nexus.configureService('test-user', {});
 
-		await nexus.setModel('test-item', {
+		await nexus.configureModel('test-item', {
 			fields: {
 				id: {
 					read: true,
@@ -88,9 +88,9 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.installService('test-item', {});
+		await nexus.configureService('test-item', {});
 
-		await nexus.setModel('test-material', {
+		await nexus.configureModel('test-material', {
 			fields: {
 				id: {
 					read: true,
@@ -100,9 +100,9 @@ describe('src/actors/document.js', function(){
 				title: true
 			}
 		});
-		await nexus.installService('test-material', {});
+		await nexus.configureService('test-material', {});
 
-		await nexus.setModel('test-item-material', {
+		await nexus.configureModel('test-item-material', {
 			fields: {
 				id: {
 					read: true,
@@ -131,9 +131,9 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.installService('test-item-material', {});
+		await nexus.configureService('test-item-material', {});
 
-		await nexus.setModel('test-person', {
+		await nexus.configureModel('test-person', {
 			fields: {
 				id: true,
 				name: true,
@@ -151,9 +151,9 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.installService('test-person', {});
+		await nexus.configureService('test-person', {});
 
-		await nexus.setModel('test-family', {
+		await nexus.configureModel('test-family', {
 			fields: {
 				id: {
 					read: true,
@@ -162,9 +162,9 @@ describe('src/actors/document.js', function(){
 				name: true
 			}
 		});
-		await nexus.installService('test-family', {});
+		await nexus.configureService('test-family', {});
 
-		await nexus.setModel('test-category', {
+		await nexus.configureModel('test-category', {
 			fields: {
 				id: {
 					read: true,
@@ -193,9 +193,9 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.installService('test-category', {});
+		await nexus.configureService('test-category', {});
 
-		await nexus.setModel('test-tag', {
+		await nexus.configureModel('test-tag', {
 			fields: {
 				id: {
 					read: true,
@@ -212,9 +212,9 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.installService('test-tag', {});
+		await nexus.configureService('test-tag', {});
 
-		await nexus.setComposite('test-composite-item', {
+		await nexus.configureComposite('test-composite-item', {
 			base: 'test-item',
 			key: 'id',
 			fields: {
@@ -225,9 +225,9 @@ describe('src/actors/document.js', function(){
 			}
 		});
 
-		await nexus.installDocument('test-composite-item', connector);
+		await nexus.configureDocument('test-composite-item', connector);
 
-		await nexus.setComposite('test-composite-tag', {
+		await nexus.configureComposite('test-composite-tag', {
 			base: 'test-tag',
 			key: 'id',
 			fields: {
@@ -235,9 +235,9 @@ describe('src/actors/document.js', function(){
 			}
 		});
 
-		await nexus.installDocument('test-composite-tag', connector);
+		await nexus.configureDocument('test-composite-tag', connector);
 
-		await nexus.setModel('test-user-family-pivot', {
+		await nexus.configureModel('test-user-family-pivot', {
 			fields: {
 				id: {
 					read: true,
@@ -271,7 +271,7 @@ describe('src/actors/document.js', function(){
 				'test-category_2': 'category-1'
 			}];
 
-			nexus.setComposite('test-1', {
+			nexus.configureComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -366,7 +366,7 @@ describe('src/actors/document.js', function(){
 				'test-category_2': '{"hello":"world"}'
 			}];
 
-			nexus.setComposite('test-1', {
+			nexus.configureComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -457,7 +457,7 @@ describe('src/actors/document.js', function(){
 				'test-category_2': '{"hello":"world"}'
 			}];
 
-			nexus.setComposite('test-1', {
+			nexus.configureComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -548,7 +548,7 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('with work with join and aliases', async function(){
-			nexus.setComposite('test-1', {
+			nexus.configureComposite('test-1', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -665,7 +665,7 @@ describe('src/actors/document.js', function(){
 
 	describe('::link', function(){
 		it('should fail without defined properties', async function(){
-			await nexus.setComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ut', {
 				key: 'id',
 				base: 'test-family',
 				schema: {
@@ -692,7 +692,7 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should work with a direct link - without it in the request', async function(){
-			await nexus.setComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ut', {
 				key: 'id',
 				base: 'test-family',
 				fields: {
@@ -721,7 +721,7 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should work with a hop off an attached model', async function(){
-			await nexus.setComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
 				fields: {
@@ -748,7 +748,7 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should work with a jump to the attached schema', async function(){
-			await nexus.setComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
 				fields: {
@@ -781,7 +781,7 @@ describe('src/actors/document.js', function(){
 				'test-category_1': 'category-1'
 			}];
 
-			await nexus.setComposite('test-comp', {
+			await nexus.configureComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -868,7 +868,7 @@ describe('src/actors/document.js', function(){
 				'test-category_1': 'category-1'
 			}];
 
-			nexus.setComposite('test-comp', {
+			nexus.configureComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -938,7 +938,7 @@ describe('src/actors/document.js', function(){
 
 	describe('::normalize', function(){
 		it('should load decode a object push - 1', async function(){
-			nexus.setComposite('test-comp', {
+			nexus.configureComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -976,7 +976,7 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should load decode a object push - 2', async function(){
-			nexus.setComposite('test-comp', {
+			nexus.configureComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -1026,7 +1026,7 @@ describe('src/actors/document.js', function(){
 
 			const categories = await nexus.loadService('test-category');
 
-			const comp = await nexus.setComposite('test-comp', {
+			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -1075,7 +1075,7 @@ describe('src/actors/document.js', function(){
 
 			const categories = await nexus.loadService('test-category');
 
-			const comp = await nexus.setComposite('test-comp', {
+			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -1171,7 +1171,7 @@ describe('src/actors/document.js', function(){
 			families = await nexus.loadService('test-family');
 			categories = await nexus.loadService('test-category');
 
-			const comp = await nexus.setComposite('test-composite-ut', {
+			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
 				fields: {
@@ -1326,7 +1326,7 @@ describe('src/actors/document.js', function(){
 			families = await nexus.loadService('test-family');
 			categories = await nexus.loadService('test-category');
 
-			const comp = await nexus.setComposite('test-composite-ut', {
+			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
 				fields: {
@@ -1440,7 +1440,7 @@ describe('src/actors/document.js', function(){
 			families = await nexus.loadService('test-family');
 			categories = await nexus.loadService('test-category');
 
-			const comp = await nexus.setComposite('test-composite-ut', {
+			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
 				key: 'id',
 				fields: {
@@ -1561,7 +1561,7 @@ describe('src/actors/document.js', function(){
 		let comp = null;
 
 		beforeEach(async function(){
-			await nexus.setComposite('test-material', {
+			await nexus.configureComposite('test-material', {
 				base: 'test-material',
 				key: 'id',
 				fields: {
@@ -1569,9 +1569,9 @@ describe('src/actors/document.js', function(){
 					'name': '.name'
 				}
 			});
-			await nexus.installDocument('test-material', connector);
+			await nexus.configureDocument('test-material', connector);
 
-			await nexus.setComposite('test-composite-material', {
+			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
 				key: 'id',
 				extends: 'test-material',
@@ -1579,9 +1579,9 @@ describe('src/actors/document.js', function(){
 					'pivot': '.id'
 				}
 			});
-			await nexus.installDocument('test-composite-material', connector);
+			await nexus.configureDocument('test-composite-material', connector);
 
-			await nexus.setComposite('test-composite-material-2', {
+			await nexus.configureComposite('test-composite-material-2', {
 				base: 'test-item-material',
 				key: 'id',
 				extends: 'test-composite-material',
@@ -1589,9 +1589,9 @@ describe('src/actors/document.js', function(){
 					'mask': '.mask'
 				}
 			});
-			await nexus.installDocument('test-composite-material-2', connector);
+			await nexus.configureDocument('test-composite-material-2', connector);
 
-			await nexus.setComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -1600,7 +1600,7 @@ describe('src/actors/document.js', function(){
 					'materials': ['> #test-composite-material-2']
 				}
 			});
-			await nexus.installDocument('test-composite-ut', connector);
+			await nexus.configureDocument('test-composite-ut', connector);
 		});
 
 		it('should work when creating brand new', async function(){
@@ -1904,7 +1904,7 @@ describe('src/actors/document.js', function(){
 			let changeCb = null;
 
 			beforeEach(async function(){
-				await nexus.setComposite('test-material', {
+				await nexus.configureComposite('test-material', {
 					base: 'test-material',
 					key: 'id',
 					fields: {
@@ -1912,9 +1912,9 @@ describe('src/actors/document.js', function(){
 						'name': '.name'
 					}
 				});
-				await nexus.installDocument('test-material', connector);
+				await nexus.configureDocument('test-material', connector);
 
-				await nexus.setComposite('test-composite-material', {
+				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
 					key: 'id',
 					extends: 'test-material',
@@ -1925,9 +1925,9 @@ describe('src/actors/document.js', function(){
 						return typeCb(doc);
 					}
 				});
-				await nexus.installDocument('test-composite-material', connector);
+				await nexus.configureDocument('test-composite-material', connector);
 
-				await nexus.setComposite('test-composite-ut', {
+				await nexus.configureComposite('test-composite-ut', {
 					base: 'test-item',
 					key: 'id',
 					fields: {
@@ -1939,7 +1939,7 @@ describe('src/actors/document.js', function(){
 						return changeCb(type, instructions);
 					}
 				});
-				doc = await nexus.installDocument('test-composite-ut', connector);
+				doc = await nexus.configureDocument('test-composite-ut', connector);
 			});
 
 			it('should work with a null type change', async function(){
@@ -2129,7 +2129,7 @@ describe('src/actors/document.js', function(){
 			let changeCb = null;
 
 			beforeEach(async function(){
-				await nexus.setComposite('test-material', {
+				await nexus.configureComposite('test-material', {
 					base: 'test-material',
 					key: 'id',
 					fields: {
@@ -2140,9 +2140,9 @@ describe('src/actors/document.js', function(){
 						return typeCb(doc);
 					}
 				});
-				await nexus.installDocument('test-material', connector);
+				await nexus.configureDocument('test-material', connector);
 
-				await nexus.setComposite('test-composite-material', {
+				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
 					key: 'id',
 					extends: 'test-material',
@@ -2150,9 +2150,9 @@ describe('src/actors/document.js', function(){
 						'pivot': '.id'
 					}
 				});
-				await nexus.installDocument('test-composite-material', connector);
+				await nexus.configureDocument('test-composite-material', connector);
 
-				await nexus.setComposite('test-composite-ut', {
+				await nexus.configureComposite('test-composite-ut', {
 					base: 'test-item',
 					key: 'id',
 					fields: {
@@ -2165,7 +2165,7 @@ describe('src/actors/document.js', function(){
 					}
 				});
 
-				doc = await nexus.installDocument('test-composite-ut', connector);
+				doc = await nexus.configureDocument('test-composite-ut', connector);
 			});
 
 			it('should work with a null type change', async function(){
@@ -2218,7 +2218,7 @@ describe('src/actors/document.js', function(){
 		const changeTypes = require('../schema/model.js').config.get('changeTypes');
 
 		beforeEach(async function(){
-			await nexus.setComposite('test-material', {
+			await nexus.configureComposite('test-material', {
 				base: 'test-material',
 				key: 'id',
 				fields: {
@@ -2228,7 +2228,7 @@ describe('src/actors/document.js', function(){
 			});
 
 			stubs.getChangeType = sinon.stub();
-			await nexus.setComposite('test-composite-material', {
+			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
 				key: 'id',
 				extends: 'test-material',
@@ -2237,7 +2237,7 @@ describe('src/actors/document.js', function(){
 				},
 				getChangeType: stubs.getChangeType
 			});
-			await nexus.installDocument('test-composite-material', connector);
+			await nexus.configureDocument('test-composite-material', connector);
 
 			stubs.onChange = sinon.stub()
 			.callsFake(function(type, series){
@@ -2249,7 +2249,7 @@ describe('src/actors/document.js', function(){
 					datum.setField('name', datum.getField('name')+'.2');
 				}
 			});
-			await nexus.setComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -2259,9 +2259,9 @@ describe('src/actors/document.js', function(){
 				},
 				onChange: stubs.onChange
 			});
-			await nexus.installDocument('test-composite-ut', connector);
+			await nexus.configureDocument('test-composite-ut', connector);
 
-			await nexus.setComposite('test-ownership', {
+			await nexus.configureComposite('test-ownership', {
 				base: 'test-user',
 				key: 'id',
 				fields: {
@@ -2271,7 +2271,7 @@ describe('src/actors/document.js', function(){
 				}
 			});
 
-			doc = await nexus.installDocument('test-ownership', connector);
+			doc = await nexus.configureDocument('test-ownership', connector);
 
 			const users = await nexus.loadService('test-user');
 			const items = await nexus.loadService('test-item');

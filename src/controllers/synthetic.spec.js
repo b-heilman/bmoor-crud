@@ -23,7 +23,7 @@ describe('src/controller/synthetic.js', function(){
 		nexus = new Nexus();
 
 		//-----------------
-		await nexus.setModel('test-user', {
+		await nexus.configureModel('test-user', {
 			fields: {
 				id: {
 					read: true,
@@ -32,9 +32,9 @@ describe('src/controller/synthetic.js', function(){
 				name: true
 			}
 		});
-		await nexus.installService('test-user', {});
+		await nexus.configureService('test-user', {});
 
-		nexus.setComposite('test-ownership', {
+		nexus.configureComposite('test-ownership', {
 			base: 'test-user',
 			key: 'id',
 			fields: {
@@ -43,7 +43,7 @@ describe('src/controller/synthetic.js', function(){
 			}
 		});
 
-		doc = await nexus.installDocument('test-ownership', {});
+		doc = await nexus.configureDocument('test-ownership', {});
 	});
 
 	afterEach(function(){

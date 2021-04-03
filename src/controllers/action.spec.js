@@ -18,7 +18,7 @@ describe('src/controller/action.js', function(){
 
 		nexus = new Nexus();
 
-		nexus.setModel('service-1', {
+		nexus.configureModel('service-1', {
 			fields: {
 				id: {
 					create: false,
@@ -37,7 +37,7 @@ describe('src/controller/action.js', function(){
 
 		interface = {};
 			
-		service = await nexus.installService('service-1', interface);
+		service = await nexus.configureService('service-1', interface);
 	});
 
 	afterEach(function(){

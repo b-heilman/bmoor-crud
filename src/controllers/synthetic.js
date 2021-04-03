@@ -70,19 +70,22 @@ class Synthetic extends Controller {
 				path: '',
 				method: 'post'
 			},
-			fn: (ctx) => this.route(ctx)
+			fn: (ctx) => this.route(ctx),
+			structure: this.composite.structure
 		}, {
 			route: {
 				path: '/:id',
 				method: 'get'
 			},
-			fn: (ctx) => this.route(ctx)
+			fn: (ctx) => this.route(ctx),
+			structure: this.composite.structure
 		}, {
 			route: {
 				path: '',
 				method: 'get'
 			},
-			fn: (ctx) => this.route(ctx)
+			fn: (ctx) => this.route(ctx),
+			structure: this.composite.structure
 		}];
 	}
 

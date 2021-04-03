@@ -72,6 +72,14 @@ class Bootstrap {
 		this.crud = await this.installCrud();
 		this.controllers = await this.installControllers();
 	}
+
+	toJSON(){
+		return {
+			$schema: 'bmoor-crud:bootstrap',
+			crud: this.crud,
+			controllers: this.controllers
+		};
+	}
 }
 
 module.exports = {

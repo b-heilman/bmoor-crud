@@ -77,7 +77,7 @@ class Action extends Controller {
 	}
 
 	_buildRoutes(){
-		return Object.key(this.settings)
+		return Object.keys(this.settings)
 		.map(key => {
 			const setting = this.settings[key];
 
@@ -90,8 +90,8 @@ class Action extends Controller {
 					ctx.setParam('action', key);
 
 					return this.route(ctx);
-				}
-				// TODO: structure: ????
+				},
+				structure: this.structure // TODO
 			};
 		});
 	}

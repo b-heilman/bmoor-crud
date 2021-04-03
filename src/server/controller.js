@@ -135,18 +135,17 @@ class Controller {
 	}
 
 	toJSON(){
-		const structure = this.structure.toJSON();
-
-		return this._buildRoutes()
-		.filter(routeInfo => !routeInfo.hidden)
-		.map(
-			routeInfo => ({
-				route: routeInfo.route,
-				response: {
-					structure: routeInfo.structure || structure
-				}
-			})
-		);
+		return {
+			$schema: 'bmoor-crud:controller',
+			routes: this._buildRoutes()
+			.filter(routeInfo => !routeInfo.hidden)
+			.map(
+				routeInfo => ({
+					route: routeInfo.route,
+					structure: routeInfo.structure.name
+				})
+			)
+		};
 	}
 }
 

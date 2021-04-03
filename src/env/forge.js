@@ -11,7 +11,6 @@ async function load(type, directories, stubs = null){
 		}
 	}
 
-	console.log('->', type);
 	return loader.loadFiles(directories.get(type));
 }
 
@@ -39,7 +38,7 @@ class Forge {
 
 		const security = settings.security;
 		if (security){
-			await this.nexus.applySecurity(ref, security);
+			await this.nexus.configureSecurity(ref, security);
 		}
 
 		return service;
@@ -59,20 +58,21 @@ class Forge {
 		);
 	}
 
-	async installServices(connectors, directories, stubs){
+	async configureServices(connectors, directories, stubs){
 		return Promise.all(
 			(await load('model', directories, stubs))
 			.map(async (file) => {
 				const settings = file.settings;
 
-				await this.nexus.setModel(
+				await this.nexus.configureModel(
 					file.name,
 					settings
 				);
 
-				const service = await this.nexus.installService(
+				const service = await this.nexus.configureService(
 					file.name,
-					connectors.get(settings.connector)(settings.connectorSettings)
+					connectors.get(settings.connector)(settings.connectorSettings),
+					settings
 				);
 
 				await this.configureService(file.name, settings);
@@ -82,20 +82,21 @@ class Forge {
 		);
 	}
 
-	async installDocuments(connectors, directories, stubs){
+	async configureDocuments(connectors, directories, stubs){
 		return Promise.all(
 			(await load('composite', directories, stubs))
 			.map(async (file) => {
 				const settings = file.settings;
 
-				await this.nexus.setModel(
+				await this.nexus.configureComposite(
 					file.name,
 					settings
 				);
 
-				const doc = await this.nexus.installDocument(
+				const doc = await this.nexus.configureDocument(
 					file.name,
-					connectors.get(settings.connector)(settings.connectorSettings)
+					connectors.get(settings.connector)(settings.connectorSettings),
+					settings
 				);
 
 				return doc;
@@ -103,21 +104,21 @@ class Forge {
 		);
 	}
 
-	async installDecorators(directories, stubs){
+	async configureDecorators(directories, stubs){
 		return Promise.all(
 			(await load('decorator', directories, stubs))
-			.map(async (file) => this.nexus.applyDecorator(file.name, file.settings))
+			.map(async (file) => this.nexus.configureDecorator(file.name, file.settings))
 		);
 	}
 
-	async installHooks(directories, stubs){
+	async configureHooks(directories, stubs){
 		return Promise.all(
 			(await load('hook', directories, stubs))
-			.map(async (file) => this.nexus.applyHook(file.name, file.settings))
+			.map(async (file) => this.nexus.configureHook(file.name, file.settings))
 		);
 	}
 
-	async installEffects(directories, stubs){
+	async configureEffects(directories, stubs){
 		return Promise.all(
 			(await load('effect', directories, stubs))
 			.map(async (file) => this.subscribe(file.name, file.settings))
@@ -135,11 +136,11 @@ class Forge {
 
 		const [services, docs] = 
 		await Promise.all([
-			this.installServices(connectors, directories, stubs),
-			this.installDocuments(connectors, directories, stubs),
-			this.installDecorators(directories, stubs),
-			this.installHooks(directories, stubs),
-			this.installEffects(directories, stubs)
+			this.configureServices(connectors, directories, stubs),
+			this.configureDocuments(connectors, directories, stubs),
+			this.configureDecorators(directories, stubs),
+			this.configureHooks(directories, stubs),
+			this.configureEffects(directories, stubs)
 		]);
 
 		// install the services, they should be fully hydrated at this point

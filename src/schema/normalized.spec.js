@@ -26,7 +26,7 @@ describe('src/schema/normalized', function(){
 		let class4 = null;
 
 		beforeEach(async function(){
-			nexus.setModel('class-1', {
+			nexus.configureModel('class-1', {
 				fields: {
 					'id': {
 						key: true,
@@ -37,9 +37,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class1 = await nexus.installService('class-1');
+			class1 = await nexus.configureService('class-1');
 
-			nexus.setModel('class-2', {
+			nexus.configureModel('class-2', {
 				fields: {
 					id: {
 						key: true,
@@ -54,9 +54,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class2 = await nexus.installService('class-2');
+			class2 = await nexus.configureService('class-2');
 
-			nexus.setModel('class-3', {
+			nexus.configureModel('class-3', {
 				fields: {
 					id: {
 						key: true,
@@ -71,9 +71,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class3 = await nexus.installService('class-3');
+			class3 = await nexus.configureService('class-3');
 
-			nexus.setModel('class-4', {
+			nexus.configureModel('class-4', {
 				fields: {
 					id: {
 						key: true,
@@ -88,7 +88,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class4 = await nexus.installService('class-4');
+			class4 = await nexus.configureService('class-4');
 		});
 
 		it('should properly process a basic set of models', function(done){
@@ -379,7 +379,7 @@ describe('src/schema/normalized', function(){
 		let class4 = null;
 
 		beforeEach(async function(){
-			await nexus.setModel('class-1', {
+			await nexus.configureModel('class-1', {
 				fields: {
 					'id': {
 						key: true,
@@ -390,9 +390,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class1 = await nexus.installService('class-1');
+			class1 = await nexus.configureService('class-1');
 
-			await nexus.setModel('class-2', {
+			await nexus.configureModel('class-2', {
 				fields: {
 					id: {
 						key: true,
@@ -406,9 +406,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class2 = await nexus.installService('class-2');
+			class2 = await nexus.configureService('class-2');
 
-			await nexus.setModel('class-3', {
+			await nexus.configureModel('class-3', {
 				fields: {
 					id: {
 						key: true,
@@ -422,9 +422,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class3 = await nexus.installService('class-3');
+			class3 = await nexus.configureService('class-3');
 
-			await nexus.setModel('class-4', {
+			await nexus.configureModel('class-4', {
 				fields: {
 					id: {
 						key: true,
@@ -438,7 +438,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class4 = await nexus.installService('class-4');
+			class4 = await nexus.configureService('class-4');
 		});
 
 		describe('class1', function(){
@@ -1084,7 +1084,7 @@ describe('src/schema/normalized', function(){
 		let class5 = null;
 
 		beforeEach(async function(){
-			await nexus.setModel('class-1', {
+			await nexus.configureModel('class-1', {
 				fields: {
 					'id': {
 						key: true,
@@ -1095,9 +1095,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class1 = await nexus.installService('class-1');
+			class1 = await nexus.configureService('class-1');
 
-			await nexus.setModel('class-2', {
+			await nexus.configureModel('class-2', {
 				fields: {
 					id: {
 						key: true,
@@ -1111,9 +1111,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class2 = await nexus.installService('class-2');
+			class2 = await nexus.configureService('class-2');
 
-			await nexus.setModel('class-3', {
+			await nexus.configureModel('class-3', {
 				fields: {
 					id: {
 						key: true,
@@ -1121,9 +1121,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class3 = await nexus.installService('class-3');
+			class3 = await nexus.configureService('class-3');
 
-			await nexus.setModel('class-4', {
+			await nexus.configureModel('class-4', {
 				fields: {
 					id: {
 						key: true,
@@ -1137,9 +1137,9 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class4 = await nexus.installService('class-4');
+			class4 = await nexus.configureService('class-4');
 
-			await nexus.setModel('class-5', {
+			await nexus.configureModel('class-5', {
 				fields: {
 					id: {
 						key: true,
@@ -1159,7 +1159,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class5 = await nexus.installService('class-5');
+			class5 = await nexus.configureService('class-5');
 		});
 
 		describe('::inflate', function(){

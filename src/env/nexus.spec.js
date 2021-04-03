@@ -22,9 +22,9 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 
-	describe('::setModel', function(){
+	describe('::configureModel', function(){
 		it('should properly define a model', async function(){
-			const model = await nexus.setModel('test-10', {
+			const model = await nexus.configureModel('test-10', {
 				fields: {
 					eins: {
 						create: false,
@@ -58,7 +58,7 @@ describe('src/env/nexus.js', function(){
 		});
 
 		it('should assist in defining links', async function(){
-			await nexus.setModel('test-l-1', {
+			await nexus.configureModel('test-l-1', {
 				fields: {
 					eins: {
 						create: false,
@@ -77,7 +77,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			await nexus.setModel('test-l-2', {
+			await nexus.configureModel('test-l-2', {
 				fields: {
 					id: {
 						create: false,
@@ -103,7 +103,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			await nexus.setModel('test-l-3', {
+			await nexus.configureModel('test-l-3', {
 				fields: {
 					id: {
 						create: false,
@@ -115,7 +115,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			await nexus.setModel('test-l-4', {
+			await nexus.configureModel('test-l-4', {
 				fields: {
 					id: {
 						create: false,
@@ -166,7 +166,7 @@ describe('src/env/nexus.js', function(){
 				model = m;
 			});
 
-			nexus.setModel('test-11', {
+			nexus.configureModel('test-11', {
 				fields: {
 					eins: {
 						create: false,
@@ -201,7 +201,7 @@ describe('src/env/nexus.js', function(){
 		});
 
 		it('should resolve if the model was already defined', async function(){
-			nexus.setModel('test-12', {
+			nexus.configureModel('test-12', {
 				fields: {
 					eins: {
 						create: false,
@@ -237,7 +237,7 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 
-	describe('::installService', function(){
+	describe('::configureService', function(){
 		let service = null;
 
 		const connector = {
@@ -249,14 +249,14 @@ describe('src/env/nexus.js', function(){
 
 		describe('model defined first', function(){
 			beforeEach(async function(){
-				nexus.setModel('test-13', {
+				nexus.configureModel('test-13', {
 					fields: {
 						id: true,
 						value: true
 					}
 				});
 
-				service = await nexus.installService('test-13', connector);
+				service = await nexus.configureService('test-13', connector);
 			});
 
 			it('should define the service', async function(){
@@ -276,12 +276,12 @@ describe('src/env/nexus.js', function(){
 
 		describe('model described second', function(){
 			beforeEach(async function(){
-				nexus.installService('test-13.5', connector)
+				nexus.configureService('test-13.5', connector)
 				.then(s => {
 					service = s;
 				});
 
-				await nexus.setModel('test-13.5', {
+				await nexus.configureModel('test-13.5', {
 					fields: {
 						id: true,
 						value: true
@@ -317,7 +317,7 @@ describe('src/env/nexus.js', function(){
 
 		describe('if loaded before installed', function(){
 			beforeEach(async function(){
-				nexus.setModel('test-14', {
+				nexus.configureModel('test-14', {
 					fields: {
 						id: true,
 						value: true
@@ -326,7 +326,7 @@ describe('src/env/nexus.js', function(){
 
 				const prom = nexus.loadService('test-14');
 
-				await nexus.installService('test-14', connector);
+				await nexus.configureService('test-14', connector);
 
 				service = await prom;
 			});
@@ -348,14 +348,14 @@ describe('src/env/nexus.js', function(){
 
 		describe('if loaded after installed', function(){
 			beforeEach(async function(){
-				nexus.setModel('test-15', {
+				nexus.configureModel('test-15', {
 					fields: {
 						id: true,
 						value: true
 					}
 				});
 
-				await nexus.installService('test-15', connector);
+				await nexus.configureService('test-15', connector);
 
 				service = await nexus.loadService('test-15');
 			});
@@ -376,7 +376,7 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 	
-	describe('::applyDecorator', function(){
+	describe('::configureDecorator', function(){
 		let service = null;
 
 		const connector = {
@@ -387,7 +387,7 @@ describe('src/env/nexus.js', function(){
 		};
 
 		beforeEach(async function(){
-			nexus.setModel('test-16', {
+			nexus.configureModel('test-16', {
 				fields: {
 					id: true,
 					value: true
@@ -396,13 +396,13 @@ describe('src/env/nexus.js', function(){
 
 			const prom = nexus.loadService('test-16');
 
-			await nexus.installService('test-16', connector);
+			await nexus.configureService('test-16', connector);
 
 			service = await prom;
 		});
 
 		it('should define the service', async function(){
-			await nexus.applyDecorator('test-16', {
+			await nexus.configureDecorator('test-16', {
 				doSomethingCool: async function(info, ctx){
 					expect(ctx)
 					.to.deep.equal({hello: 'world'});
@@ -427,7 +427,7 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 
-	describe('::applyHook', function(){
+	describe('::configureHook', function(){
 		let service = null;
 
 		const connector = {
@@ -438,7 +438,7 @@ describe('src/env/nexus.js', function(){
 		};
 
 		beforeEach(async function(){
-			nexus.setModel('test-17', {
+			nexus.configureModel('test-17', {
 				fields: {
 					id: true,
 					value: true
@@ -447,7 +447,7 @@ describe('src/env/nexus.js', function(){
 
 			const prom = nexus.loadService('test-17');
 
-			await nexus.installService('test-17', connector);
+			await nexus.configureService('test-17', connector);
 
 			service = await prom;
 		});
@@ -455,7 +455,7 @@ describe('src/env/nexus.js', function(){
 		it('should define the service', async function(){
 			const trace = [];
 
-			await nexus.applyHook('test-17', {
+			await nexus.configureHook('test-17', {
 				beforeCreate: async function(){
 					trace.push(1);
 				}
@@ -492,7 +492,7 @@ describe('src/env/nexus.js', function(){
 		};
 
 		beforeEach(async function(){
-			nexus.setModel('test-17', {
+			nexus.configureModel('test-17', {
 				fields: {
 					eins: {
 						create: false,
@@ -507,7 +507,7 @@ describe('src/env/nexus.js', function(){
 
 			const prom = nexus.loadService('test-17');
 
-			await nexus.installService('test-17', connector);
+			await nexus.configureService('test-17', connector);
 
 			service = await prom;
 		});
@@ -520,7 +520,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					filter: function(datum){
 						return 'event-'+datum.eins;
 					}
@@ -540,7 +540,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					filter: function(datum){
 						return 'event-'+datum.eins;
 					}
@@ -558,7 +558,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					filter: function(datum){
 						return 'event-'+datum.eins;
 					},
@@ -579,7 +579,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					filter: 'event-something-1'
 				});
 
@@ -597,7 +597,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					filter: 'event-something-1'
 				});
 
@@ -612,7 +612,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					filter: 'junk',
 					isAdmin: 'event-something-1'
 				});
@@ -633,7 +633,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowCreate: function(datum){
 						expect(datum)
 						.to.deep.equal({
@@ -664,7 +664,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowCreate: function(){
 						return 'allow-something';
 					}
@@ -698,7 +698,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowCreate: function(datum){
 						expect(datum)
 						.to.deep.equal({
@@ -733,7 +733,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowUpdate: function(id, delta, datum){
 						expect(id)
 						.to.deep.equal(123);
@@ -775,7 +775,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowUpdate: function(){
 						return 'allow-something';
 					}
@@ -810,7 +810,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowUpdate: function(){
 						return 'allow-something';
 					},
@@ -840,7 +840,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowDelete: function(id, datum){
 						expect(id)
 						.to.deep.equal(123);
@@ -872,7 +872,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowDelete: function(){
 						return 'allow-something';
 					}
@@ -903,7 +903,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					allowDelete: function(){
 						return 'allow-something';
 					},
@@ -928,7 +928,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					create: 'allow-something'
 				});
 
@@ -951,7 +951,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					create: 'allow-something'
 				});
 
@@ -984,7 +984,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					update: 'allow-something'
 				});
 
@@ -1008,7 +1008,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					update: 'allow-something'
 				});
 
@@ -1042,7 +1042,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					delete: 'allow-something'
 				});
 
@@ -1062,7 +1062,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.applySecurity('test-17', {
+				await nexus.configureSecurity('test-17', {
 					delete: 'allow-something'
 				});
 
@@ -1085,7 +1085,7 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 
-	describe('::installDocument', function(){
+	describe('::configureDocument', function(){
 	
 		let connector = null;
 	
@@ -1100,14 +1100,14 @@ describe('src/env/nexus.js', function(){
 		});
 
 		it('should allow simple install', async function(){
-			await nexus.setModel('test-item', {
+			await nexus.configureModel('test-item', {
 				fields: {
 					id: true,
 					name: true
 				}
 			});
 
-			await nexus.setModel('test-person', {
+			await nexus.configureModel('test-person', {
 				fields: {
 					id: true,
 					name: true,
@@ -1122,7 +1122,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			await nexus.setModel('test-category', {
+			await nexus.configureModel('test-category', {
 				fields: {
 					id: true,
 					name: true,
@@ -1144,7 +1144,7 @@ describe('src/env/nexus.js', function(){
 				'test-category_2': 'category-1'
 			}]);
 
-			await nexus.setComposite('comp-1', {
+			await nexus.configureComposite('comp-1', {
 				base: 'test-item',
 				key: 'id',
 				fields: {
@@ -1154,7 +1154,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			const doc = await nexus.installDocument('comp-1', connector);
+			const doc = await nexus.configureDocument('comp-1', connector);
 
 			const res = await doc.read(1, {});
 
@@ -1227,14 +1227,14 @@ describe('src/env/nexus.js', function(){
 
 		describe('multi-tiered definitions', function(){
 			beforeEach(async function(){
-				await nexus.setModel('test-item', {
+				await nexus.configureModel('test-item', {
 					fields: {
 						id: true,
 						name: true
 					}
 				});
 
-				await nexus.setModel('test-person', {
+				await nexus.configureModel('test-person', {
 					fields: {
 						id: true,
 						name: true,
@@ -1249,7 +1249,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.setModel('test-category', {
+				await nexus.configureModel('test-category', {
 					fields: {
 						id: true,
 						name: true,
@@ -1272,14 +1272,14 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.setModel('test-2-foo', {
+				await nexus.configureModel('test-2-foo', {
 					fields: {
 						id: true,
 						name: true
 					}
 				});
 
-				await nexus.setModel('test-2-bar', {
+				await nexus.configureModel('test-2-bar', {
 					fields: {
 						id: true,
 						name: true,
@@ -1294,7 +1294,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.setModel('test-3-hello', {
+				await nexus.configureModel('test-3-hello', {
 					fields: {
 						id: true,
 						name: true,
@@ -1309,7 +1309,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.setModel('test-3-world', {
+				await nexus.configureModel('test-3-world', {
 					fields: {
 						id: true,
 						name: true,
@@ -1324,7 +1324,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.setComposite('comp-1', {
+				await nexus.configureComposite('comp-1', {
 					base: 'test-3-hello',
 					key: 'id',
 					fields: {
@@ -1332,12 +1332,12 @@ describe('src/env/nexus.js', function(){
 						'world.name': '> $test-3-world.name'
 					}
 				});
-				const doc1 = await nexus.installDocument('comp-1', connector);
+				const doc1 = await nexus.configureDocument('comp-1', connector);
 
 				stubs.doc1 = sinon.spy(doc1, 'query');
 
 
-				await nexus.setComposite('comp-2', {
+				await nexus.configureComposite('comp-2', {
 					base: 'test-2-foo',
 					key: 'id',
 					fields: {
@@ -1346,13 +1346,13 @@ describe('src/env/nexus.js', function(){
 						'barName':  '> $test-2-bar.name'
 					}
 				});
-				const doc2 = await nexus.installDocument('comp-2', connector);
+				const doc2 = await nexus.configureDocument('comp-2', connector);
 
 				stubs.doc2 = sinon.spy(doc2, 'query');
 			});
 
 			it('should allow composites to chain calls', async function(){
-				await nexus.setComposite('comp-3', {
+				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
 					key: 'id',
 					fields: {
@@ -1362,7 +1362,7 @@ describe('src/env/nexus.js', function(){
 						'link': '> $test-category.fooId > #comp-2'
 					}
 				});
-				const doc3 = await nexus.installDocument('comp-3', connector);
+				const doc3 = await nexus.configureDocument('comp-3', connector);
 				
 				// comp-3
 				stubs.execute.onCall(0)
@@ -1568,7 +1568,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			it('should allow composites to skip calls', async function(){
-				await nexus.setComposite('comp-3', {
+				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
 					key: 'id',
 					fields: {
@@ -1579,7 +1579,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				const doc3 = await nexus.installDocument('comp-3', connector);
+				const doc3 = await nexus.configureDocument('comp-3', connector);
 
 				// comp-3
 				stubs.execute.onCall(0)

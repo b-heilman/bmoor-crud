@@ -10,7 +10,7 @@ async function load(type, directories, stubs = null){
 		const stub = stubs.get(type);
 
 		if (stub){
-			console.log('=>', stub);
+			console.log('stub =>', type, stub);
 			return stub;
 		}
 	}
@@ -28,28 +28,28 @@ class Gateway {
 	async installGuards(directories, stubs){
 		return Promise.all(
 			(await load('guard', directories, stubs))
-			.map(file => this.nexus.setGuard(file.name, file.settings))
+			.map(file => this.nexus.configureGuard(file.name, file.settings))
 		);
 	}
 
 	async installActions(directories, stubs){
 		return Promise.all(
 			(await load('action', directories, stubs))
-			.map(file => this.nexus.setAction(file.name, file.settings))
+			.map(file => this.nexus.configureAction(file.name, file.settings))
 		);
 	}
 
 	async installUtilities(directories, stubs){
 		return Promise.all(
 			(await load('utility', directories, stubs))
-			.map(file => this.nexus.setUtility(file.name, file.settings))
+			.map(file => this.nexus.configureUtility(file.name, file.settings))
 		);
 	}
 
 	async installSynthetics(directories, stubs){
 		return Promise.all(
 			(await load('synthetic', directories, stubs))
-			.map(file => this.nexus.setSynthetic(file.name, file.settings))
+			.map(file => this.nexus.configureSynthetic(file.name, file.settings))
 		);
 	}
 

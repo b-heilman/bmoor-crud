@@ -13,17 +13,17 @@ describe('src/env/gateway.js', function(){
 
 	beforeEach(function(){
 		stubs = {
-			setGuard: sinon.stub(),
-			setAction: sinon.stub(),
-			setUtility: sinon.stub(),
-			setSynthetic: sinon.stub()
+			configureGuard: sinon.stub(),
+			configureAction: sinon.stub(),
+			configureUtility: sinon.stub(),
+			configureSynthetic: sinon.stub()
 		};
 
 		stubbedNexus = {
-			setGuard: stubs.setGuard,
-			setAction: stubs.setAction,
-			setUtility: stubs.setUtility,
-			setSynthetic: stubs.setSynthetic
+			configureGuard: stubs.configureGuard,
+			configureAction: stubs.configureAction,
+			configureUtility: stubs.configureUtility,
+			configureSynthetic: stubs.configureSynthetic
 		};
 	});
 
@@ -58,7 +58,7 @@ describe('src/env/gateway.js', function(){
 			option: 1
 		});
 
-		stubs.setGuard
+		stubs.configureGuard
 		.resolves({
 			iAm: 'a guard'
 		});
@@ -79,7 +79,7 @@ describe('src/env/gateway.js', function(){
 			option: 2
 		});
 
-		stubs.setAction
+		stubs.configureAction
 		.resolves({
 			iAm: 'a action'
 		});
@@ -100,7 +100,7 @@ describe('src/env/gateway.js', function(){
 			option: 3
 		});
 
-		stubs.setUtility
+		stubs.configureUtility
 		.resolves({
 			iAm: 'a utility'
 		});
@@ -121,7 +121,7 @@ describe('src/env/gateway.js', function(){
 			option: 4
 		});
 
-		stubs.setSynthetic
+		stubs.configureSynthetic
 		.resolves({
 			iAm: 'a synthetic'
 		});
@@ -131,25 +131,25 @@ describe('src/env/gateway.js', function(){
 		const res = await gateway.install(directories);
 
 		//--- results ---
-		expect(stubs.setGuard.getCall(0).args)
+		expect(stubs.configureGuard.getCall(0).args)
 		.to.deep.equal([
 			'guard-file',
 			{ option: 1 }
 		]);
 
-		expect(stubs.setAction.getCall(0).args)
+		expect(stubs.configureAction.getCall(0).args)
 		.to.deep.equal([
 			'action-file',
 			{ option: 2 }
 		]);
 
-		expect(stubs.setUtility.getCall(0).args)
+		expect(stubs.configureUtility.getCall(0).args)
 		.to.deep.equal([
 			'utility-file',
 			{ option: 3 }
 		]);
 
-		expect(stubs.setSynthetic.getCall(0).args)
+		expect(stubs.configureSynthetic.getCall(0).args)
 		.to.deep.equal([
 			'synthetic-file',
 			{ option: 4 }
@@ -187,7 +187,7 @@ describe('src/env/gateway.js', function(){
 				}
 			]);
 
-			stubs.setGuard
+			stubs.configureGuard
 			.resolves({
 				iAm: 'a guard'
 			});
@@ -202,7 +202,7 @@ describe('src/env/gateway.js', function(){
 				}
 			]);
 
-			stubs.setAction
+			stubs.configureAction
 			.resolves({
 				iAm: 'a action'
 			});
@@ -217,7 +217,7 @@ describe('src/env/gateway.js', function(){
 				}
 			]);
 
-			stubs.setUtility
+			stubs.configureUtility
 			.resolves({
 				iAm: 'a utility'
 			});
@@ -232,7 +232,7 @@ describe('src/env/gateway.js', function(){
 				}
 			]);
 
-			stubs.setSynthetic
+			stubs.configureSynthetic
 			.resolves({
 				iAm: 'a synthetic'
 			});
@@ -242,25 +242,25 @@ describe('src/env/gateway.js', function(){
 			const res = await gateway.install(directories, mockery);
 
 			//--- results ---
-			expect(stubs.setGuard.getCall(0).args)
+			expect(stubs.configureGuard.getCall(0).args)
 			.to.deep.equal([
 				'a-guard',
 				{ option: 1 }
 			]);
 
-			expect(stubs.setAction.getCall(0).args)
+			expect(stubs.configureAction.getCall(0).args)
 			.to.deep.equal([
 				'a-action',
 				{ option: 2 }
 			]);
 
-			expect(stubs.setUtility.getCall(0).args)
+			expect(stubs.configureUtility.getCall(0).args)
 			.to.deep.equal([
 				'a-utility',
 				{ option: 3 }
 			]);
 
-			expect(stubs.setSynthetic.getCall(0).args)
+			expect(stubs.configureSynthetic.getCall(0).args)
 			.to.deep.equal([
 				'a-synthetic',
 				{ option: 4 }

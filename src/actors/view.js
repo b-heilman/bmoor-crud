@@ -235,6 +235,14 @@ class View {
 
 		return runStatement(this, stmt, ctx);
 	}
+
+	toJSON(){
+		console.log('--view--', this.structure.name);
+		return {
+			$schema: 'bmoor-crud:view',
+			structure: this.structure
+		};
+	}
 }
 	
 module.exports = {
