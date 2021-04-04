@@ -4,11 +4,6 @@ const error = require('bmoor/src/lib/error.js');
 const {Controller} = require('../server/controller.js');
 
 class Synthetic extends Controller {
-	constructor(composite){
-		super(composite.structure);
-		
-		this.composite = composite;
-	}
 
 	async configure(settings){
 		this.settings = settings;
@@ -32,7 +27,7 @@ class Synthetic extends Controller {
 				});
 			}
 
-			return this.composite.push(await ctx.getContent(), ctx);
+			return this.view.push(await ctx.getContent(), ctx);
 		} else if (ctx.getMethod() === 'get') {
 			if (!this.settings.readable){
 				throw error.create('document is not readable', {
@@ -51,9 +46,9 @@ class Synthetic extends Controller {
 			}
 
 			if (ctx.hasParam('id')) {
-				return this.composite.read(ctx.getParam('id'), ctx);
+				return this.view.read(ctx.getParam('id'), ctx);
 			} else {
-				return this.composite.query(ctx.getQuery(), ctx);
+				return this.view.query(ctx.getQuery(), ctx);
 			}
 		} else {
 			throw error.create('called read with method '+ctx.method, {
@@ -65,38 +60,29 @@ class Synthetic extends Controller {
 	}
 
 	_buildRoutes(){
+		console.log('=>', this.view);
 		return [{
 			route: {
 				path: '',
 				method: 'post'
 			},
 			fn: (ctx) => this.route(ctx),
-			structure: this.composite.structure
+			structure: this.view.structure
 		}, {
 			route: {
 				path: '/:id',
 				method: 'get'
 			},
 			fn: (ctx) => this.route(ctx),
-			structure: this.composite.structure
+			structure: this.view.structure
 		}, {
 			route: {
 				path: '',
 				method: 'get'
 			},
 			fn: (ctx) => this.route(ctx),
-			structure: this.composite.structure
+			structure: this.view.structure
 		}];
-	}
-
-	getRoutes(nexus){
-		return [
-			this.prepareRoute(nexus, 'post', '/', 'route'),
-
-			this.prepareRoute(nexus, 'get','/:id', 'route'),
-			
-			this.prepareRoute(nexus, 'get', '/', 'route')
-		];
 	}
 }
 

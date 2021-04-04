@@ -62,12 +62,6 @@ async function runUpdate(ids, service, delta, ctx){
 }
 
 class Guard extends Controller {
-	constructor(service){
-		super(service.structure);
-		
-		this.service = service;
-	}
-
 	async read(ctx){
 		if (ctx.getMethod() === 'get'){
 			if (!this.settings.read){
@@ -79,7 +73,7 @@ class Guard extends Controller {
 					operationNotAllowed('query');
 				}
 
-				return this.service.query(ctx.getQuery(), ctx);
+				return this.view.query(ctx.getQuery(), ctx);
 			} else if (ctx.params){
 				let ids = ctx.getParam('id');
 
@@ -94,9 +88,9 @@ class Guard extends Controller {
 						status: 400
 					});
 				} else if (ids.length > 1){
-					return this.service.readMany(ids, ctx);
+					return this.view.readMany(ids, ctx);
 				} else {
-					return this.service.read(ids[0], ctx)
+					return this.view.read(ids[0], ctx)
 					.then(res => {
 						if (!res){
 							throw error.create('called read without result', {
@@ -110,7 +104,7 @@ class Guard extends Controller {
 					});
 				}
 			} else {
-				return this.service.readAll(ctx);
+				return this.view.readAll(ctx);
 			}
 		} else {
 			throw error.create('called read with method '+ctx.method, {
@@ -125,7 +119,7 @@ class Guard extends Controller {
 		const datum = await ctx.getContent();
 
 		ctx.setInfo({
-			model: this.service.structure.name
+			model: this.view.structure.name
 		});
 
 		if (ctx.getMethod() === 'post'){
@@ -137,7 +131,7 @@ class Guard extends Controller {
 				action: 'create'
 			});
 
-			return this.service.create(datum, ctx);
+			return this.view.create(datum, ctx);
 		} else if (ctx.getMethod() === 'put'){
 			const ids = (ctx.getParam('id')||'').trim();
 
@@ -156,7 +150,7 @@ class Guard extends Controller {
 					status: 400
 				});
 			} else if (config.get('putIsPatch')){
-				return runUpdate(ids.split(','), this.service, datum, ctx);
+				return runUpdate(ids.split(','), this.view, datum, ctx);
 			} else {
 				throw error.create('called write and tried to put, not ready', {
 					code: 'CRUD_CONTROLLER_WRITE_NOTREADY',
@@ -183,7 +177,7 @@ class Guard extends Controller {
 					status: 400
 				});
 			} else {
-				return runUpdate(ids.split(','), this.service, datum, ctx);
+				return runUpdate(ids.split(','), this.view, datum, ctx);
 			}
 		} else {
 			throw error.create('called write with method '+ctx.method, {
@@ -196,7 +190,7 @@ class Guard extends Controller {
 
 	async delete(ctx){
 		ctx.setInfo({
-			model: this.service.structure.name,
+			model: this.view.structure.name,
 			action: 'delete'
 		});
 
@@ -210,11 +204,11 @@ class Guard extends Controller {
 					operationNotAllowed('query');
 				}
 
-				const queriedIds = (await this.service.query(ctx.getQuery(), ctx))
-					.map(datum => this.service.structure.getKey(datum));
+				const queriedIds = (await this.view.query(ctx.getQuery(), ctx))
+					.map(datum => this.view.structure.getKey(datum));
 
 				return Promise.all(queriedIds.map(
-					id => this.service.delete(id, ctx)
+					id => this.view.delete(id, ctx)
 				));
 			} else {
 				let ids = (ctx.getParam('id')||'').trim();
@@ -230,10 +224,10 @@ class Guard extends Controller {
 
 					if (ids.length > 1){
 						return Promise.all(ids.map(
-							id => this.service.delete(id, ctx)
+							id => this.view.delete(id, ctx)
 						));
 					} else {
-						return this.service.delete(ids[0], ctx);
+						return this.view.delete(ids[0], ctx);
 					}
 				}
 			}
@@ -265,7 +259,7 @@ class Guard extends Controller {
 			}, 
 			fn: (ctx) => this.write(ctx),
 			hidden: !this.settings.create,
-			structure: this.service.structure
+			structure: this.view.structure
 		}, {
 			// read / readMany
 			route: {
@@ -274,7 +268,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.read(ctx),
 			hidden: !this.settings.read,
-			structure: this.service.structure
+			structure: this.view.structure
 		}, {
 			// readAll, query
 			route: {
@@ -283,7 +277,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.read(ctx),
 			hidden: !this.settings.read,
-			structure: this.service.structure
+			structure: this.view.structure
 		}, {
 			// update
 			route: {
@@ -292,7 +286,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.write(ctx),
 			hidden: !this.settings.update,
-			structure: this.service.structure
+			structure: this.view.structure
 		}, {
 			// update
 			route: {
@@ -301,7 +295,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.write(ctx),
 			hidden: !this.settings.update,
-			structure: this.service.structure
+			structure: this.view.structure
 		}, {
 			// delete
 			route: {
@@ -310,7 +304,7 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.delete(ctx),
 			hidden: !this.settings.delete,
-			structure: this.service.structure
+			structure: this.view.structure
 		}, {
 			// delete w/ query
 			route: {
@@ -319,16 +313,8 @@ class Guard extends Controller {
 			},
 			fn: (ctx) => this.delete(ctx),
 			hidden: !(this.settings.delete && this.settings.query),
-			structure: this.service.structure
+			structure: this.view.structure
 		}];
-	}
-
-	getRoutes(nexus){
-		return this._buildRoutes()
-		.map(routeInfo => this.prepareRoute(
-			nexus, 
-			routeInfo
-		));
 	}
 }
 

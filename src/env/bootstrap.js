@@ -15,6 +15,7 @@ const {Guard} = require('../controllers/guard.js');
 const {Action} = require('../controllers/action.js');
 const {Utility} = require('../controllers/utility.js');
 const {Synthetic} = require('../controllers/synthetic.js');
+const {Router} = require('../server/router.js');
 
 const config = new Config({
 	connectors: {},
@@ -41,8 +42,21 @@ const config = new Config({
 		action: Action,
 		utility: Utility,
 		synthetic: Synthetic
+	},
+	routes: {
+		root: '/bmoor',
+		guard: '/crud',
+		action: '/action',
+		utility: '/utility',
+		synthetic: '/synthetic'
 	}
 });
+
+function assignControllers(guard, controllers){
+	guard.addRouters(controllers.map(controller => controller.getRouter()));
+
+	return guard;
+}
 
 class Bootstrap {
 	constructor(cfg = config){
@@ -69,15 +83,30 @@ class Bootstrap {
 	}
 
 	async install(){
+		const routes = this.config.sub('routes');
+
 		this.crud = await this.installCrud();
 		this.controllers = await this.installControllers();
+
+		const {guards, actions, utilities, synthetics} = this.controllers;
+		const root = new Router(routes.get('root'));
+
+		const guard = assignControllers(new Router(routes.get('guard')), guards);
+		const action = assignControllers(new Router(routes.get('action')), actions);
+		const utility = assignControllers(new Router(routes.get('utility')), utilities);
+		const synthetic = assignControllers(new Router(routes.get('synthetic')), synthetics);
+
+		root.addRouters([guard, action, utility, synthetic]);
+
+		this.router = root;
 	}
 
 	toJSON(){
 		return {
 			$schema: 'bmoor-crud:bootstrap',
 			crud: this.crud,
-			controllers: this.controllers
+			controllers: this.controllers,
+			router: this.router
 		};
 	}
 }

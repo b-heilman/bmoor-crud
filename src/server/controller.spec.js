@@ -29,17 +29,14 @@ describe('src/server/controller.js', function(){
 			};
 		}
 
-		const route = ctrl.prepareRoute(
-			{},
-			{
-				route: {
-					path: 'test/route',
-					method: 'post'
-				},
-				fn: test,
-				enableRollback: true
-			}
-		);
+		const route = ctrl.prepareRoute({
+			route: {
+				path: 'test/route',
+				method: 'post'
+			},
+			fn: test,
+			enableRollback: true
+		});
 
 		const res = await route.action({});
 
@@ -60,27 +57,24 @@ describe('src/server/controller.js', function(){
 			};
 		}
 
-		const route = ctrl.prepareRoute(
-			{},
-			{
-				route: {
-					method: 'post',
-					path: 'test/route'
-				},
-				fn: test,
-				enableRollback: true,
-				formatResponse: function(res){
-					expect(res)
-					.to.deep.equal({
-						foo: 'bar'
-					});
+		const route = ctrl.prepareRoute({
+			route: {
+				method: 'post',
+				path: 'test/route'
+			},
+			fn: test,
+			enableRollback: true,
+			formatResponse: function(res){
+				expect(res)
+				.to.deep.equal({
+					foo: 'bar'
+				});
 
-					return {
-						hello: 'world'
-					};
-				} 
-			}
-		);
+				return {
+					hello: 'world'
+				};
+			} 
+		});
 
 		const res = await route.action({});
 
@@ -92,17 +86,6 @@ describe('src/server/controller.js', function(){
 
 
 	it('should perform rollback on error', async function(){
-		const ctrl = new sut.Controller();
-		
-		function test(ctx){
-			ctx.addChange('model-1', 'create', {}, {});
-			ctx.addChange('model-2', 'create', {}, {});
-			ctx.addChange('model-3', 'create', {}, {});
-			ctx.addChange('model-1', 'update', {}, {});
-
-			throw new Error('testing');
-		}
-
 		stubs.delete = sinon.stub()
 		.resolves({});
 
@@ -118,20 +101,33 @@ describe('src/server/controller.js', function(){
 			}
 		});
 
+		const ctrl = new sut.Controller({
+			structure: {
+				nexus: {
+					loadService: stubs.loadService
+				}
+			}
+		});
+		
+		function test(ctx){
+			ctx.addChange('model-1', 'create', {}, {});
+			ctx.addChange('model-2', 'create', {}, {});
+			ctx.addChange('model-3', 'create', {}, {});
+			ctx.addChange('model-1', 'update', {}, {});
+
+			throw new Error('testing');
+		}
+
 		let failed = false;
 		try {
-			const route = ctrl.prepareRoute(
-				{
-					loadService: stubs.loadService
-				},{
-					route: {
-						method: 'post',
-						path: 'test/route'
-					},
-					fn: test,
-					enableRollback: true
-				}
-			);
+			const route = ctrl.prepareRoute({
+				route: {
+					method: 'post',
+					path: 'test/route'
+				},
+				fn: test,
+				enableRollback: true
+			});
 
 			await route.action({});
 		} catch( ex ){
@@ -158,17 +154,6 @@ describe('src/server/controller.js', function(){
 	});
 
 	it('should not perform rollback on error if not enabled', async function(){
-		const ctrl = new sut.Controller();
-		
-		function test(ctx){
-			ctx.addChange('model-1', 'create', {}, {});
-			ctx.addChange('model-2', 'create', {}, {});
-			ctx.addChange('model-3', 'create', {}, {});
-			ctx.addChange('model-1', 'update', {}, {});
-
-			throw new Error('testing');
-		}
-
 		stubs.delete = sinon.stub()
 		.resolves({});
 
@@ -183,21 +168,34 @@ describe('src/server/controller.js', function(){
 				getKey: () => 'key'
 			}
 		});
+		
+		const ctrl = new sut.Controller({
+			structure: {
+				nexus: {
+					loadService: stubs.loadService
+				}
+			}
+		});
+		
+		function test(ctx){
+			ctx.addChange('model-1', 'create', {}, {});
+			ctx.addChange('model-2', 'create', {}, {});
+			ctx.addChange('model-3', 'create', {}, {});
+			ctx.addChange('model-1', 'update', {}, {});
+
+			throw new Error('testing');
+		}
 
 		let failed = false;
 		try {
-			const route = ctrl.prepareRoute(
-				{
-					loadService: stubs.loadService
-				}, {
-					route: {
-						method: 'post',
-						path: 'test/route'
-					},
-					fn: test,
-					enableRollback: false
-				}
-			);
+			const route = ctrl.prepareRoute({
+				route: {
+					method: 'post',
+					path: 'test/route'
+				},
+				fn: test,
+				enableRollback: false
+			});
 
 			await route.action({});
 		} catch( ex ){
@@ -212,7 +210,13 @@ describe('src/server/controller.js', function(){
 	});
 
 	it('should return a list of changes if one is available', async function(){
-		const ctrl = new sut.Controller();
+		const ctrl = new sut.Controller({
+			structure: {
+				nexus: {
+					loadService: stubs.loadService
+				}
+			}
+		});
 		
 		async function test(ctx){
 			ctx.addChange('model-1', 'create', {value: 1}, {value: 2});
@@ -220,18 +224,14 @@ describe('src/server/controller.js', function(){
 			return {hello: 'world'};
 		}
 
-		const route = ctrl.prepareRoute(
-			{
-				loadService: stubs.loadService
-			}, {
-				route: {
-					method: 'post',
-					path: 'test/route'
-				},
-				fn: test,
-				enableRollback: false
-			}
-		);
+		const route = ctrl.prepareRoute({
+			route: {
+				method: 'post',
+				path: 'test/route'
+			},
+			fn: test,
+			enableRollback: false
+		});
 
 		const res = await route.action({});
 
@@ -248,7 +248,9 @@ describe('src/server/controller.js', function(){
 	});
 
 	it('should return a list of changes if multiple are available', async function(){
-		const ctrl = new sut.Controller();
+		const ctrl = new sut.Controller({
+			loadService: stubs.loadService
+		});
 		
 		async function test(ctx){
 			ctx.addChange('model-1', 'create', 1, {value: 1}, {value: 2});
@@ -259,18 +261,14 @@ describe('src/server/controller.js', function(){
 			return {hello: 'world'};
 		}
 
-		const route = ctrl.prepareRoute(
-			{
-				loadService: stubs.loadService
-			}, {
-				route: {
-					method: 'post',
-					path: 'test/route'
-				},
-				fn: test,
-				enableRollback: false
-			}
-		);
+		const route = ctrl.prepareRoute({
+			route: {
+				method: 'post',
+				path: 'test/route'
+			},
+			fn: test,
+			enableRollback: false
+		});
 
 		const res = await route.action({});
 

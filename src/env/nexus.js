@@ -121,7 +121,7 @@ class Nexus {
 	}
 
 	getModel(ref){
-		return getDefined(this, 'model', this.constructors, ref, [ref]);
+		return getDefined(this, 'model', this.constructors, ref, [ref, this]);
 	}
 
 	async configureModel(ref, settings){
@@ -303,12 +303,10 @@ class Nexus {
 	}
 
 	getComposite(ref){
-		return getDefined(this, 'composite', this.constructors, ref, [ref]);
+		return getDefined(this, 'composite', this.constructors, ref, [ref, this]);
 	}
 
 	async configureComposite(ref, settings){
-		settings.nexus = this;
-		console.log('--> setting composite', ref);
 		return setSettings(this, 'composite', this.getComposite(ref), settings, ref);
 	}
 
@@ -321,15 +319,14 @@ class Nexus {
 	}
 
 	async configureDocument(ref, connector, settings = {}){
-		console.log('document configure -->', ref);
 		await this.loadComposite(ref);
 
 		const doc = this.getDocument(ref);
-		console.log('document configuring -->', ref);
+		
 		await doc.configure(connector, settings);
 
 		await this.setConfigured('document', ref, doc);
-		console.log('document configured -->', ref);
+		
 		return doc;
 	}
 

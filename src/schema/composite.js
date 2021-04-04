@@ -212,8 +212,6 @@ class Composite extends Structure {
 	async configure(settings){
 		await super.configure(settings);
 
-		this.nexus = settings.nexus;
-
 		this.context = null;
 		this.connections = {};
 		this.properties = new CompositeProperties(

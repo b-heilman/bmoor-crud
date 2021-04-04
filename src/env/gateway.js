@@ -5,12 +5,10 @@ const {Config} = require('bmoor/src/lib/config.js');
 
 // this is our building object, it produces all the things exposing in the system
 async function load(type, directories, stubs = null){
-	console.log('->', type);
 	if (stubs){
 		const stub = stubs.get(type);
 
 		if (stub){
-			console.log('stub =>', type, stub);
 			return stub;
 		}
 	}

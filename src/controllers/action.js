@@ -16,12 +16,6 @@ function camelize(str){
 
 // actions performed against a class, but a particular instance
 class Action extends Controller {
-	constructor(service){
-		super(service.structure);
-		
-		this.service = service;
-	}
-
 	async configure(settings){
 		this.settings = Object.keys(settings)
 		.reduce((agg, key) => {
@@ -61,7 +55,7 @@ class Action extends Controller {
 
 		const method = camelize(action);
 
-		if (!this.service[method]){
+		if (!this.view[method]){
 			throw error.create('method was not found with service', {
 				code: 'ACTION_CONTROLLER_METHOD',
 				type: 'warn',
@@ -69,11 +63,12 @@ class Action extends Controller {
 			});
 		}
 
-		const datum = this.service.read(id);
+		// TODO: allow read by other fields, not just id
+		const datum = this.view.read(id);
 		const params = setting.parseParams	?
 			setting.parseParams(ctx, datum) : [ctx];
 		
-		return this.service[method](...params);
+		return this.view[method](...params);
 	}
 
 	_buildRoutes(){
@@ -91,7 +86,7 @@ class Action extends Controller {
 
 					return this.route(ctx);
 				},
-				structure: this.structure // TODO
+				structure: this.view.structure // TODO
 			};
 		});
 	}

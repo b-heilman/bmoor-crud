@@ -16,12 +16,6 @@ function camelize(str){
 
 // actions performed against a class, but a particular instance
 class Utility extends Controller {
-	constructor(service){
-		super(service.structure);
-		
-		this.service = service;
-	}
-
 	async configure(settings){
 		this.settings = Object.keys(settings)
 		.reduce((agg, key) => {
@@ -60,7 +54,7 @@ class Utility extends Controller {
 
 		const fn = camelize(utility);
 
-		if (!this.service[fn]){
+		if (!this.view[fn]){
 			throw error.create('method was not found with service', {
 				code: 'UTILITY_CONTROLLER_METHOD',
 				type: 'warn',
@@ -71,7 +65,7 @@ class Utility extends Controller {
 		const params = setting.parseParams	?
 			setting.parseParams(ctx) : [ctx];
 		
-		return this.service[fn](...params);
+		return this.view[fn](...params);
 	}
 
 	_buildRoutes(){
@@ -89,7 +83,7 @@ class Utility extends Controller {
 
 					return this.route(ctx);
 				},
-				structure: this.structure // TODO
+				structure: this.view.structure // TODO
 			};
 		});
 	}

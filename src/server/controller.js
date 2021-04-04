@@ -1,5 +1,6 @@
 
 const {Route} = require('./route.js');
+const {Router} = require('./router.js');
 const {Context} = require('./context.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -74,15 +75,15 @@ const config = new Config({
 });
 
 class Controller {
-	constructor(structure){
-		this.structure = structure;
+	constructor(view){
+		this.view = view;
 	}
 
 	async configure(settings){
 		this.settings = settings;
 	}
 
-	prepareRoute(nexus, settings={}){
+	prepareRoute(settings={}){
 		return new Route(
 			settings.route.path,
 			settings.route.method,
@@ -96,15 +97,15 @@ class Controller {
 					const changes = ctx.getChanges();
 
 					if (ctx.info.response){
-						return ctx.info.response(res, changes, ctx, nexus);
+						return ctx.info.response(res, changes, ctx);
 					} else if (settings.formatResponse){
-						return settings.formatResponse(res, changes, ctx, nexus);
+						return settings.formatResponse(res, changes, ctx);
 					} else {
-						return config.get('formatResponse')(res, changes, ctx, nexus);
+						return config.get('formatResponse')(res, changes, ctx);
 					}
 				} catch(ex){
 					if (settings.enableRollback){
-						await config.get('handleRollback')(ctx.getChanges(), ctx, nexus);
+						await config.get('handleRollback')(ctx.getChanges(), ctx, this.view.structure.nexus);
 					}
 
 					throw ex;
@@ -126,12 +127,17 @@ class Controller {
 		}];
 	}
 
-	getRoutes(nexus){
+	getRoutes(){
 		return this._buildRoutes()
-		.map(routeInfo => this.prepareRoute(
-			nexus, 
-			routeInfo
-		));
+		.map(routeInfo => this.prepareRoute(routeInfo));
+	}
+
+	getRouter(){
+		const router = new Router('/'+this.view.structure.name);
+
+		router.addRoutes(this.getRoutes());
+
+		return router;
 	}
 
 	toJSON(){

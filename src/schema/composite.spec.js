@@ -151,7 +151,7 @@ describe('src/schema/composite.js', function(){
 
 	describe('::getQuery', function(){
 		it('should work', async function(){
-			const lookup = new Composite('foo-bar');
+			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
@@ -160,8 +160,7 @@ describe('src/schema/composite.js', function(){
 					zwei: '> $test-2.name',
 					drei: '> $test-2.title',
 					fier: '> $test-2 > $test-3.name'
-				},
-				nexus
+				}
 			});
 
 			await lookup.link();
@@ -243,7 +242,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		it('should succeed with a basic alignment', async function(){
-			const lookup = new Composite('foo-bar');
+			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
@@ -252,8 +251,7 @@ describe('src/schema/composite.js', function(){
 					zwei: '> $test-2.name',
 					drei: '> $test-2.title',
 					fier: '> $test-2 > $test-3.name'
-				},
-				nexus
+				}
 			});
 
 			await lookup.link();
@@ -321,7 +319,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		it('should succeed with a alias alignment', async function(){
-			const lookup = new Composite('foo-bar');
+			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-5',
@@ -331,8 +329,7 @@ describe('src/schema/composite.js', function(){
 					drei: '.title',
 					fier: '.owner1Id > ?$owner:test-1.name',
 					funf: '.owner1Id > ?$owner:test-1.title'
-				},
-				nexus
+				}
 			});
 
 			await lookup.link();
@@ -428,7 +425,7 @@ describe('src/schema/composite.js', function(){
 	
 	describe('::getInflater', function(){
 		it('should work', async function(){
-			const lookup = new Composite('blah');
+			const lookup = new Composite('blah', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
@@ -437,8 +434,7 @@ describe('src/schema/composite.js', function(){
 					zwei: '> $test-2.name',
 					drei: '> $test-2.title',
 					fier: '> $test-2 > $test-3.name'
-				},
-				nexus
+				}
 			});
 
 			const inflate = await lookup.getInflater({});
@@ -460,7 +456,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		it('should work with types', async function(){
-			const lookup = new Composite('blah');
+			const lookup = new Composite('blah', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
@@ -469,8 +465,7 @@ describe('src/schema/composite.js', function(){
 					zwei: '> $test-2.json',
 					drei: '> $test-2.title',
 					fier: '> $test-2 > $test-3.name'
-				},
-				nexus
+				}
 			});
 
 			const inflate = await lookup.getInflater({});
@@ -498,7 +493,7 @@ describe('src/schema/composite.js', function(){
 
 	describe('schema', function(){
 		it('should define the correct properties', async function(){
-			const comp = new Composite('test');
+			const comp = new Composite('test', nexus);
 
 			await comp.configure({
 				base: 'test-2',
@@ -508,8 +503,7 @@ describe('src/schema/composite.js', function(){
 					foo: {
 						bar: '.title'
 					}
-				},
-				nexus
+				}
 			});
 
 			await comp.link();
@@ -552,7 +546,7 @@ describe('src/schema/composite.js', function(){
 					}
 				});
 
-				const comp = new Composite('extends');
+				const comp = new Composite('extends', nexus);
 
 				await comp.configure({
 					base: 'test-2',
@@ -560,8 +554,7 @@ describe('src/schema/composite.js', function(){
 					extends: 'base',
 					fields: {
 						myName: '.name'
-					},
-					nexus
+					}
 				});
 
 				await comp.link();
@@ -612,7 +605,7 @@ describe('src/schema/composite.js', function(){
 					}
 				});
 
-				const comp = new Composite('uber-extends');
+				const comp = new Composite('uber-extends', nexus);
 
 				await comp.configure({
 					base: 'test-3',
@@ -620,8 +613,7 @@ describe('src/schema/composite.js', function(){
 					extends: 'extends',
 					fields: {
 						reallyMyName: '.name'
-					},
-					nexus
+					}
 				});
 
 				await comp.link();

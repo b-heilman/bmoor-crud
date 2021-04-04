@@ -275,8 +275,9 @@ function buildDeflate(actions, fields){
 }
 
 class Structure {
-	constructor(name){
+	constructor(name, nexus){
 		this.name = name;
+		this.nexus = nexus;
 	}
 
 	configure(settings){

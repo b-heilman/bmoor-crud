@@ -346,6 +346,122 @@ describe('src/env/bootstrap.js', function(){
 					}]
 				}]
 			});
+
+			expect(res.router)
+			.to.deep.equal({
+				'$schema': 'bmoor-crud:router',
+				'path': '/bmoor',
+				'routes': [
+					{
+						'$schema': 'bmoor-crud:router',
+						'path': '/action',
+						'routes': [
+							{
+								'$schema': 'bmoor-crud:router',
+								'path': '/service-1',
+								'routes': [
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'get',
+										'path': '/hello/:id'
+									}
+								]
+							}
+						]
+					},
+					{
+						'$schema': 'bmoor-crud:router',
+						'path': '/crud',
+						'routes': [
+							{
+								'$schema': 'bmoor-crud:router',
+								'path': '/service-1',
+								'routes': [
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'delete',
+										'path': ''
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'get',
+										'path': ''
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'post',
+										'path': ''
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'delete',
+										'path': '/:id'
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'get',
+										'path': '/:id'
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'patch',
+										'path': '/:id'
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'put',
+										'path': '/:id'
+									}
+								]
+							}
+						]
+					},
+					{
+						'$schema': 'bmoor-crud:router',
+						'path': '/synthetic',
+						'routes': [
+							{
+								'$schema': 'bmoor-crud:router',
+								'path': '/composite-1',
+								'routes': [
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'get',
+										'path': ''
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'post',
+										'path': ''
+									},
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'get',
+										'path': '/:id'
+									}
+								]
+							}
+						]
+					},
+					{
+						'$schema': 'bmoor-crud:router',
+						'path': '/utility',
+						'routes': [
+							{
+								'$schema': 'bmoor-crud:router',
+								'path': '/service-1',
+								'routes': [
+									{
+										'$schema': 'bmoor-crud:route',
+										'method': 'get',
+										'path': '/hello'
+									}
+								]
+							}
+						]
+					}
+				]
+			});
 		});
 	});
 });

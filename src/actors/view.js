@@ -237,7 +237,6 @@ class View {
 	}
 
 	toJSON(){
-		console.log('--view--', this.structure.name);
 		return {
 			$schema: 'bmoor-crud:view',
 			structure: this.structure
