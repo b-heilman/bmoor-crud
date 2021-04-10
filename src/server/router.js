@@ -11,8 +11,16 @@ class Router {
 		this.routes = this.routes.concat(routes);
 	}
 
+	getRoutes(){
+		return this.routes;
+	}
+
 	addRouters(routers){
 		this.subs = this.subs.concat(routers);
+	}
+
+	getRouters(){
+		this.subs = this.subs;
 	}
 
 	toJSON(){
