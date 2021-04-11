@@ -1,7 +1,6 @@
 
 const {Route} = require('./route.js');
 const {Router} = require('./router.js');
-const {Context} = require('./context.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
 async function formatResponse(res, changes/*, ctx, nexus*/){
@@ -67,9 +66,6 @@ async function handleRollback(changes, ctx, nexus){
 }
 
 const config = new Config({
-	buildContext: function(req){
-		return new Context(req);
-	},
 	formatResponse,
 	handleRollback
 });
@@ -87,9 +83,7 @@ class Controller {
 		return new Route(
 			settings.route.path,
 			settings.route.method,
-			async (...params) => {
-				const ctx = await config.get('buildContext')(params);
-
+			async (ctx) => {
 				await ctx.isReady();
 
 				try {

@@ -1,12 +1,23 @@
 
+const {get} = require('bmoor/src/core.js');
+
 class Context {
-	constructor(systemContext = {}){
+	constructor(
+		systemContext = {}, 
+		cfg={
+			query: 'query', 
+			params: 'params',
+			method: 'method',
+			content: 'body',
+			permissions: 'permissions'
+		}
+	){
 		this.ctx = systemContext;
-		this.query = systemContext.query || null;
-		this.params = systemContext.params || {};
-		this.method = (systemContext.method || 'none').toLowerCase();
-		this.content = systemContext.content || null;
-		this.permissions = systemContext.permissions || {};
+		this.query = get(systemContext, cfg.query) || null;
+		this.params = get(systemContext, cfg.params) || {};
+		this.method = (get(systemContext, cfg.method) || 'none').toLowerCase();
+		this.content = get(systemContext, cfg.content) || null;
+		this.permissions = get(systemContext, cfg.permissions) || {};
 
 		this.changes = [];
 		this.trackingChanges = true;
@@ -97,6 +108,16 @@ class Context {
 	// server/controller is written to handle the rollback condition
 	getChanges(){
 		return this.changes.slice(0);
+	}
+
+	toJSON(){
+		return {
+			query: this.query,
+			params: this.params,
+			method: this.method,
+			content: this.content,
+			permissions: this.permissions
+		};
 	}
 }
 

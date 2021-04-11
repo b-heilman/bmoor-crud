@@ -20,7 +20,7 @@ class Router {
 	}
 
 	getRouters(){
-		this.subs = this.subs;
+		return this.subs;
 	}
 
 	toJSON(){

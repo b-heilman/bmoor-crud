@@ -60,7 +60,6 @@ class Synthetic extends Controller {
 	}
 
 	_buildRoutes(){
-		console.log('=>', this.view);
 		return [{
 			route: {
 				path: '',

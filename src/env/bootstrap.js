@@ -58,6 +58,29 @@ function assignControllers(guard, controllers){
 	return guard;
 }
 
+function toRoutes(crudRouter){
+	const routes = [];
+
+	crudRouter.getRouters().forEach(subRouter => {
+		const sub = toRoutes(subRouter);
+
+		sub.forEach(s => {
+			s.path = crudRouter.path+s.path;
+
+			routes.push(s);
+		});
+	});
+
+	crudRouter.getRoutes().forEach(route => {
+		routes.push({
+			path: crudRouter.path+route.path,
+			method: route.method
+		});
+	});
+
+	return routes;
+}
+
 class Bootstrap {
 	constructor(cfg = config){
 		this.bus = new Bus();
@@ -99,6 +122,10 @@ class Bootstrap {
 		root.addRouters([guard, action, utility, synthetic]);
 
 		this.router = root;
+	}
+
+	toRoutes(){
+		return toRoutes(this.router);
 	}
 
 	toJSON(){

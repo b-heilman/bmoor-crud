@@ -4,6 +4,8 @@ const sinon = require('sinon');
 
 const sut = require('./controller.js');
 
+const {Context} = require('./context.js');
+
 describe('src/server/controller.js', function(){
 	let stubs = null;
 
@@ -38,7 +40,7 @@ describe('src/server/controller.js', function(){
 			enableRollback: true
 		});
 
-		const res = await route.action({});
+		const res = await route.action(new Context({}));
 
 		expect(res)
 		.to.deep.equal({
@@ -76,7 +78,7 @@ describe('src/server/controller.js', function(){
 			} 
 		});
 
-		const res = await route.action({});
+		const res = await route.action(new Context({}));
 
 		expect(res)
 		.to.deep.equal({
@@ -129,7 +131,7 @@ describe('src/server/controller.js', function(){
 				enableRollback: true
 			});
 
-			await route.action({});
+			await route.action(new Context({}));
 		} catch( ex ){
 			failed = true;
 		}
@@ -197,7 +199,7 @@ describe('src/server/controller.js', function(){
 				enableRollback: false
 			});
 
-			await route.action({});
+			await route.action(new Context({}));
 		} catch( ex ){
 			failed = true;
 		}
@@ -233,7 +235,7 @@ describe('src/server/controller.js', function(){
 			enableRollback: false
 		});
 
-		const res = await route.action({});
+		const res = await route.action(new Context({}));
 
 		expect(res)
 		.to.deep.equal({
@@ -270,7 +272,7 @@ describe('src/server/controller.js', function(){
 			enableRollback: false
 		});
 
-		const res = await route.action({});
+		const res = await route.action(new Context({}));
 
 		expect(res)
 		.to.deep.equal({

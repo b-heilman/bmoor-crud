@@ -443,7 +443,6 @@ class Structure {
 	}
 
 	toJSON(){
-		console.log('--structure--', this.name);
 		return {
 			$schema: 'bmoor-crud:structure',
 			name: this.name,
