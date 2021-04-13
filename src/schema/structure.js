@@ -21,6 +21,22 @@ const types = new Config({
 				setter(tgt, JSON.stringify(value));
 			}
 		}
+	},
+	monitor: {
+		onCreate: function(tgt, src, setter, getter, cfg){
+			const target = cfg.getTarget(src);
+
+			if (target !== undefined){
+				setter(tgt, Date.now());
+			}
+		},
+		onUpdate: function(tgt, src, setter, getter, cfg){
+			const target = cfg.getTarget(src);
+
+			if (target !== undefined){
+				setter(tgt, Date.now());
+			}
+		}
 	}
 });
 
@@ -57,27 +73,19 @@ structure: {
 }
 **/
 
-function actionExtend(op, incoming, outgoing, old, oldBefore = true){
+function actionExtend(op, incoming, outgoing, old, cfg){
 	const getter = makeGetter(incoming);
 	const setter = makeSetter(outgoing);
 
 	if (old){
-		if (oldBefore){
-			return function(tgt, src, ctx){
-				op(old(tgt, src, ctx), src, setter, getter, ctx);
+		return function(tgt, src, ctx){
+			op(old(tgt, src, ctx), src, setter, getter, cfg, ctx);
 
-				return tgt;
-			};
-		} else {
-			return function(tgt, src, ctx){
-				 old(op(tgt, src, setter, getter, ctx), src, ctx);
-
-				return tgt;
-			};
-		}
+			return tgt;
+		};
 	} else {
 		return function(tgt, src, ctx){
-			op(tgt, src, setter, getter, ctx);
+			op(tgt, src, setter, getter, cfg, ctx);
 
 			return tgt;
 		};
@@ -91,22 +99,31 @@ function buildActions(actions, field){
 	
 	const settings = field.settings;
 
+	let cfg = {};
+
+	if (settings.cfg){
+		cfg = settings.cfg;
+		if (cfg.target){
+			cfg.getTarget = makeGetter(cfg.target);
+		}
+	}
+
 	if (settings.onCreate){
-		actions.create = actionExtend(settings.onCreate, path, path, actions.create);
+		actions.create = actionExtend(settings.onCreate, path, path, actions.create, cfg);
 	}
 
 	if (settings.onUpdate){
-		actions.update = actionExtend(settings.onUpdate, path, path, actions.update);
+		actions.update = actionExtend(settings.onUpdate, path, path, actions.update, cfg);
 	}
 
 	// inflate are changes out of the database
 	if (settings.onInflate){
-		actions.inflate = actionExtend(settings.onInflate, reference, path, actions.inflate);
+		actions.inflate = actionExtend(settings.onInflate, reference, path, actions.inflate, cfg);
 	}
 
 	// deflate are changes into the database
 	if (settings.onDeflate){
-		actions.deflate = actionExtend(settings.onDeflate, path, storagePath, actions.deflate);
+		actions.deflate = actionExtend(settings.onDeflate, path, storagePath, actions.deflate, cfg);
 	}
 
 	if (path !== reference){

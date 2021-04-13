@@ -94,7 +94,7 @@ describe('src/server/controller.js', function(){
 		stubs.update = sinon.stub()
 		.resolves({});
 
-		stubs.loadService = sinon.stub()
+		stubs.loadCrud = sinon.stub()
 		.resolves({
 			delete: stubs.delete,
 			update: stubs.update,
@@ -106,7 +106,7 @@ describe('src/server/controller.js', function(){
 		const ctrl = new sut.Controller({
 			structure: {
 				nexus: {
-					loadService: stubs.loadService
+					loadCrud: stubs.loadCrud
 				}
 			}
 		});
@@ -139,19 +139,19 @@ describe('src/server/controller.js', function(){
 		expect(failed)
 		.to.equal(true);
 
-		expect(stubs.loadService.callCount)
+		expect(stubs.loadCrud.callCount)
 		.to.equal(4);
 
-		expect(stubs.loadService.getCall(0).args[0])
+		expect(stubs.loadCrud.getCall(0).args[0])
 		.to.equal('model-1');
 
-		expect(stubs.loadService.getCall(1).args[0])
+		expect(stubs.loadCrud.getCall(1).args[0])
 		.to.equal('model-3');
 
-		expect(stubs.loadService.getCall(2).args[0])
+		expect(stubs.loadCrud.getCall(2).args[0])
 		.to.equal('model-2');
 
-		expect(stubs.loadService.getCall(3).args[0])
+		expect(stubs.loadCrud.getCall(3).args[0])
 		.to.equal('model-1');
 	});
 
@@ -162,7 +162,7 @@ describe('src/server/controller.js', function(){
 		stubs.update = sinon.stub()
 		.resolves({});
 
-		stubs.loadService = sinon.stub()
+		stubs.loadCrud = sinon.stub()
 		.resolves({
 			delete: stubs.delete,
 			update: stubs.update,
@@ -174,7 +174,7 @@ describe('src/server/controller.js', function(){
 		const ctrl = new sut.Controller({
 			structure: {
 				nexus: {
-					loadService: stubs.loadService
+					loadCrud: stubs.loadCrud
 				}
 			}
 		});
@@ -207,7 +207,7 @@ describe('src/server/controller.js', function(){
 		expect(failed)
 		.to.equal(true);
 
-		expect(stubs.loadService.callCount)
+		expect(stubs.loadCrud.callCount)
 		.to.equal(0);
 	});
 
@@ -215,7 +215,7 @@ describe('src/server/controller.js', function(){
 		const ctrl = new sut.Controller({
 			structure: {
 				nexus: {
-					loadService: stubs.loadService
+					loadCrud: stubs.loadCrud
 				}
 			}
 		});
@@ -251,7 +251,7 @@ describe('src/server/controller.js', function(){
 
 	it('should return a list of changes if multiple are available', async function(){
 		const ctrl = new sut.Controller({
-			loadService: stubs.loadService
+			loadCrud: stubs.loadCrud
 		});
 		
 		async function test(ctx){

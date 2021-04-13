@@ -16,7 +16,7 @@ const connector = {
 			});
 		}
 
-		console.log(stmt);
+		return stmt;
 	}
 };
 

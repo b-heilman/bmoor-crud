@@ -37,7 +37,7 @@ describe('src/controller/action.js', function(){
 
 		interface = {};
 			
-		service = await nexus.configureService('service-1', interface);
+		service = await nexus.configureCrud('service-1', interface);
 	});
 
 	afterEach(function(){

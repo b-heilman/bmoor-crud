@@ -237,7 +237,7 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 
-	describe('::configureService', function(){
+	describe('::configureCrud', function(){
 		let service = null;
 
 		const connector = {
@@ -256,7 +256,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				service = await nexus.configureService('test-13', connector);
+				service = await nexus.configureCrud('test-13', connector);
 			});
 
 			it('should define the service', async function(){
@@ -276,7 +276,7 @@ describe('src/env/nexus.js', function(){
 
 		describe('model described second', function(){
 			beforeEach(async function(){
-				nexus.configureService('test-13.5', connector)
+				nexus.configureCrud('test-13.5', connector)
 				.then(s => {
 					service = s;
 				});
@@ -305,7 +305,7 @@ describe('src/env/nexus.js', function(){
 		});
 	});
 
-	describe('::loadService', function(){
+	describe('::loadCrud', function(){
 		let service = null;
 
 		const connector = {
@@ -324,9 +324,9 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				const prom = nexus.loadService('test-14');
+				const prom = nexus.loadCrud('test-14');
 
-				await nexus.configureService('test-14', connector);
+				await nexus.configureCrud('test-14', connector);
 
 				service = await prom;
 			});
@@ -355,9 +355,9 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				await nexus.configureService('test-15', connector);
+				await nexus.configureCrud('test-15', connector);
 
-				service = await nexus.loadService('test-15');
+				service = await nexus.loadCrud('test-15');
 			});
 
 			it('should define the service', async function(){
@@ -394,9 +394,9 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			const prom = nexus.loadService('test-16');
+			const prom = nexus.loadCrud('test-16');
 
-			await nexus.configureService('test-16', connector);
+			await nexus.configureCrud('test-16', connector);
 
 			service = await prom;
 		});
@@ -445,9 +445,9 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			const prom = nexus.loadService('test-17');
+			const prom = nexus.loadCrud('test-17');
 
-			await nexus.configureService('test-17', connector);
+			await nexus.configureCrud('test-17', connector);
 
 			service = await prom;
 		});
@@ -505,9 +505,9 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			const prom = nexus.loadService('test-17');
+			const prom = nexus.loadCrud('test-17');
 
-			await nexus.configureService('test-17', connector);
+			await nexus.configureCrud('test-17', connector);
 
 			service = await prom;
 		});

@@ -68,13 +68,7 @@ class Guard extends Controller {
 				operationNotAllowed('read');
 			}
 
-			if (ctx.hasQuery()){
-				if (!this.settings.query){
-					operationNotAllowed('query');
-				}
-
-				return this.view.query(ctx.getQuery(), ctx);
-			} else if (ctx.params){
+			if (ctx.hasParam()){
 				let ids = ctx.getParam('id');
 
 				if (ids){
@@ -103,6 +97,12 @@ class Guard extends Controller {
 						return res;
 					});
 				}
+			} else if (ctx.hasQuery()){
+				if (!this.settings.query){
+					operationNotAllowed('query');
+				}
+
+				return this.view.query(ctx.getQuery(), ctx);
 			} else {
 				return this.view.readAll(ctx);
 			}

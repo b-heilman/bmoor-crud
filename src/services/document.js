@@ -5,7 +5,7 @@ const {Transformer} = require('bmoor-schema/src/Transformer.js');
 
 const {compareChanges} = require('../schema/model.js');
 
-const {View} = require('../actors/view.js');
+const {View} = require('../services/view.js');
 const {Path} = require('../graph/path.js');
 
 const normalized = require('../schema/normalized.js');
@@ -259,7 +259,7 @@ const normalized = require('../schema/normalized.js');
 
 				const transformer = new Transformer(trans.mappings);
 
-				const service = await this.structure.nexus.loadService(trans.model);
+				const service = await this.structure.nexus.loadCrud(trans.model);
 
 				// I need to generate references for the second loop
 				const ref = new normalized.DatumRef(series);

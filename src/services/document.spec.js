@@ -6,7 +6,7 @@ const {Nexus, config} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 const normalized = require('../schema/normalized.js');
 	
-describe('src/actors/document.js', function(){
+describe('src/services/document.js', function(){
 	const sut = require('./document.js');
 
 	let nexus = null;
@@ -58,7 +58,7 @@ describe('src/actors/document.js', function(){
 				name: true
 			}
 		});
-		await nexus.configureService('test-user', {});
+		await nexus.configureCrud('test-user', {});
 
 		await nexus.configureModel('test-item', {
 			fields: {
@@ -88,7 +88,7 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.configureService('test-item', {});
+		await nexus.configureCrud('test-item', {});
 
 		await nexus.configureModel('test-material', {
 			fields: {
@@ -100,7 +100,7 @@ describe('src/actors/document.js', function(){
 				title: true
 			}
 		});
-		await nexus.configureService('test-material', {});
+		await nexus.configureCrud('test-material', {});
 
 		await nexus.configureModel('test-item-material', {
 			fields: {
@@ -131,7 +131,7 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.configureService('test-item-material', {});
+		await nexus.configureCrud('test-item-material', {});
 
 		await nexus.configureModel('test-person', {
 			fields: {
@@ -151,7 +151,7 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.configureService('test-person', {});
+		await nexus.configureCrud('test-person', {});
 
 		await nexus.configureModel('test-family', {
 			fields: {
@@ -162,7 +162,7 @@ describe('src/actors/document.js', function(){
 				name: true
 			}
 		});
-		await nexus.configureService('test-family', {});
+		await nexus.configureCrud('test-family', {});
 
 		await nexus.configureModel('test-category', {
 			fields: {
@@ -193,7 +193,7 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.configureService('test-category', {});
+		await nexus.configureCrud('test-category', {});
 
 		await nexus.configureModel('test-tag', {
 			fields: {
@@ -212,7 +212,7 @@ describe('src/actors/document.js', function(){
 				}
 			}
 		});
-		await nexus.configureService('test-tag', {});
+		await nexus.configureCrud('test-tag', {});
 
 		await nexus.configureComposite('test-composite-item', {
 			base: 'test-item',
@@ -1022,9 +1022,9 @@ describe('src/actors/document.js', function(){
 
 	describe('::push', function(){
 		it('should load decode a object push - 1', async function(){
-			const items = await nexus.loadService('test-item');
+			const items = await nexus.loadCrud('test-item');
 
-			const categories = await nexus.loadService('test-category');
+			const categories = await nexus.loadCrud('test-category');
 
 			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-item',
@@ -1071,9 +1071,9 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should load decode a object push - 2', async function(){
-			const items = await nexus.loadService('test-item');
+			const items = await nexus.loadCrud('test-item');
 
-			const categories = await nexus.loadService('test-category');
+			const categories = await nexus.loadCrud('test-category');
 
 			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-item',
@@ -1167,9 +1167,9 @@ describe('src/actors/document.js', function(){
 		let categories = null;
 
 		it('should work with a direct link', async function(){
-			items = await nexus.loadService('test-item');
-			families = await nexus.loadService('test-family');
-			categories = await nexus.loadService('test-category');
+			items = await nexus.loadCrud('test-item');
+			families = await nexus.loadCrud('test-family');
+			categories = await nexus.loadCrud('test-category');
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
@@ -1322,9 +1322,9 @@ describe('src/actors/document.js', function(){
 		let tags = null;
 
 		it('should work with a hop off an attached model', async function(){
-			tags = await nexus.loadService('test-tag');
-			families = await nexus.loadService('test-family');
-			categories = await nexus.loadService('test-category');
+			tags = await nexus.loadCrud('test-tag');
+			families = await nexus.loadCrud('test-family');
+			categories = await nexus.loadCrud('test-category');
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
@@ -1436,9 +1436,9 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should work with a jump to the attached schema', async function(){
-			tags = await nexus.loadService('test-tag');
-			families = await nexus.loadService('test-family');
-			categories = await nexus.loadService('test-category');
+			tags = await nexus.loadCrud('test-tag');
+			families = await nexus.loadCrud('test-family');
+			categories = await nexus.loadCrud('test-category');
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
@@ -1604,9 +1604,9 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should work when creating brand new', async function(){
-			items = await nexus.loadService('test-item');
-			itemMaterials = await nexus.loadService('test-item-material');
-			materials = await nexus.loadService('test-material');
+			items = await nexus.loadCrud('test-item');
+			itemMaterials = await nexus.loadCrud('test-item-material');
+			materials = await nexus.loadCrud('test-material');
 
 			comp = await nexus.loadComposite('test-composite-ut');
 			
@@ -1713,9 +1713,9 @@ describe('src/actors/document.js', function(){
 		});
 
 		it('should work when updating all things', async function(){
-			items = await nexus.loadService('test-item');
-			itemMaterials = await nexus.loadService('test-item-material');
-			materials = await nexus.loadService('test-material');
+			items = await nexus.loadCrud('test-item');
+			itemMaterials = await nexus.loadCrud('test-item-material');
+			materials = await nexus.loadCrud('test-material');
 
 			comp = await nexus.loadComposite('test-composite-ut');
 
@@ -1855,9 +1855,9 @@ describe('src/actors/document.js', function(){
 		let doc = null;
 
 		beforeEach(async function(){
-			items = await nexus.loadService('test-item');
-			itemMaterials = await nexus.loadService('test-item-material');
-			materials = await nexus.loadService('test-material');
+			items = await nexus.loadCrud('test-item');
+			itemMaterials = await nexus.loadCrud('test-item-material');
+			materials = await nexus.loadCrud('test-material');
 
 			// updates require us to stub read
 			stubs.itemRead = sinon.stub(items, 'read')
@@ -2273,10 +2273,10 @@ describe('src/actors/document.js', function(){
 
 			doc = await nexus.configureDocument('test-ownership', connector);
 
-			const users = await nexus.loadService('test-user');
-			const items = await nexus.loadService('test-item');
-			const itemMaterials = await nexus.loadService('test-item-material');
-			const materials = await nexus.loadService('test-material');
+			const users = await nexus.loadCrud('test-user');
+			const items = await nexus.loadCrud('test-item');
+			const itemMaterials = await nexus.loadCrud('test-item-material');
+			const materials = await nexus.loadCrud('test-material');
 
 			stubs.userRead = sinon.stub(users, 'read')
 			.resolves({

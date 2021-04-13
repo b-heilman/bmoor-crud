@@ -8,9 +8,9 @@ const {Nexus} = require('./nexus.js');
 const {Gateway} =  require('./gateway.js');
 
 const {Model} = require('../schema/model.js');
-const {Service} = require('../actors/service.js');
+const {Crud} = require('../services/crud.js');
 const {Composite} = require('../schema/composite.js');
-const {Document} = require('../actors/document.js');
+const {Document} = require('../services/document.js');
 const {Guard} = require('../controllers/guard.js');
 const {Action} = require('../controllers/action.js');
 const {Utility} = require('../controllers/utility.js');
@@ -35,7 +35,7 @@ const config = new Config({
 	},
 	constructors: {
 		model: Model,
-		service: Service,
+		crud: Crud,
 		composite: Composite,
 		document: Document,
 		guard: Guard,

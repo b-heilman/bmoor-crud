@@ -2,19 +2,19 @@
 const {Config} = require('bmoor/src/lib/config.js');
 const {create} = require('bmoor/src/lib/error.js');
 
-const {hook} = require('../actors/hook.js');
+const {hook} = require('../services/hook.js');
 const {Mapper} = require('../graph/mapper.js');
 
 const {Model} = require('../schema/model.js');
-const {Service} = require('../actors/service.js');
+const {Crud} = require('../services/crud.js');
 const {Composite} = require('../schema/composite.js');
-const {Document} = require('../actors/document.js');
+const {Document} = require('../services/document.js');
 
 const config = new Config({
 	timeout: 2000,
 	constructors: {
 		model: Model,
-		service: Service,
+		crud: Crud,
 		composite: Composite,
 		document: Document
 	}
@@ -136,14 +136,14 @@ class Nexus {
 		return loadTarget(this, 'model', ref);
 	}
 
-	getService(ref){
-		return getDefined(this, 'service', this.constructors, ref, [this.getModel(ref)]);
+	getCrud(ref){
+		return getDefined(this, 'crud', this.constructors, ref, [this.getModel(ref)]);
 	}
 
-	async configureService(ref, connector, settings = {}){
+	async configureCrud(ref, connector, settings = {}){
 		await this.loadModel(ref);
 
-		const service = this.getService(ref);
+		const service = this.getCrud(ref);
 
 		await service.configure(connector, settings);
 
@@ -152,12 +152,12 @@ class Nexus {
 		return service;
 	}
 
-	async loadService(ref){
+	async loadCrud(ref){
 		return loadTarget(this, 'service', ref);
 	}
 
 	async configureDecorator(ref, decoration){
-		const service = await this.loadService(ref);
+		const service = await this.loadCrud(ref);
 
 		service.decorate(decoration);
 
@@ -165,7 +165,7 @@ class Nexus {
 	}
 
 	async configureHook(ref, settings){
-		const service = await this.loadService(ref);
+		const service = await this.loadCrud(ref);
 
 		hook(service, settings);
 
@@ -336,7 +336,7 @@ class Nexus {
 
 	// I'm not putting loads below because nothing should be requiring these...
 	getGuard(ref){
-		return getDefined(this, 'guard', this.constructors, ref, [this.getService(ref)]);
+		return getDefined(this, 'guard', this.constructors, ref, [this.getCrud(ref)]);
 	}
 
 	async configureGuard(ref, settings){
@@ -344,7 +344,7 @@ class Nexus {
 	}
 
 	getAction(ref){
-		return getDefined(this, 'action', this.constructors, ref, [this.getService(ref)]);
+		return getDefined(this, 'action', this.constructors, ref, [this.getCrud(ref)]);
 	}
 
 	async configureAction(ref, settings){
@@ -352,7 +352,7 @@ class Nexus {
 	}
 
 	getUtility(ref){
-		return getDefined(this, 'utility', this.constructors, ref, [this.getService(ref)]);
+		return getDefined(this, 'utility', this.constructors, ref, [this.getCrud(ref)]);
 	}
 
 	async configureUtility(ref, settings){

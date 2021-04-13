@@ -1,9 +1,21 @@
 
+const sinon = require('sinon');
 const {expect} = require('chai');
 
 describe('src/schema/model.js', function(){
 	
 	const {Model, config} = require('./model.js');
+
+	let now = Date.now();
+	let clock = null;
+
+	beforeEach(function(){
+		clock = sinon.useFakeTimers(now);
+	});
+
+	afterEach(function(){
+		clock.restore();
+	});
 
 	it('should be defined', function(){
 		expect(Model).to.exist;
@@ -352,6 +364,142 @@ describe('src/schema/model.js', function(){
 						})
 					).to.deep.equal({
 						eins: '{"foo":"bar"}'
+					});
+				});
+			});
+
+			describe('monitor', function(){
+				it('should properly on create', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
+						fields: {
+							eins: {
+								create: true
+							},
+							zwei: {
+								type: 'monitor',
+								cfg: {
+									target: 'eins'
+								}
+							}
+						}
+					});
+
+					expect(
+						model.actions.create({junk: 'ok'}, {
+							eins: 1
+						})
+					).to.deep.equal({
+						junk: 'ok',
+						zwei: now
+					});
+				});
+
+				it('should properly on update', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
+						fields: {
+							eins: {
+								create: true
+							},
+							zwei: {
+								type: 'monitor',
+								cfg: {
+									target: 'eins'
+								}
+							}
+						}
+					});
+
+					expect(
+						model.actions.update({junk: 'ok'}, {
+							eins: 1
+						})
+					).to.deep.equal({
+						junk: 'ok',
+						zwei: now
+					});
+				});
+
+				it('should properly on update with 0', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
+						fields: {
+							eins: {
+								create: true
+							},
+							zwei: {
+								type: 'monitor',
+								cfg: {
+									target: 'eins'
+								}
+							}
+						}
+					});
+
+					expect(
+						model.actions.update({junk: 'ok'}, {
+							eins: 0
+						})
+					).to.deep.equal({
+						junk: 'ok',
+						zwei: now
+					});
+				});
+
+				it('should properly on update with null', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
+						fields: {
+							eins: {
+								create: true
+							},
+							zwei: {
+								type: 'monitor',
+								cfg: {
+									target: 'eins'
+								}
+							}
+						}
+					});
+
+					expect(
+						model.actions.update({junk: 'ok'}, {
+							eins: null
+						})
+					).to.deep.equal({
+						junk: 'ok',
+						zwei: now
+					});
+				});
+
+				it('should properly on update with undefined', async function(){
+					const model = new Model('test-1');
+
+					await model.configure({
+						fields: {
+							eins: {
+								create: true
+							},
+							zwei: {
+								type: 'monitor',
+								cfg: {
+									target: 'eins'
+								}
+							}
+						}
+					});
+
+					expect(
+						model.actions.update({junk: 'ok'}, {
+							eins: undefined
+						})
+					).to.deep.equal({
+						junk: 'ok'
 					});
 				});
 			});

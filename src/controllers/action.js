@@ -64,9 +64,10 @@ class Action extends Controller {
 		}
 
 		// TODO: allow read by other fields, not just id
-		const datum = this.view.read(id);
+		const datum = await this.view.read(id, ctx);
+		
 		const params = setting.parseParams	?
-			setting.parseParams(ctx, datum) : [ctx];
+			setting.parseParams(datum, ctx) : [datum, ctx];
 		
 		return this.view[method](...params);
 	}

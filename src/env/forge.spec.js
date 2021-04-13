@@ -69,11 +69,11 @@ describe('src/env/forge.js', function(){
 			interface1 = {};
 			interface2 = {};
 
-			service1 = await nexus.configureService('service-1', interface1);
-			service2 = await nexus.configureService('service-2', interface2);
+			service1 = await nexus.configureCrud('service-1', interface1);
+			service2 = await nexus.configureCrud('service-2', interface2);
 		});
 
-		describe('::configureService', function(){
+		describe('::configureCrud', function(){
 			it('should allow for the subscription of afterCreate events', async function(){
 				interface1.execute = () => Promise.resolve([{
 					foo: 'bar',
@@ -90,7 +90,7 @@ describe('src/env/forge.js', function(){
 					myCtx.addChange('foo', 'bar', 2, {hello: 'world'});
 				});
 
-				await forge.configureService('service-1');
+				await forge.configureCrud('service-1');
 
 				const res = await service1.create({eins: 1}, ctx);
 
@@ -131,7 +131,7 @@ describe('src/env/forge.js', function(){
 					myCtx.addChange('foo', 'bar', 3, {hello: 'world'});
 				});
 
-				await forge.configureService('service-1');
+				await forge.configureCrud('service-1');
 
 				const res = await service1.update(1, {eins: 1}, ctx);
 
@@ -177,7 +177,7 @@ describe('src/env/forge.js', function(){
 					myCtx.addChange('foo', 'bar', 3, {hello: 'world'});
 				});
 
-				await forge.configureService('service-1');
+				await forge.configureCrud('service-1');
 
 				const res = await service1.delete(1, ctx);
 
@@ -306,7 +306,7 @@ describe('src/env/forge.js', function(){
 			});
 		});
 
-		describe('::configureService should play nice with ::subscribe', function(){
+		describe('::configureCrud should play nice with ::subscribe', function(){
 			it('should work for create', async function(){
 				interface1.execute = () => Promise.resolve([{
 					id: 30,
@@ -318,7 +318,7 @@ describe('src/env/forge.js', function(){
 					hello: 'world'
 				}]);
 
-				await forge.configureService('service-1');
+				await forge.configureCrud('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -371,7 +371,7 @@ describe('src/env/forge.js', function(){
 					id: 41
 				}]);
 
-				await forge.configureService('service-1');
+				await forge.configureCrud('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -427,7 +427,7 @@ describe('src/env/forge.js', function(){
 					hello: 'world'
 				}]);
 
-				await forge.configureService('service-1');
+				await forge.configureCrud('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -502,7 +502,7 @@ describe('src/env/forge.js', function(){
 				execute: sinon.stub().resolves([{foo: 'bar'}])
 			};
 
-			service1 = await nexus.configureService('service-1', interface1);
+			service1 = await nexus.configureCrud('service-1', interface1);
 
 			// await forge.secure('service-1');
 		});
@@ -970,7 +970,7 @@ describe('src/env/forge.js', function(){
 			await forge.install(cfg.sub('connectors'), cfg.sub('crud'));
 
 			// this method is not real
-			service = await nexus.loadService('service-1');
+			service = await nexus.loadCrud('service-1');
 		});
 
 		it('should properly define the models', function(){
@@ -1143,7 +1143,7 @@ describe('src/env/forge.js', function(){
 			}]);
 			//--------- for the update
 
-			const otherService = await nexus.loadService('service-2');
+			const otherService = await nexus.loadCrud('service-2');
 
 			let called = false;
 
@@ -1283,7 +1283,7 @@ describe('src/env/forge.js', function(){
 			await forge.install(cfg.sub('connectors'), cfg.sub('crud'), mockery);
 
 			// this method is not real
-			service = await nexus.loadService('service-1');
+			service = await nexus.loadCrud('service-1');
 		});
 
 		it('should properly define the models', function(){
@@ -1456,7 +1456,7 @@ describe('src/env/forge.js', function(){
 			}]);
 			//--------- for the update
 
-			const otherService = await nexus.loadService('service-2');
+			const otherService = await nexus.loadCrud('service-2');
 
 			let called = false;
 

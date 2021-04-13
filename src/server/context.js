@@ -2,16 +2,15 @@
 const {get} = require('bmoor/src/core.js');
 
 class Context {
-	constructor(
-		systemContext = {}, 
-		cfg={
+	constructor(systemContext = {}, cfg={}){
+		cfg = Object.assign({
 			query: 'query', 
 			params: 'params',
 			method: 'method',
 			content: 'body',
 			permissions: 'permissions'
-		}
-	){
+		}, cfg);
+
 		this.ctx = systemContext;
 		this.query = get(systemContext, cfg.query) || null;
 		this.params = get(systemContext, cfg.params) || {};
@@ -46,7 +45,12 @@ class Context {
 
 	// params
 	hasParam(name){
-		return name in this.params;
+		if (name){
+			return name in this.params;
+		} else {
+			return this.params && Object.keys(this.params).length !== 0;
+		}
+		
 	}
 
 	setParam(name, value){
@@ -62,14 +66,18 @@ class Context {
 	}
 
 	// query
-	hasQuery(){
-		return !!this.query;
+	hasQuery(name){
+		if (name){
+			return name in this.query;
+		} else {
+			return this.query && Object.keys(this.query).length !== 0;
+		}
 	}
 
 	getQuery(name){
 		if (this.query && name in this.query){
 			return this.query[name];
-		} else if (!name){
+		} else if (!name){ // I don't really like this...
 			return this.query;
 		} else {
 			return null;

@@ -37,7 +37,7 @@ describe('src/controller/guard.js', function(){
 
 		interface = {};
 			
-		service = await nexus.configureService('service-1', interface);
+		service = await nexus.configureCrud('service-1', interface);
 	});
 
 	describe('::Controller', function(){
@@ -174,6 +174,7 @@ describe('src/controller/guard.js', function(){
 							new Context({
 								method: 'get',
 								params: {
+									bad: 'param'
 								}
 							})
 						);
@@ -223,7 +224,7 @@ describe('src/controller/guard.js', function(){
 							content: {
 								weAre: 'Penn State'
 							}
-						})
+						}, {content: 'content'})
 					);
 
 					expect(res)
@@ -244,13 +245,13 @@ describe('src/controller/guard.js', function(){
 					const res = await controller.write(
 						new Context({
 							method: 'put',
-							content: {
+							body: {
 								weAre: 'Penn State'
 							},
 							params: {
 								id: '1'
 							}
-						})
+						}, {content: 'body'})
 					);
 
 					expect(res)
@@ -272,7 +273,7 @@ describe('src/controller/guard.js', function(){
 					const res = await controller.write(
 						new Context({
 							method: 'put',
-							content: {
+							body: {
 								weAre: 'Penn State'
 							},
 							params: {
@@ -307,7 +308,7 @@ describe('src/controller/guard.js', function(){
 						await controller.write(
 							new Context({
 								method: 'put',
-								content: {
+								body: {
 									weAre: 'Penn State'
 								},
 								params: {
@@ -334,7 +335,7 @@ describe('src/controller/guard.js', function(){
 						await controller.write(
 							new Context({
 								method: 'put',
-								content: {
+								body: {
 									weAre: 'Penn State'
 								},
 								params: {
@@ -365,7 +366,7 @@ describe('src/controller/guard.js', function(){
 					const res = await controller.write(
 						new Context({
 							method: 'patch',
-							content: {
+							body: {
 								weAre: 'Penn State'
 							},
 							params: {
@@ -393,7 +394,7 @@ describe('src/controller/guard.js', function(){
 					const res = await controller.write(
 						new Context({
 							method: 'patch',
-							content: {
+							body: {
 								weAre: 'Penn State'
 							},
 							params: {
@@ -428,7 +429,7 @@ describe('src/controller/guard.js', function(){
 						await controller.write(
 							new Context({
 								method: 'patch',
-								content: {
+								body: {
 									weAre: 'Penn State'
 								},
 								params: {

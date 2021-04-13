@@ -32,7 +32,7 @@ describe('src/controller/synthetic.js', function(){
 				name: true
 			}
 		});
-		await nexus.configureService('test-user', {});
+		await nexus.configureCrud('test-user', {});
 
 		nexus.configureComposite('test-ownership', {
 			base: 'test-user',

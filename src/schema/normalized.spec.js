@@ -37,7 +37,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class1 = await nexus.configureService('class-1');
+			class1 = await nexus.configureCrud('class-1');
 
 			nexus.configureModel('class-2', {
 				fields: {
@@ -54,7 +54,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class2 = await nexus.configureService('class-2');
+			class2 = await nexus.configureCrud('class-2');
 
 			nexus.configureModel('class-3', {
 				fields: {
@@ -71,7 +71,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class3 = await nexus.configureService('class-3');
+			class3 = await nexus.configureCrud('class-3');
 
 			nexus.configureModel('class-4', {
 				fields: {
@@ -88,7 +88,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class4 = await nexus.configureService('class-4');
+			class4 = await nexus.configureCrud('class-4');
 		});
 
 		it('should properly process a basic set of models', function(done){
@@ -390,7 +390,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class1 = await nexus.configureService('class-1');
+			class1 = await nexus.configureCrud('class-1');
 
 			await nexus.configureModel('class-2', {
 				fields: {
@@ -406,7 +406,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class2 = await nexus.configureService('class-2');
+			class2 = await nexus.configureCrud('class-2');
 
 			await nexus.configureModel('class-3', {
 				fields: {
@@ -422,7 +422,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class3 = await nexus.configureService('class-3');
+			class3 = await nexus.configureCrud('class-3');
 
 			await nexus.configureModel('class-4', {
 				fields: {
@@ -438,7 +438,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class4 = await nexus.configureService('class-4');
+			class4 = await nexus.configureCrud('class-4');
 		});
 
 		describe('class1', function(){
@@ -1095,7 +1095,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class1 = await nexus.configureService('class-1');
+			class1 = await nexus.configureCrud('class-1');
 
 			await nexus.configureModel('class-2', {
 				fields: {
@@ -1111,7 +1111,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class2 = await nexus.configureService('class-2');
+			class2 = await nexus.configureCrud('class-2');
 
 			await nexus.configureModel('class-3', {
 				fields: {
@@ -1121,7 +1121,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class3 = await nexus.configureService('class-3');
+			class3 = await nexus.configureCrud('class-3');
 
 			await nexus.configureModel('class-4', {
 				fields: {
@@ -1137,7 +1137,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class4 = await nexus.configureService('class-4');
+			class4 = await nexus.configureCrud('class-4');
 
 			await nexus.configureModel('class-5', {
 				fields: {
@@ -1159,7 +1159,7 @@ describe('src/schema/normalized', function(){
 				}
 			});
 
-			class5 = await nexus.configureService('class-5');
+			class5 = await nexus.configureCrud('class-5');
 		});
 
 		describe('::inflate', function(){

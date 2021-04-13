@@ -332,7 +332,7 @@ async function deflate(schema, nexus, ctx){
 
 	return order.reduce(
 		async (prom, serviceName) => {
-			const service = await nexus.loadService(serviceName);
+			const service = await nexus.loadCrud(serviceName);
 
 			return master.get(serviceName).reduce(
 				async (prom, datum) => {
@@ -410,7 +410,7 @@ async function inflate(service, query, nexus, ctx){
 	
 	let c = 0;
 	async function getLooking(serviceName, key){
-		const service = await nexus.loadService(serviceName);
+		const service = await nexus.loadCrud(serviceName);
 		let s = looking[service.structure.name];
 
 		if (!s){
@@ -472,7 +472,7 @@ async function inflate(service, query, nexus, ctx){
 
 	do{
 		const loading = toProcess.shift();
-		const service = await nexus.loadService(loading.service);
+		const service = await nexus.loadCrud(loading.service);
 
 		const datums = await getDatums(service, loading.query, ctx);
 
@@ -562,7 +562,7 @@ async function diagram(service, keys, nexus, ctx){
 		keys.map(
 			async (key) => ({
 				query: {
-					[(await nexus.loadService(service)).schema.properties.key]: key
+					[(await nexus.loadCrud(service)).schema.properties.key]: key
 				},
 				service
 			})
@@ -591,7 +591,7 @@ async function diagram(service, keys, nexus, ctx){
 
 	do {
 		const loading = toProcess.shift();
-		const service = await nexus.loadService(loading.service);
+		const service = await nexus.loadCrud(loading.service);
 		const results = await service.query(loading.query, ctx);  
 
 		results.forEach(datum => { // jshint ignore:line
@@ -644,7 +644,7 @@ async function clear(master, nexus, ctx){
 
 	return order.reduce(
 		async (prom, serviceName) => {
-			const service = await nexus.loadService(serviceName);
+			const service = await nexus.loadCrud(serviceName);
 
 			return master[serviceName].reduce(
 				(agg, datum) => agg.then(

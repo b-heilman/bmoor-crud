@@ -3,10 +3,10 @@ const {expect} = require('chai');
 const sinon = require('sinon');
 
 const {Model} = require('../schema/model.js');
-const {Service} = require('./service.js');
+const {Crud} = require('./crud.js');
 const {Context} = require('../server/context.js');
 
-describe('src/actors/service.js', function(){
+describe('src/services/crud.js', function(){
 	let stubs = null;
 	let context = null;
 	let permissions = null;
@@ -62,7 +62,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			service = new Service(model);
+			service = new Crud(model);
 		});
 		// right now this is covered by forge's old code
 		describe('for create', function(){
@@ -263,7 +263,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure(
 				{
@@ -333,7 +333,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -393,7 +393,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			service.configure({
 				execute: function(request){
@@ -458,7 +458,7 @@ describe('src/actors/service.js', function(){
 			});
 
 			let response = null;
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(){
@@ -560,7 +560,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -624,7 +624,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -688,7 +688,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(){
@@ -743,7 +743,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -801,7 +801,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(){
@@ -856,7 +856,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -917,7 +917,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(){
@@ -976,7 +976,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -1046,7 +1046,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			service.configure({
 				execute: function(request){
@@ -1122,7 +1122,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){
@@ -1180,7 +1180,7 @@ describe('src/actors/service.js', function(){
 				}
 			});
 
-			const service = new Service(model);
+			const service = new Crud(model);
 
 			await service.configure({
 				execute: function(request){

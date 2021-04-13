@@ -1,5 +1,5 @@
 
-const {hook} = require('../actors/hook.js');
+const {hook} = require('../services/hook.js');
 const loader = require('../server/loader.js');
 
 async function load(type, directories, stubs = null){
@@ -21,8 +21,8 @@ class Forge {
 		this.messageBus = messageBus;
 	}
 
-	async configureService(ref, settings={}){
-		const service = await this.nexus.loadService(ref);
+	async configureCrud(ref, settings={}){
+		const service = await this.nexus.loadCrud(ref);
 
 		await hook(service, {
 			afterCreate: (datum, ctx) => {
@@ -45,7 +45,7 @@ class Forge {
 	}
 
 	async subscribe(ref, subscriptions){
-		const service = await this.nexus.loadService(ref);
+		const service = await this.nexus.loadCrud(ref);
 
 		return Promise.all(
 			subscriptions.map(settings => {
@@ -58,7 +58,7 @@ class Forge {
 		);
 	}
 
-	async configureServices(connectors, directories, stubs){
+	async configureCruds(connectors, directories, stubs){
 		return Promise.all(
 			(await load('model', directories, stubs))
 			.map(async (file) => {
@@ -69,13 +69,13 @@ class Forge {
 					settings
 				);
 
-				const service = await this.nexus.configureService(
+				const service = await this.nexus.configureCrud(
 					file.name,
 					connectors.get(settings.connector)(settings.connectorSettings),
 					settings
 				);
 
-				await this.configureService(file.name, settings);
+				await this.configureCrud(file.name, settings);
 
 				return service;
 			})
@@ -136,7 +136,7 @@ class Forge {
 
 		const [services, docs] = 
 		await Promise.all([
-			this.configureServices(connectors, directories, stubs),
+			this.configureCruds(connectors, directories, stubs),
 			this.configureDocuments(connectors, directories, stubs),
 			this.configureDecorators(directories, stubs),
 			this.configureHooks(directories, stubs),

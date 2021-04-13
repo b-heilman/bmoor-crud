@@ -4,7 +4,11 @@ const {create} = require('bmoor/src/lib/error.js');
 
 async function runStatement(view, base, ctx){
 	if (!(view.connector&&view.connector.execute)){
-		console.log('refusing to run ->', view.structure.name, ctx);
+		console.log(
+			'refusing to run ->', view.structure.name, 
+			JSON.stringify(ctx, null, 2)
+		);
+		
 		throw new Error('no connector defined: '+view.structure.name);
 	}
 	

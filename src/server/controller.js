@@ -44,7 +44,7 @@ async function handleRollback(changes, ctx, nexus){
 		async (prom, d) => {
 			await prom;
 
-			const service = await nexus.loadService(d.model);
+			const service = await nexus.loadCrud(d.model);
 
 			if (d.action === 'create'){
 				// if it was created, just delete it

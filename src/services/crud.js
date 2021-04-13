@@ -3,7 +3,7 @@ const {create} = require('bmoor/src/lib/error.js');
 
 const {View} = require('./view.js');
 
-class Service extends View {
+class Crud extends View {
 	
 	decorate(decoration){
 		Object.assign(this, decoration);
@@ -194,5 +194,5 @@ class Service extends View {
 }
 
 module.exports = {
-	Service
+	Crud
 };
