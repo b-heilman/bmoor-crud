@@ -92,6 +92,13 @@ function hook(crud, settings){
 		);
 	}
 
+	if (settings.canAccess){
+		// TODO
+		// Idea is that different models can chain this.  I can be accessed if a 
+		// higher model can access me.
+		// event-version-section -> event-version -> event
+	}
+
 	if (settings.mapFactory){
 		crud._mapFactory = mapFactory(
 			settings.mapFactory,

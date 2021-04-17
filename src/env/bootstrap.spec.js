@@ -325,13 +325,13 @@ describe('src/env/bootstrap.js', function(){
 				}],
 				'synthetics': [{
 					'$schema': 'bmoor-crud:controller',
-					'routes': [{
+					'routes': [/*{
 						'route': {
 							'path': '',
 							'method': 'post'
 						},
 						'structure': 'composite-1'
-					}, {
+					}, */{
 						'route': {
 							'path': '/:id',
 							'method': 'get'
@@ -428,12 +428,12 @@ describe('src/env/bootstrap.js', function(){
 										'$schema': 'bmoor-crud:route',
 										'method': 'get',
 										'path': ''
-									},
+									},/*
 									{
 										'$schema': 'bmoor-crud:route',
 										'method': 'post',
 										'path': ''
-									},
+									},*/
 									{
 										'$schema': 'bmoor-crud:route',
 										'method': 'get',

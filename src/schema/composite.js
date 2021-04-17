@@ -443,6 +443,7 @@ class Composite extends Structure {
 	}
 
 	// produces representation for interface layer
+	// TODO: sort-by, limit
 	async getQuery(queries={}, settings={}, ctx={}){
 		await this.link();
 

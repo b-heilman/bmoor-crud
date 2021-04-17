@@ -6,6 +6,37 @@ const config = new Config({
 	knex: null
 });
 
+// TODO: a lot
+// add sort-by and possibly limit if doing pagination...
+// filter needs to be decoded and passed down to here, join is just a 
+// glorified filter
+/*****
+ * --- stms ----
+ * models: [
+    name
+    schema
+    series
+ *  fields: [{
+	  
+ }]
+    join: [{
+	  optional
+	  on: [{
+	    local
+	    remote
+	  }]
+    }]
+    query: [{
+	  [field] => [] || '' || 123 ||  {
+	    op
+	    value
+	    --- cross ref
+	    name
+	    field
+	  }
+    }]
+ * ]
+ *****/
 function translateSelect(stmt){
 	const settings = stmt.models.reduce(
 		(agg, model) => {

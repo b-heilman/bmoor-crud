@@ -60,14 +60,14 @@ class Synthetic extends Controller {
 	}
 
 	_buildRoutes(){
-		return [{
+		return [/*{
 			route: {
 				path: '',
 				method: 'post'
 			},
 			fn: (ctx) => this.route(ctx),
 			structure: this.view.structure
-		}, {
+		}, */{
 			route: {
 				path: '/:id',
 				method: 'get'
