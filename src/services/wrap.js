@@ -50,7 +50,7 @@ function syncWrap(fn, old, before = true){
 function boolWrap(fn, old){
 	if (old){
 		return async function(...args){
-			if (fn(...args)){
+			if (await fn(...args)){
 				return old(...args);
 			} else {
 				return false;

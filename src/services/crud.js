@@ -3,6 +3,19 @@ const {create} = require('bmoor/src/lib/error.js');
 
 const {View} = require('./view.js');
 
+async function massAccess(service, arr, ctx){
+	if (service._canAccess){
+		return (await Promise.all(
+			arr.map(
+				async (datum) => 
+				(await service._canAccess(datum, ctx)) ? datum : null
+			)
+		)).filter();
+	} else {
+		return arr;
+	}
+}
+
 class Crud extends View {
 	
 	decorate(decoration){
@@ -10,8 +23,28 @@ class Crud extends View {
 	}
 
 	async create(proto, ctx){
+		if (!ctx){
+			throw create(`missing ctx in create of ${this.structure.name}`, {
+				status: 500,
+				code: 'BMOOR_CRUD_SERVICE_CREATE_CTX',
+				context: {
+					id
+				}
+			});
+		}
+
 		if (this._beforeCreate){
 			await this._beforeCreate(proto, ctx, this);
+		}
+
+		if (this._canCreate){
+			if (!(await this._canCreate(proto, ctx))){
+				throw create(`now allowed to create instance of ${this.structure.name}`, {
+					status: 403,
+					code: 'BMOOR_CRUD_SERVICE_CAN_CREATE',
+					context: {}
+				});
+			}
 		}
 
 		const datum = (
@@ -73,18 +106,30 @@ class Crud extends View {
 					id
 				}
 			});
+		} else if (this._canAccess){
+			if (!(await this._canAccess(datum, ctx))){
+				throw create(`now allowed to read instance of ${this.structure.name}`, {
+					status: 403,
+					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
+					context: {}
+				});
+			}
 		}
 
 		return datum;
 	}
 
 	async readAll(ctx){
-		return super.read(
-			await this.structure.getQuery(
-				null,
-				{},
+		return massAccess(
+			this, 
+			await super.read(
+				await this.structure.getQuery(
+					null,
+					{},
+					ctx
+				),
 				ctx
-			),
+			), 
 			ctx
 		);
 	}
@@ -92,12 +137,16 @@ class Crud extends View {
 	async readMany(ids, ctx){
 		await this.structure.build();
 
-		return super.read(
-			await this.structure.getQuery(
-				{[this.structure.properties.key]: ids},
-				{},
+		return massAccess(
+			this, 
+			await super.read(
+				await this.structure.getQuery(
+					{[this.structure.properties.key]: ids},
+					{},
+					ctx
+				),
 				ctx
-			),
+			), 
 			ctx
 		);
 	}
@@ -109,12 +158,16 @@ class Crud extends View {
 			await this._beforeQuery(search, ctx);
 		}
 
-		return super.read(
-			await this.structure.getQuery(
-				await this.clean('query', search, ctx), // TODO : transform external => internal?
-				{},
+		return massAccess(
+			this, 
+			await super.read(
+				await this.structure.getQuery(
+					await this.clean('query', search, ctx), // TODO : transform external => internal?
+					{},
+					ctx
+				),
 				ctx
-			),
+			), 
 			ctx
 		);
 	}
@@ -126,6 +179,18 @@ class Crud extends View {
 
 		if (this._beforeUpdate){
 			await this._beforeUpdate(id, delta, tgt, ctx, this);
+		}
+
+		if (this._canAccess){
+			if (!(await this._canAccess(tgt, ctx))){
+				throw create(`now allowed to update instance of ${this.structure.name}`, {
+					status: 403,
+					code: 'BMOOR_CRUD_SERVICE_CAN_UPDATE',
+					context: {
+						id
+					}
+				});
+			}
 		}
 
 		const datum = (
@@ -166,6 +231,18 @@ class Crud extends View {
 
 		if (this._beforeDelete){
 			await this._beforeDelete(id, datum, ctx, this);
+		}
+
+		if (this._canAccess){
+			if (!(await this._canAccess(datum, ctx))){
+				throw create(`now allowed to update instance of ${this.structure.name}`, {
+					status: 403,
+					code: 'BMOOR_CRUD_SERVICE_CAN_DELETE',
+					context: {
+						id
+					}
+				});
+			}
 		}
 
 		await super.delete({

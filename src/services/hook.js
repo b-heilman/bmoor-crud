@@ -1,5 +1,5 @@
 
-const {asyncWrap} = require('./wrap.js');
+const {asyncWrap, boolWrap} = require('./wrap.js');
 
 function mapFactory(fn, old){
 	if (!old){
@@ -92,11 +92,24 @@ function hook(crud, settings){
 		);
 	}
 
-	if (settings.canAccess){
-		// TODO
+	if (settings.canCreate){
 		// Idea is that different models can chain this.  I can be accessed if a 
 		// higher model can access me.
 		// event-version-section -> event-version -> event
+		crud._canCreate = asyncWrap(
+			settings.canCreate, 
+			crud._canCreate
+		);
+	}
+
+	if (settings.canAccess){
+		// Idea is that different models can chain this.  I can be accessed if a 
+		// higher model can access me.
+		// event-version-section -> event-version -> event
+		crud._canAccess = boolWrap(
+			settings.canAccess, 
+			crud._canAccess
+		);
 	}
 
 	if (settings.mapFactory){
