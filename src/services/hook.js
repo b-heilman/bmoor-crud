@@ -93,22 +93,33 @@ function hook(crud, settings){
 	}
 
 	if (settings.canCreate){
-		// Idea is that different models can chain this.  I can be accessed if a 
-		// higher model can access me.
-		// event-version-section -> event-version -> event
-		crud._canCreate = asyncWrap(
+		crud._canCreate = boolWrap(
 			settings.canCreate, 
 			crud._canCreate
 		);
 	}
 
-	if (settings.canAccess){
+	if (settings.canRead){
 		// Idea is that different models can chain this.  I can be accessed if a 
 		// higher model can access me.
 		// event-version-section -> event-version -> event
-		crud._canAccess = boolWrap(
-			settings.canAccess, 
-			crud._canAccess
+		crud._canRead = boolWrap(
+			settings.canRead, 
+			crud._canRead
+		);
+	}
+
+	if (settings.canUpdate){
+		crud._canUpdate = boolWrap(
+			settings.canUpdate, 
+			crud._canUpdate
+		);
+	}
+
+	if (settings.canDelete){
+		crud._canDelete = boolWrap(
+			settings.canDelete, 
+			crud._canDelete
 		);
 	}
 

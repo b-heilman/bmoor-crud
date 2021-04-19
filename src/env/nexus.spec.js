@@ -2,14 +2,19 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
+const {Context} = require('../server/context.js');
+
 describe('src/env/nexus.js', function(){
 	const {Nexus} = require('./nexus.js');
 
 	let nexus = null;
 	let stubs = null;
+	let ctx = null;
 
 	beforeEach(function(){
 		stubs = {};
+
+		ctx = new Context();
 		nexus = new Nexus();
 	});
 
@@ -265,7 +270,7 @@ describe('src/env/nexus.js', function(){
 					name: 'name-1',
 					title: 'title-1',
 					junk: 'junk'
-				}).then(res => {
+				}, ctx).then(res => {
 					expect(res).to.deep.equal({
 						id: 'something-1',
 						value: 'v-1'
@@ -295,7 +300,8 @@ describe('src/env/nexus.js', function(){
 					name: 'name-1',
 					title: 'title-1',
 					junk: 'junk'
-				}).then(res => {
+				}, ctx)
+				.then(res => {
 					expect(res).to.deep.equal({
 						id: 'something-1',
 						value: 'v-1'
@@ -337,7 +343,8 @@ describe('src/env/nexus.js', function(){
 					name: 'name-1',
 					title: 'title-1',
 					junk: 'junk'
-				}).then(res => {
+				}, ctx)
+				.then(res => {
 					expect(res).to.deep.equal({
 						id: 'something-1',
 						value: 'v-1'
@@ -366,7 +373,8 @@ describe('src/env/nexus.js', function(){
 					name: 'name-1',
 					title: 'title-1',
 					junk: 'junk'
-				}).then(res => {
+				}, ctx)
+				.then(res => {
 					expect(res).to.deep.equal({
 						id: 'something-1',
 						value: 'v-1'
@@ -404,21 +412,24 @@ describe('src/env/nexus.js', function(){
 		it('should define the service', async function(){
 			await nexus.configureDecorator('test-16', {
 				doSomethingCool: async function(info, ctx){
-					expect(ctx)
+					expect(ctx.test)
 					.to.deep.equal({hello: 'world'});
 
-					return this.create(info);
+					return this.create(info, ctx);
 				}
 			});
+
+			ctx.test = {
+				hello: 'world'
+			};
 
 			await service.doSomethingCool({
 				id: 123,
 				name: 'name-1',
 				title: 'title-1',
 				junk: 'junk'
-			}, {
-				hello: 'world'
-			}).then(res => {
+			}, ctx)
+			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
 					value: 'v-1'
@@ -466,7 +477,8 @@ describe('src/env/nexus.js', function(){
 				name: 'name-1',
 				title: 'title-1',
 				junk: 'junk'
-			}).then(res => {
+			}, ctx)
+			.then(res => {
 				expect(res)
 				.to.deep.equal({
 					id: 'something-1',

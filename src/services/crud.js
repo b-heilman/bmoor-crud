@@ -4,13 +4,13 @@ const {create} = require('bmoor/src/lib/error.js');
 const {View} = require('./view.js');
 
 async function massAccess(service, arr, ctx){
-	if (service._canAccess){
+	if (service._canRead){
 		return (await Promise.all(
 			arr.map(
 				async (datum) => 
-				(await service._canAccess(datum, ctx)) ? datum : null
+				(await service._canRead(datum, ctx)) ? datum : null
 			)
-		)).filter();
+		)).filter(v => !!v);
 	} else {
 		return arr;
 	}
@@ -27,9 +27,7 @@ class Crud extends View {
 			throw create(`missing ctx in create of ${this.structure.name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_CREATE_CTX',
-				context: {
-					id
-				}
+				context: {}
 			});
 		}
 
@@ -106,8 +104,8 @@ class Crud extends View {
 					id
 				}
 			});
-		} else if (this._canAccess){
-			if (!(await this._canAccess(datum, ctx))){
+		} else if (this._canRead){
+			if (!(await this._canRead(datum, ctx))){
 				throw create(`now allowed to read instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
@@ -181,8 +179,8 @@ class Crud extends View {
 			await this._beforeUpdate(id, delta, tgt, ctx, this);
 		}
 
-		if (this._canAccess){
-			if (!(await this._canAccess(tgt, ctx))){
+		if (this._canUpdate){
+			if (!(await this._canUpdate(tgt, ctx))){
 				throw create(`now allowed to update instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_UPDATE',
@@ -233,8 +231,8 @@ class Crud extends View {
 			await this._beforeDelete(id, datum, ctx, this);
 		}
 
-		if (this._canAccess){
-			if (!(await this._canAccess(datum, ctx))){
+		if (this._canDelete){
+			if (!(await this._canDelete(datum, ctx))){
 				throw create(`now allowed to update instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_DELETE',

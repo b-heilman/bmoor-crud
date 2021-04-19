@@ -233,6 +233,12 @@ describe('src/services/crud.js', function(){
 	});
 
 	describe('::create', function(){
+		let ctx = null;
+
+		beforeEach(function(){
+			ctx = new Context();
+		});
+
 		it('should basically work', async function(){
 			const model = new Model('model-1');
 
@@ -293,7 +299,8 @@ describe('src/services/crud.js', function(){
 				json: {
 					hello: 'world'
 				}
-			}).then(res => {
+			}, ctx)
+			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
 					json: {
@@ -356,7 +363,8 @@ describe('src/services/crud.js', function(){
 				name: 'name-1',
 				title: 'title-1',
 				junk: 'junk'
-			}).then(res => {
+			}, ctx)
+			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1'
 				});
