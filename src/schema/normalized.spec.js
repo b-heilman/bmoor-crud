@@ -106,7 +106,8 @@ describe('src/schema/normalized', function(){
 
 			deflate({
 				'class-1': [{
-					$ref: 'foo-1'
+					$ref: 'foo-1',
+					foo: 'bar'
 				}],
 				'class-2': [{
 					$ref: 'bar-2',
@@ -119,21 +120,16 @@ describe('src/schema/normalized', function(){
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'foo-1',
-					$type: undefined
+					foo: 'bar'
 				});
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'bar-2',
-					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: undefined,
-					$type: undefined,
 					class2Id: 456
 				});
 
@@ -175,15 +171,11 @@ describe('src/schema/normalized', function(){
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'bar-2',
-					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'bar-2',
-					$type: undefined,
 					class2Id: 456
 				});
 
@@ -227,15 +219,11 @@ describe('src/schema/normalized', function(){
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'bar-2',
-					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: undefined,
-					$type: undefined,
 					class2Id: 456
 				});
 
@@ -282,22 +270,16 @@ describe('src/schema/normalized', function(){
 
 				expect(stubs.class1Update.getCall(0).args[1])
 				.to.deep.equal({
-					$ref: 'foo-1',
-					$type: 'update',
 					id: 'one'
 				});
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'bar-2',
-					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: undefined,
-					$type: undefined,
 					class2Id: 456
 				});
 
@@ -346,8 +328,6 @@ describe('src/schema/normalized', function(){
 
 				expect(stubs.class1Update.getCall(0).args[1])
 				.to.deep.equal({
-					$ref: 'foo-1',
-					$type: 'update',
 					id: {
 						info: 'one'
 					}
@@ -355,15 +335,11 @@ describe('src/schema/normalized', function(){
 
 				expect(stubs.class2.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: 'bar-2',
-					$type: undefined,
 					class1Id: 123
 				});
 
 				expect(stubs.class3.getCall(0).args[0])
 				.to.deep.equal({
-					$ref: undefined,
-					$type: undefined,
 					class2Id: 456
 				});
 

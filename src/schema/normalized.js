@@ -32,28 +32,28 @@ async function getDatum(service, query, ctx){
 }
 
 // TODO: convert action to Datum
-async function install(action, service, master, mapper, ctx){
-	let ref = action.$ref;
-	let datum = null;
+async function install(datum, service, master, mapper, ctx){
+	let ref = datum.getReference();
+	let rtn = null;
 
-	if (action.$type === 'read'){
+	if (datum.getAction() === 'read'){
 		// either search by key, or the whop thing sent in
-		datum = await getDatum(service, action, ctx);
+		rtn = await getDatum(service, datum.content, ctx);
 
-		if (!datum){
+		if (!rtn){
 			throw create(`unable to read expected datum of type ${service.structure.name}`, {
 				status: 406,
 				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_READ',
 				context: {
 					name: service.structure.name,
-					action
+					action: datum.getAction()
 				}
 			});
 		}
-	} else if (action.$type === 'update'){
+	} else if (datum.getAction() === 'update'){
 		// allows you to do something like update by name, but also change the name by overloading
 		// the key
-		const current = await getDatum(service, action, ctx);
+		const current = await getDatum(service, datum.content, ctx);
 
 		if (!current){
 			throw create(`unable to update expected datum of type ${service.structure.name}`, {
@@ -61,28 +61,28 @@ async function install(action, service, master, mapper, ctx){
 				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_UPDATE',
 				context: {
 					name: service.structure.name,
-					action
+					action: datum.getAction()
 				}
 			});
 		}
 
-		datum = await service.update(service.structure.getKey(current), action, ctx);
-	} else if (action.$type === 'update-create'){
-		datum = await getDatum(service, action, ctx);
+		rtn = await service.update(service.structure.getKey(current), datum.content, ctx);
+	} else if (datum.getAction() === 'update-create'){
+		rtn = await getDatum(service, datum.content, ctx);
 
-		if (datum){
-			await service.update(service.structure.getKey(datum), action, ctx);
+		if (rtn){
+			await service.update(service.structure.getKey(rtn), datum.content, ctx);
 		} else {
-			datum = await service.create(action, ctx);
+			rtn = await service.create(datum.content, ctx);
 		}
-	}  else if (action.$type === 'read-create'){
-		datum = await getDatum(service, action, ctx);
+	}  else if (datum.getAction() === 'read-create'){
+		rtn = await getDatum(service, datum.content, ctx);
 
-		if (!datum){
-			datum = await service.create(action, ctx);
+		if (!rtn){
+			rtn = await service.create(datum.content, ctx);
 		}
 	} else {
-		datum = await service.create(action, ctx);
+		rtn = await service.create(datum.content, ctx);
 	}
 
 	// when this thing is processed, update any references to it
@@ -91,13 +91,13 @@ async function install(action, service, master, mapper, ctx){
 		link => master.process(link.name, 
 			target => {
 				if (target.getField(link.remote) === ref){
-					target.setField(link.remote, datum[link.local]);
+					target.setField(link.remote, rtn[link.local]);
 				}
 			}
 		)
 	);
 
-	return datum;
+	return rtn;
 }
 
 // take a master datum, and a mapper reference to all classes, and convert that
@@ -138,7 +138,7 @@ class Datum {
 		return this.ref;
 	}
 
-	toJson(){
+	toJSON(){
 		return Object.keys(this.content)
 		.reduce(
 			(rtn, path) => {
@@ -254,11 +254,11 @@ class Schema extends SeriesMap{
 		);
 	}
 
-	toJson(){
+	toJSON(){
 		const agg = {};
 
 		for (let [index, arr] of this.entries()) {
-			agg[index] = arr.map(datum => datum.toJson());
+			agg[index] = arr.map(datum => datum.toJSON());
 		}
 
 		return agg;
@@ -339,7 +339,7 @@ async function deflate(schema, nexus, ctx){
 					const agg = await prom;
 
 					const res = await install(
-						datum.toJson(),
+						datum,
 						service,
 						master,
 						nexus.mapper,

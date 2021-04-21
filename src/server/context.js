@@ -1,5 +1,6 @@
 
 const {get} = require('bmoor/src/core.js');
+const {Waitlist} = require('./waitlist.js');
 
 class Context {
 	constructor(systemContext = {}, cfg={}){
@@ -19,6 +20,7 @@ class Context {
 		this.permissions = get(systemContext, cfg.permissions) || {};
 
 		this.changes = [];
+		this.waitlist = new Waitlist();
 		this.trackingChanges = true;
 
 		// controller specific properties
@@ -100,6 +102,7 @@ class Context {
 		this.trackingChanges = toggle;
 	}
 
+	// Why the constants, at least for to?
 	addChange(model, action, key, from, to = null, md={}){
 		if (this.trackingChanges){
 			this.changes.push({

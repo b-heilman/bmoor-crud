@@ -959,7 +959,7 @@ describe('src/services/document.js', function(){
 				categoryName: 'category-1'
 			});
 
-			expect(res.instructions.toJson())
+			expect(res.instructions.toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 'test-item:1',
@@ -1001,7 +1001,7 @@ describe('src/services/document.js', function(){
 				categoryName: 'category-1'
 			});
 
-			expect(res.instructions.toJson())
+			expect(res.instructions.toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 'test-item:1',
@@ -1124,7 +1124,7 @@ describe('src/services/document.js', function(){
 				categoryName: 'category-1'
 			}, {});
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 'test-item:1',
@@ -1252,7 +1252,7 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
 					$ref: 'test-family:1',
@@ -1386,7 +1386,7 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
 					$ref: 'test-family:1',
@@ -1498,7 +1498,7 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
 					$ref: 'test-family:1',
@@ -1646,7 +1646,7 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 'test-item:1',
@@ -1687,24 +1687,18 @@ describe('src/services/document.js', function(){
 
 			expect(stubs.itemCreate.getCall(0).args[0])
 			.to.deep.equal({
-				$ref: 'test-item:1',
-				$type: 'create',
 				id: undefined,
 				name: 'item-name-1'
 			});
 
 			expect(stubs.materialCreate.getCall(0).args[0])
 			.to.deep.equal({
-				$ref: 'test-material:2',
-				$type: 'create',
 				id: undefined,
 				name: 'material-name-1'
 			});
 
 			expect(stubs.imCreate.getCall(0).args[0])
 			.to.deep.equal({
-				$ref: 'test-item-material:2',
-				$type: 'create',
 				id: undefined,
 				itemId: 'item-1',
 				materialId: 'material-1',
@@ -1779,7 +1773,7 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 'test-item:1',
@@ -1820,24 +1814,18 @@ describe('src/services/document.js', function(){
 
 			expect(stubs.itemCreate.getCall(0).args[1])
 			.to.deep.equal({
-				$ref: 'test-item:1',
-				$type: 'update',
 				id: 'item-id-1',
 				name: 'item-name-10'
 			});
 
 			expect(stubs.materialCreate.getCall(0).args[1])
 			.to.deep.equal({
-				$ref: 'test-material:2',
-				$type: 'update',
 				id: 'material-1',
 				name: 'material-name-10'
 			});
 
 			expect(stubs.imCreate.getCall(0).args[1])
 			.to.deep.equal({
-				$ref: 'test-item-material:2',
-				$type: 'update',
 				id: 'join-1',
 				itemId: 'item-1',
 				materialId: 'material-1',
@@ -2372,7 +2360,7 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			expect(stubs.deflateSpy.getCall(0).args[0].toJson())
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-user': [{
 					'$ref': 'test-user:1',
