@@ -9,9 +9,22 @@ describe('src/server/waitlist.js', function(){
 
 		const prom = waitlist.await('hello', 'world');
 
-		waitlist.resolve('hello', 'world', 3);
+		const service = {
+			structure: {
+				name: 'hello',
+				getKey: function(){
+					return 123;
+				}
+			}
+		};
+
+		waitlist.resolve(service, 'world', 3);
 
 		expect(await prom)
-		.to.equal(3);
+		.to.deep.equal({
+			service,
+			datum: 3,
+			key: 123
+		});
 	});
 });

@@ -3,13 +3,16 @@ const {expect} = require('chai');
 const sinon = require('sinon');
 
 const {Nexus} = require('../env/nexus.js');
+const {Context} = require('../server/context.js');
 const {deflate, inflate} = require('./normalized.js');
 
 describe('src/schema/normalized', function(){
+	let ctx = null;
 	let stubs = null;
 	let nexus = null;
 
 	beforeEach(function(){
+		ctx = new Context();
 		stubs = {};
 		nexus = new Nexus();
 	});
@@ -116,7 +119,7 @@ describe('src/schema/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, nexus, {})
+			}, nexus, ctx)
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.deep.equal({
@@ -164,7 +167,7 @@ describe('src/schema/normalized', function(){
 					$ref: 'bar-2',
 					class2Id: 'bar-2',
 				}]
-			}, nexus, {})
+			}, nexus, ctx)
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.equal('one');
@@ -210,7 +213,7 @@ describe('src/schema/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, nexus, {})
+			}, nexus, ctx)
 			.then(() => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.deep.equal({
@@ -260,7 +263,7 @@ describe('src/schema/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, nexus, {})
+			}, nexus, ctx)
 			.then(() => {
 				expect(stubs.class1Read.getCall(0).args[0])
 				.to.equal('one');
@@ -318,7 +321,7 @@ describe('src/schema/normalized', function(){
 				'class-3': [{
 					class2Id: 'bar-2',
 				}]
-			}, nexus, {})
+			}, nexus, ctx)
 			.then(() => {
 				expect(stubs.class1Read.getCall(0).args[0])
 				.to.deep.equal({info:'one'});
@@ -345,6 +348,68 @@ describe('src/schema/normalized', function(){
 
 				done();
 			}).catch(done);
+		});
+
+		it('should properly process parallel requests', async function(){
+			stubs.class1Read = sinon.stub(class1, 'query')
+			.resolves([{id:123}]);
+
+			stubs.class1Update = sinon.stub(class1, 'update')
+			.resolves({id:123});
+
+			stubs.class2 = sinon.stub(class2, 'create')
+			.resolves({id:456});
+
+			stubs.class3 = sinon.stub(class3, 'create')
+			.resolves({id:789});
+
+			stubs.class4 = sinon.stub(class4, 'create')
+			.resolves({id:0});
+
+			const before = deflate({
+				'class-2': [{
+					$ref: 'bar-2',
+					class1Id: 'foo-1'
+				}],
+				'class-3': [{
+					class2Id: 'bar-2',
+				}]
+			}, nexus, ctx);
+
+			await deflate({
+				'class-1': [{
+					$type: 'update',
+					$ref: 'foo-1',
+					id: {
+						info: 'one'
+					}
+				}]
+			}, nexus, ctx);
+
+			await before;
+
+			expect(stubs.class1Read.getCall(0).args[0])
+			.to.deep.equal({info:'one'});
+
+			expect(stubs.class1Update.getCall(0).args[0])
+			.to.equal(123);
+
+			expect(stubs.class1Update.getCall(0).args[1])
+			.to.deep.equal({
+				id: {
+					info: 'one'
+				}
+			});
+
+			expect(stubs.class2.getCall(0).args[0])
+			.to.deep.equal({
+				class1Id: 123
+			});
+
+			expect(stubs.class3.getCall(0).args[0])
+			.to.deep.equal({
+				class2Id: 456
+			});
 		});
 	});
 

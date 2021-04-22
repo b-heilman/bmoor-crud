@@ -1,5 +1,10 @@
 
+const {Config} = require('bmoor/src/lib/config.js');
 const {Broadcast} = require('bmoor/src/eventing/broadcast.js');
+
+const config = new Config({
+	timeout: 2000
+});
 
 class Waitlist {
 	constructor(){
@@ -19,31 +24,46 @@ class Waitlist {
 		return rtn;
 	}
 
-	async await(model, id){
-		const waiting = this.getModel(model);
+	async await(modelName, ref){
+		const waiting = this.getModel(modelName);
 
-		let rtn = waiting[id];
+		let rtn = waiting[ref];
 
 		if (!rtn){
-			rtn = new Promise((resolve) => {
-				this.broadcast.once(`${model}.${id}`, function(datum){
-					// TODO... put a timer here;
-					resolve(datum);
+			rtn = new Promise((resolve, reject) => {
+				const looking = `${modelName}.${ref}`;
+				const timeout = config.get('timeout');
+
+				const clear = setTimeout(function(){
+					reject(new Error('waitlist timed out: '+looking));
+				}, timeout);
+
+				this.broadcast.once(looking, function(info){
+					clearTimeout(clear);
+					
+					resolve(info);
 				});
 			});
 
-			waiting[id] = rtn;
+			waiting[ref] = rtn;
 		}
 
 		return rtn;
 	}
 
-	async resolve(model, id, datum){
+	async resolve(service, ref, datum){
+		const model = service.structure.name;
 		const waiting = this.getModel(model);
 
-		waiting[id] = datum;
+		const response = {
+			service,
+			datum,
+			key: service.structure.getKey(datum)
+		};
 
-		this.broadcast.trigger(`${model}.${id}`, datum);
+		waiting[ref] = response;
+
+		this.broadcast.trigger(`${model}.${ref}`, response);
 	}
 }
 

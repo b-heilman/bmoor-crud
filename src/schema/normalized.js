@@ -3,103 +3,6 @@ const {create} = require('bmoor/src/lib/error.js');
 
 const {Network} = require('../graph/network.js');
 
-async function getDatum(service, query, ctx){
-	let key = service.structure.getKey(query);
-
-	// on update, a user might send a query object as the key if they are updating the name
-	// in the body but not referencing by the id
-	if (typeof(key) === 'object'){
-		query = key;
-
-		key = service.structure.getKey(query);
-	}
-
-	if (key){
-		// if you make key === 0, you're a horrible person
-		return await service.read(key, ctx);
-	} else {
-		if (service.structure.hasIndex()){
-			const res = await service.query(
-				service.structure.clean('index',query), 
-				ctx
-			);
-
-			return res[0];
-		} else {
-			return null;
-		}
-	}
-}
-
-// TODO: convert action to Datum
-async function install(datum, service, master, mapper, ctx){
-	let ref = datum.getReference();
-	let rtn = null;
-
-	if (datum.getAction() === 'read'){
-		// either search by key, or the whop thing sent in
-		rtn = await getDatum(service, datum.content, ctx);
-
-		if (!rtn){
-			throw create(`unable to read expected datum of type ${service.structure.name}`, {
-				status: 406,
-				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_READ',
-				context: {
-					name: service.structure.name,
-					action: datum.getAction()
-				}
-			});
-		}
-	} else if (datum.getAction() === 'update'){
-		// allows you to do something like update by name, but also change the name by overloading
-		// the key
-		const current = await getDatum(service, datum.content, ctx);
-
-		if (!current){
-			throw create(`unable to update expected datum of type ${service.structure.name}`, {
-				status: 406,
-				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_UPDATE',
-				context: {
-					name: service.structure.name,
-					action: datum.getAction()
-				}
-			});
-		}
-
-		rtn = await service.update(service.structure.getKey(current), datum.content, ctx);
-	} else if (datum.getAction() === 'update-create'){
-		rtn = await getDatum(service, datum.content, ctx);
-
-		if (rtn){
-			await service.update(service.structure.getKey(rtn), datum.content, ctx);
-		} else {
-			rtn = await service.create(datum.content, ctx);
-		}
-	}  else if (datum.getAction() === 'read-create'){
-		rtn = await getDatum(service, datum.content, ctx);
-
-		if (!rtn){
-			rtn = await service.create(datum.content, ctx);
-		}
-	} else {
-		rtn = await service.create(datum.content, ctx);
-	}
-
-	// when this thing is processed, update any references to it
-	mapper.getByDirection(service.structure.name, 'incoming')
-	.forEach(
-		link => master.process(link.name, 
-			target => {
-				if (target.getField(link.remote) === ref){
-					target.setField(link.remote, rtn[link.local]);
-				}
-			}
-		)
-	);
-
-	return rtn;
-}
-
 // take a master datum, and a mapper reference to all classes, and convert that
 // into a series of service calls
 
@@ -275,6 +178,121 @@ class Schema extends SeriesMap{
 
 		return schema;
 	}
+}
+
+async function getDatum(service, query, ctx){
+	let key = service.structure.getKey(query);
+
+	// on update, a user might send a query object as the key if they are updating the name
+	// in the body but not referencing by the id
+	if (typeof(key) === 'object'){
+		query = key;
+
+		key = service.structure.getKey(query);
+	}
+
+	if (key){
+		// if you make key === 0, you're a horrible person
+		return await service.read(key, ctx);
+	} else {
+		if (service.structure.hasIndex()){
+			const res = await service.query(
+				service.structure.clean('index',query), 
+				ctx
+			);
+
+			return res[0];
+		} else {
+			return null;
+		}
+	}
+}
+
+async function ensure(mapper, modelName, payload, ctx){
+	return Promise.all(mapper.getByDirection(modelName, 'outgoing')
+	.map( 
+		async (link) => {
+			if (link.local in payload){
+				const value = payload[link.local];
+
+				// if it's a DatumRef, what will the value be?
+				if (typeof(value) === 'string'){
+					// this means it's a reference string
+					
+					let foreign = await ctx.waitlist.await(link.name, value);
+
+					payload[link.local] = foreign.key;
+				}
+			}
+		},
+		Promise.resolve(true)
+	));
+}
+
+async function install(datum, service, master, mapper, ctx){
+	let ref = datum.getReference();
+	let rtn = null;
+
+	if (datum.getAction() === 'read'){
+		// either search by key, or the whop thing sent in
+		rtn = await getDatum(service, datum.content, ctx);
+
+		if (!rtn){
+			throw create(`unable to read expected datum of type ${service.structure.name}`, {
+				status: 406,
+				code: 'BMOOR_CRUD_NORMALIZED_INSTALL_READ',
+				context: {
+					name: service.structure.name,
+					action: datum.getAction()
+				}
+			});
+		}
+	} else {
+		const content = datum.content;
+		const modelName = service.structure.name;
+
+		await ensure(mapper, modelName, content, ctx);
+
+		if (datum.getAction() === 'update'){
+			// allows you to do something like update by name, but also change the name by overloading
+			// the key
+			const current = await getDatum(service, content, ctx);
+
+			if (!current){
+				throw create(`unable to update expected datum of type ${modelName}`, {
+					status: 406,
+					code: 'BMOOR_CRUD_NORMALIZED_INSTALL_UPDATE',
+					context: {
+						name: modelName,
+						action: datum.getAction()
+					}
+				});
+			}
+
+			rtn = await service.update(service.structure.getKey(current), content, ctx);
+		} else if (datum.getAction() === 'update-create'){
+			rtn = await getDatum(service, content, ctx);
+
+			if (rtn){
+				await service.update(service.structure.getKey(rtn), content, ctx);
+			} else {
+				rtn = await service.create(content, ctx);
+			}
+		}  else if (datum.getAction() === 'read-create'){
+			rtn = await getDatum(service, content, ctx);
+
+			if (!rtn){
+				rtn = await service.create(content, ctx);
+			}
+		} else {
+			rtn = await service.create(content, ctx);
+		}
+	}
+
+	// when this thing is processed, update any references to it
+	ctx.waitlist.resolve(service, ref, rtn);
+
+	return rtn;
 }
 
 /**

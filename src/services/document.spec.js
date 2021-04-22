@@ -1055,7 +1055,7 @@ describe('src/services/document.js', function(){
 			const res = await doc.push({
 				item: 'item-1',
 				categoryName: 'category-1'
-			}, {});
+			}, context);
 
 			expect(res)
 			.to.deep.equal([
@@ -1122,7 +1122,7 @@ describe('src/services/document.js', function(){
 				item: 'item-1',
 				categoryId: 456,
 				categoryName: 'category-1'
-			}, {});
+			}, context);
 
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
