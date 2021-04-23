@@ -72,7 +72,10 @@ const normalized = require('../schema/normalized.js');
 
 				// TODO: this seems like an anti pattern, do I need to change where this
 				//   is being computed?
-				while(access.length && this.structure.hasStructure(access[0].model)){
+				while(access.length && (
+					this.structure.hasStructure(access[0].model) || 
+					this.structure.settings.base === access[0].model
+				)){
 					prev = root;
 					root = access.shift();
 				}
@@ -262,15 +265,26 @@ const normalized = require('../schema/normalized.js');
 				const service = await this.structure.nexus.loadCrud(trans.model);
 
 				// I need to generate references for the second loop
-				const ref = new normalized.DatumRef(series);
-				references[series] = ref;
-
-				const content = await transformer.go(datum, {
-					$ref: ref
-				});
+				const content = await transformer.go(datum, {});
 				
 				const key = service.structure.getKey(content);
-				content.$type = !key ? 'create' : 'update';
+				let ref = null;
+
+				if (key){
+					if (typeof(key) === 'string' && key.charAt(0) === '$'){
+						ref = key;
+						content.$type = 'update-create';
+					} else {
+						ref = new normalized.DatumRef(series);
+						content.$type = 'update';
+					}
+				} else {
+					ref = new normalized.DatumRef(series);
+					content.$type = 'create';
+				}
+
+				content.$ref = ref;
+				references[series] = ref;
 
 				let model = doc[trans.model];
 				if (!model){
@@ -311,7 +325,7 @@ const normalized = require('../schema/normalized.js');
 				if (!sub.reference.property.isArray){
 					content = [content];
 				}
-
+				
 				const accessor = sub.joins[0].accessor;
 				const root = sub.joins[0].root;
 

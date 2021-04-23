@@ -3,7 +3,7 @@ const {Config} = require('bmoor/src/lib/config.js');
 const {Broadcast} = require('bmoor/src/eventing/broadcast.js');
 
 const config = new Config({
-	timeout: 2000
+	timeout: 1000
 });
 
 class Waitlist {
@@ -52,8 +52,8 @@ class Waitlist {
 	}
 
 	async resolve(service, ref, datum){
-		const model = service.structure.name;
-		const waiting = this.getModel(model);
+		const modelName = service.structure.name;
+		const waiting = this.getModel(modelName);
 
 		const response = {
 			service,
@@ -63,7 +63,7 @@ class Waitlist {
 
 		waiting[ref] = response;
 
-		this.broadcast.trigger(`${model}.${ref}`, response);
+		this.broadcast.trigger(`${modelName}.${ref}`, response);
 	}
 }
 

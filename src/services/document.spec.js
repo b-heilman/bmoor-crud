@@ -97,7 +97,14 @@ describe('src/services/document.js', function(){
 					key: true
 				},
 				name: true,
-				title: true
+				title: true,
+				creatorId: {
+					read: true,
+					link: {
+						name: 'test-user',
+						field: 'id'
+					}
+				}
 			}
 		});
 		await nexus.configureCrud('test-material', {});
@@ -128,6 +135,13 @@ describe('src/services/document.js', function(){
 					read: true,
 					write: true,
 					update: true
+				},
+				creatorId: {
+					read: true,
+					link: {
+						name: 'test-user',
+						field: 'id'
+					}
 				}
 			}
 		});
@@ -2130,6 +2144,26 @@ describe('src/services/document.js', function(){
 				});
 				await nexus.configureDocument('test-material', connector);
 
+				await nexus.configureComposite('test-item', {
+					base: 'test-item',
+					key: 'id',
+					fields: {
+						'id': '.id',
+						'name': '.name'
+					}
+				});
+				await nexus.configureDocument('test-item', connector);
+
+				await nexus.configureComposite('test-mappings', {
+					base: 'test-item-material',
+					key: 'id',
+					fields: {
+						'itemId': '.itemId',
+						'materialId': '.materialId'
+					}
+				});
+				await nexus.configureDocument('test-mappings', connector);
+
 				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
 					key: 'id',
@@ -2214,6 +2248,27 @@ describe('src/services/document.js', function(){
 					'name': '.name'
 				}
 			});
+			await nexus.configureDocument('test-material', connector);
+
+			await nexus.configureComposite('test-item', {
+				base: 'test-item',
+				key: 'id',
+				fields: {
+					'id': '.id',
+					'name': '.name'
+				}
+			});
+			await nexus.configureDocument('test-item', connector);
+
+			await nexus.configureComposite('test-mappings', {
+				base: 'test-item-material',
+				key: 'id',
+				fields: {
+					'itemId': '.itemId',
+					'materialId': '.materialId'
+				}
+			});
+			await nexus.configureDocument('test-mappings', connector);
 
 			stubs.getChangeType = sinon.stub();
 			await nexus.configureComposite('test-composite-material', {
@@ -2259,6 +2314,20 @@ describe('src/services/document.js', function(){
 				}
 			});
 
+			// this schema makes no sense in practicality...
+			await nexus.configureComposite('test-god', {
+				base: 'test-user',
+				key: 'id',
+				fields: {
+					'id': '.id',
+					'items': ['.id > .creatorId#test-item'],
+					'materials': ['.id > .creatorId#test-material'],
+					'mappings': ['.id > .creatorId#test-mappings']
+				}
+			});
+		});
+
+		it('should only call once', async function(){
 			doc = await nexus.configureDocument('test-ownership', connector);
 
 			const users = await nexus.loadCrud('test-user');
@@ -2317,10 +2386,7 @@ describe('src/services/document.js', function(){
 			});
 
 			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
-		});
 
-		it('should only call once', async function(){
-			
 			stubs.getChangeType.onCall(0)
 			.resolves(changeTypes.major);
 
@@ -2459,8 +2525,181 @@ describe('src/services/document.js', function(){
 			.to.equal(1);
 		});
 
-		describe('security', function(){
-			
+		it('should complete parallel processing', async function(){
+			doc = await nexus.configureDocument('test-god', connector);
+
+			const users = await nexus.loadCrud('test-user');
+			const items = await nexus.loadCrud('test-item');
+			const itemMaterials = await nexus.loadCrud('test-item-material');
+			const materials = await nexus.loadCrud('test-material');
+
+			stubs.userRead = sinon.stub(users, 'read')
+			.resolves({
+				id: 'user-1',
+				name: 'user-updated'
+			});
+
+			stubs.userCreate = sinon.stub(users, 'update')
+			.resolves({
+				id: 'user-1',
+				name: 'user-updated'
+			});
+
+			stubs.itemRead = sinon.stub(items, 'read')
+			.resolves({
+				id: 'item-1',
+				name: 'item-updated'
+			});
+
+			stubs.itemCreate = sinon.stub(items, 'update')
+			.resolves({
+				id: 'item-1',
+				name: 'item-updated'
+			});
+
+			stubs.materialRead = sinon.stub(materials, 'read')
+			.resolves({
+				id: 'material-1',
+				name: 'material-updated'
+			});
+
+			stubs.materialCreate = sinon.stub(materials, 'update')
+			.resolves({
+				id: 'material-1',
+				name: 'material-updated'
+			});
+
+			stubs.imRead = sinon.stub(itemMaterials, 'read')
+			.resolves({
+				id: 'im-1',
+				itemId: 'item-1-1',
+				materialId: 'material-1-1'
+			});
+
+			stubs.imCreate = sinon.stub(itemMaterials, 'create')
+			.resolves({
+				id: 'im-1',
+				itemId: 'item-1-1',
+				materialId: 'material-1-1'
+			});
+
+			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+
+			await doc.push({
+				id: 'user-id',
+				items: [{
+					id: '$item-id-1',
+					name: 'item-name-10'
+				}, {
+					id: '$item-id-2',
+					name: 'item-name-20'
+				}, {
+					id: '$item-id-3',
+					name: 'item-name-30'
+				}], 
+				materials: [{
+					id: '$material-id-1',
+					name: 'material-name-10'
+				}, {
+					id: '$material-id-2',
+					name: 'material-name-20'
+				}, {
+					id: '$material-id-3',
+					name: 'material-name-30'
+				}],
+				mappings: [{
+					itemId: '$item-id-1',
+					materialId: '$material-id-1'
+				}, {
+					itemId: '$item-id-2',
+					materialId: '$material-id-2'
+				}, {
+					itemId: '$item-id-2',
+					materialId: '$material-id-3'
+				}, {
+					itemId: '$item-id-3',
+					materialId: '$material-id-3'
+				}]
+			}, context);
+
+			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
+			.to.deep.equal({
+				'test-user': [{
+					'$ref': 'test-user:1',
+					'$type': 'update',
+					'id': 'user-id'
+				}],
+				'test-item': [{
+					'$ref': '$item-id-1',
+					'$type': 'update-create',
+					'id': '$item-id-1',
+					'name': 'item-name-10',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': '$item-id-2',
+					'$type': 'update-create',
+					'id': '$item-id-2',
+					'name': 'item-name-20',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': '$item-id-3',
+					'$type': 'update-create',
+					'id': '$item-id-3',
+					'name': 'item-name-30',
+					'creatorId': 'test-user:1'
+				}],
+				'test-material': [{
+					'$ref': '$material-id-1',
+					'$type': 'update-create',
+					'id': '$material-id-1',
+					'name': 'material-name-10',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': '$material-id-2',
+					'$type': 'update-create',
+					'id': '$material-id-2',
+					'name': 'material-name-20',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': '$material-id-3',
+					'$type': 'update-create',
+					'id': '$material-id-3',
+					'name': 'material-name-30',
+					'creatorId': 'test-user:1'
+				}],
+				'test-item-material': [{
+					'$ref': 'test-item-material:8',
+					'$type': 'create',
+					'materialId': '$material-id-1',
+					'itemId': '$item-id-1',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': 'test-item-material:9',
+					'$type': 'create',
+					'materialId': '$material-id-2',
+					'itemId': '$item-id-2',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': 'test-item-material:10',
+					'$type': 'create',
+					'materialId': '$material-id-3',
+					'itemId': '$item-id-2',
+					'creatorId': 'test-user:1'
+				},
+				{
+					'$ref': 'test-item-material:11',
+					'$type': 'create',
+					'materialId': '$material-id-3',
+					'itemId': '$item-id-3',
+					'creatorId': 'test-user:1'
+				}]
+			});
 		});
 	});
 });

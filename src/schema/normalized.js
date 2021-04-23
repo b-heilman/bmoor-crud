@@ -102,7 +102,7 @@ class SeriesMap extends Map {
 		// attach DatumRefs in places and we will update inline
 		let alias = null;
 		if (ref instanceof(DatumRef)){
-			ref.value += ':'+this.series; 
+			ref.value += ':'+this.series;
 			alias = ref.value;
 		} else {
 			alias = ref;
@@ -252,7 +252,7 @@ async function install(datum, service, master, mapper, ctx){
 		const modelName = service.structure.name;
 
 		await ensure(mapper, modelName, content, ctx);
-
+		
 		if (datum.getAction() === 'update'){
 			// allows you to do something like update by name, but also change the name by overloading
 			// the key
@@ -272,7 +272,7 @@ async function install(datum, service, master, mapper, ctx){
 			rtn = await service.update(service.structure.getKey(current), content, ctx);
 		} else if (datum.getAction() === 'update-create'){
 			rtn = await getDatum(service, content, ctx);
-
+			
 			if (rtn){
 				await service.update(service.structure.getKey(rtn), content, ctx);
 			} else {
