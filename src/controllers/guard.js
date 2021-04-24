@@ -29,6 +29,14 @@ const {Controller} = require('../server/controller.js');
 // delete => DELETE: '/'+[id1,id2]
 // delete => DELETE: ''+query
 
+async function parseQuery(view, ctx){
+	const query = ctx.getQuery();
+
+	return {
+		params: await view.clean('query', query, ctx)
+	};
+}
+
 function operationNotAllowed(operation){
 	throw error.create(`Operation (${operation}) is blocked`, {
 		code: 'CRUD_CONTROLLER_GUARDED',
@@ -102,7 +110,7 @@ class Guard extends Controller {
 					operationNotAllowed('query');
 				}
 
-				return this.view.query(ctx.getQuery(), ctx);
+				return this.view.query(await parseQuery(this.view, ctx), ctx);
 			} else {
 				return this.view.readAll(ctx);
 			}
@@ -204,8 +212,9 @@ class Guard extends Controller {
 					operationNotAllowed('query');
 				}
 
-				const queriedIds = (await this.view.query(ctx.getQuery(), ctx))
-					.map(datum => this.view.structure.getKey(datum));
+				const queriedIds = (await this.view.query(
+					await parseQuery(this.view, ctx), ctx)
+				).map(datum => this.view.structure.getKey(datum));
 
 				return Promise.all(queriedIds.map(
 					id => this.view.delete(id, ctx)

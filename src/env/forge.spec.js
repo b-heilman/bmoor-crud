@@ -556,10 +556,12 @@ describe('src/env/forge.js', function(){
 
 					try {
 						await service1.query({
-							eins: 1,
-							zwei: 2,
-							drei: 3,
-							fier: 4
+							params: {
+								eins: 1,
+								zwei: 2,
+								drei: 3,
+								fier: 4
+							}
 						}, ctx);
 
 						const args = interface1.execute.getCall(0).args;
@@ -579,7 +581,9 @@ describe('src/env/forge.js', function(){
 
 				it('should be ok if no protected fields sent', async function(){
 					await service1.query({
-						eins: 1
+						params: {
+							eins: 1
+						}
 					}, ctx);
 
 					const args = interface1.execute.getCall(0).args;
@@ -652,10 +656,12 @@ describe('src/env/forge.js', function(){
 			describe('query', function(){
 				it('should prune fields', async function(){
 					await service1.query({
-						eins: 1,
-						zwei: 2,
-						drei: 3,
-						fier: 4
+						params: {
+							eins: 1,
+							zwei: 2,
+							drei: 3,
+							fier: 4
+						}
 					}, ctx);
 
 					const args = interface1.execute.getCall(0).args;
@@ -673,6 +679,8 @@ describe('src/env/forge.js', function(){
 							}],
 							query: {
 								eins: 1,
+								zwei: 2,
+								drei: 3,
 								fier: 4
 							}
 						}]
@@ -775,10 +783,12 @@ describe('src/env/forge.js', function(){
 					check = (permission) => permission === 'can-query';
 
 					await service1.query({
-						eins: 1,
-						zwei: 2,
-						drei: 3,
-						fier: 4
+						params: {
+							eins: 1,
+							zwei: 2,
+							drei: 3,
+							fier: 4
+						}
 					}, ctx);
 
 					const args = interface1.execute.getCall(0).args;
@@ -796,6 +806,8 @@ describe('src/env/forge.js', function(){
 							}],
 							query: {
 								eins: 1,
+								zwei: 2,
+								drei: 3,
 								fier: 4
 							}
 						}]
@@ -809,10 +821,12 @@ describe('src/env/forge.js', function(){
 
 					try {
 						await service1.query({
-							eins: 1,
-							zwei: 2,
-							drei: 3,
-							fier: 4
+							params: {
+								eins: 1,
+								zwei: 2,
+								drei: 3,
+								fier: 4
+							}
 						}, ctx);
 
 						const args = interface1.execute.getCall(0).args;

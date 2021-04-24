@@ -69,7 +69,8 @@ describe('src/controller/guard.js', function(){
 						new Context({
 							method: 'get',
 							query: {
-								foo: 'bar'
+								eins: 'bar',
+								zwei: 'foo'
 							}
 						})
 					);
@@ -80,7 +81,9 @@ describe('src/controller/guard.js', function(){
 					const args = stubs.query.getCall(0).args;
 					expect(args[0])
 					.to.deep.equal({
-						foo: 'bar'
+						params: {
+							zwei: 'foo'
+						}
 					});
 				});
 
@@ -484,7 +487,8 @@ describe('src/controller/guard.js', function(){
 						new Context({
 							method: 'delete',
 							query: {
-								foo: 'bar'
+								eins: 'foo',
+								zwei: 'bar'
 							}
 						})
 					);
@@ -498,7 +502,9 @@ describe('src/controller/guard.js', function(){
 					const args = stubs.query.getCall(0).args;
 					expect(args[0])
 					.to.deep.equal({
-						foo: 'bar'
+						params: {
+							zwei: 'bar'
+						}
 					});
 
 					const args1 = stubs.delete.getCall(0).args;

@@ -149,18 +149,18 @@ class Crud extends View {
 		);
 	}
 
-	async query(search, ctx){
+	async query(settings, ctx){
 		await this.structure.build();
 
 		if (this._beforeQuery){
-			await this._beforeQuery(search, ctx);
+			await this._beforeQuery(settings.params, ctx);
 		}
 
 		return massAccess(
 			this, 
 			await super.read(
 				await this.structure.getQuery(
-					await this.clean('query', search, ctx), // TODO : transform external => internal?
+					settings.params,// await this.clean('query', search, ctx), // TODO : transform external => internal?
 					{},
 					ctx
 				),

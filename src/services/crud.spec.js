@@ -896,9 +896,81 @@ describe('src/services/crud.js', function(){
 			});
 
 			return service.query({
-				id: 1,
-				name: 'test-1',
-				title: 'title-1'
+				params: {
+					name: 'test-1'
+				}
+			}).then(res => {
+				expect(res).to.deep.equal([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			});
+		});
+
+		it('should pass through', async function(){
+			const model = new Model('model-1');
+
+			await model.configure({
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						delete: true,
+						query: true
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true
+					}
+				}
+			});
+
+			const service = new Crud(model);
+
+			await service.configure({
+				execute: function(request){
+					expect(request)
+					.to.deep.equal({
+						method: 'read',
+						models: [{
+							name: 'model-1',
+							fields: [{
+								path: 'id'
+							}, {
+								path: 'name'
+							}, {
+								path: 'title'
+							}],
+							query: {
+								id: 1,
+								name: 'test-1',
+								title: 'title-1'
+							},
+							schema: 'model-1'
+						}]
+					});
+
+					return Promise.resolve([{
+						id: 'something-1',
+						name: 'v-1',
+						title: 't-1',
+					}]);
+				}
+			});
+
+			return service.query({
+				params: {
+					id: 1,
+					name: 'test-1',
+					title: 'title-1'
+				}
 			}).then(res => {
 				expect(res).to.deep.equal([{
 					id: 'something-1',
