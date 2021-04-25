@@ -3,6 +3,14 @@ const {Route} = require('./route.js');
 const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
+async function parseQuery(view, ctx){
+	const query = ctx.getQuery() || {};
+
+	return {
+		params: await view.clean('query', query, ctx)
+	};
+}
+
 async function formatResponse(res, changes/*, ctx, nexus*/){
 	if (changes.length){
 		return {
@@ -76,7 +84,7 @@ class Controller {
 	}
 
 	async configure(settings){
-		this.settings = settings;
+		this.incomingSettings = settings;
 	}
 
 	prepareRoute(settings={}){
@@ -153,5 +161,6 @@ module.exports = {
 	config,
 	handleRollback,
 	formatResponse,
+	parseQuery,
 	Controller
 };

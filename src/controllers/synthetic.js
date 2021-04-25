@@ -1,7 +1,7 @@
 
 const error = require('bmoor/src/lib/error.js');
 
-const {Controller} = require('../server/controller.js');
+const {Controller, parseQuery} = require('../server/controller.js');
 
 class Synthetic extends Controller {
 
@@ -48,7 +48,9 @@ class Synthetic extends Controller {
 			if (ctx.hasParam('id')) {
 				return this.view.read(ctx.getParam('id'), ctx);
 			} else {
-				return this.view.query(ctx.getQuery(), ctx);
+				await this.view.link();
+				
+				return this.view.query(await parseQuery(this.view.base, ctx), ctx);
 			}
 		} else {
 			throw error.create('called read with method '+ctx.method, {

@@ -24,11 +24,11 @@ class Field {
 	     * - query
 	     * - key
 	     ***/
-		this.settings = settings;
+		this.incomingSettings = settings;
 	}
 
 	extend(path, settings){
-		const ops = Object.assign({},this.settings, settings);
+		const ops = Object.assign({},this.incomingSettings, settings);
 		ops.storagePath = this.storagePath;
 
 		const field = new Field(
@@ -42,7 +42,7 @@ class Field {
 		return field;
 	}
 
-	toJSON(){ // TODO: change to toJSON
+	toJSON(){
 		return {
 			path: this.path,
 			storage: {
@@ -50,8 +50,8 @@ class Field {
 				path: this.storagePath
 			},
 			usage: {
-				type: this.settings.jsonType,
-				description: this.settings.description
+				type: this.incomingSettings.jsonType,
+				description: this.incomingSettings.description
 			}
 		};
 	}

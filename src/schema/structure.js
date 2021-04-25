@@ -97,7 +97,7 @@ function buildActions(actions, field){
 	const reference = field.reference;
 	const storagePath = field.storagePath;
 	
-	const settings = field.settings;
+	const settings = field.incomingSettings;
 
 	let cfg = {};
 
@@ -139,10 +139,10 @@ function buildActions(actions, field){
 	return actions;
 }
 
-function buildProperties(properties, field){
+function buildSettings(properties, field){
 	const path = field.path;
 
-	const settings = field.settings;
+	const settings = field.incomingSettings;
 
 	if (settings.create){
 		properties.create.push(path);
@@ -184,7 +184,7 @@ function buildInflate(actions, fields){
 
 	const mutator = fields.reduce(
 		(old, field) => {
-			if (field.settings.onInflate){
+			if (field.incomingSettings.onInflate){
 				// this means the mapping is handled by the function and is already
 				// being passed in
 				return old;
@@ -241,7 +241,7 @@ function buildDeflate(actions, fields){
 
 	const mutator = fields.reduce(
 		(old, field) => {
-			if (field.settings.onDeflate){
+			if (field.incomingSettings.onDeflate){
 				return old;
 			} else {
 				const getter = makeGetter(field.path);
@@ -298,7 +298,7 @@ class Structure {
 	}
 
 	configure(settings){
-		this.settings = settings;
+		this.incomingSettings = settings;
 		
 		this.fields = [];
 		this.index = {};
@@ -312,7 +312,10 @@ class Structure {
 				mutates: false
 			});
 
-			this.properties = this.fields.reduce(buildProperties, {
+			this.actions.inflate = buildInflate(this.actions, this.fields);
+			this.actions.deflate = buildDeflate(this.actions, this.fields);
+
+			this.settings = this.fields.reduce(buildSettings, {
 				create: [],
 				read: [],
 				update: [],
@@ -321,9 +324,6 @@ class Structure {
 				index: [],
 				query: []
 			});
-
-			this.actions.inflate = buildInflate(this.actions, this.fields);
-			this.actions.deflate = buildDeflate(this.actions, this.fields);
 		}
 	}
 
@@ -391,7 +391,7 @@ class Structure {
 		return this.fields.reduce(
 			async (prom, field) => {
 				const agg = await prom;
-				const op = field.settings[type]; // I don't personally like this...
+				const op = field.incomingSettings[type]; // I don't personally like this...
 				                                 // the model should handle this logic
 
 				if (op){
@@ -426,11 +426,11 @@ class Structure {
 	}
 
 	clean(type, datum){
-		if (!this.properties){
+		if (!this.settings){
 			this.build();
 		}
 
-		return this.properties[type]
+		return this.settings[type]
 		.reduce(
 			(agg, field) => {
 				if (field in datum){
@@ -474,7 +474,7 @@ module.exports = {
 	types,
 	actionExtend,
 	buildActions,
-	buildProperties,
+	buildSettings,
 	buildInflate,
 	buildDeflate,
 	Structure

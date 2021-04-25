@@ -6,7 +6,7 @@ const config = new Config({
 	putIsPatch: true
 });
 
-const {Controller} = require('../server/controller.js');
+const {Controller, parseQuery} = require('../server/controller.js');
 
 // -- post
 // create => POST: ''
@@ -29,13 +29,13 @@ const {Controller} = require('../server/controller.js');
 // delete => DELETE: '/'+[id1,id2]
 // delete => DELETE: ''+query
 
-async function parseQuery(view, ctx){
-	const query = ctx.getQuery();
+// query parameters:
+// params: query variables... what are we searching by
+// sort:
+// limit: 
+// join: allow a way to join into the table from another place
 
-	return {
-		params: await view.clean('query', query, ctx)
-	};
-}
+// TODO: how would I handle pagination here?
 
 function operationNotAllowed(operation){
 	throw error.create(`Operation (${operation}) is blocked`, {
@@ -72,7 +72,7 @@ async function runUpdate(ids, service, delta, ctx){
 class Guard extends Controller {
 	async read(ctx){
 		if (ctx.getMethod() === 'get'){
-			if (!this.settings.read){
+			if (!this.incomingSettings.read){
 				operationNotAllowed('read');
 			}
 
@@ -106,7 +106,7 @@ class Guard extends Controller {
 					});
 				}
 			} else if (ctx.hasQuery()){
-				if (!this.settings.query){
+				if (!this.incomingSettings.query){
 					operationNotAllowed('query');
 				}
 
@@ -131,7 +131,7 @@ class Guard extends Controller {
 		});
 
 		if (ctx.getMethod() === 'post'){
-			if (!this.settings.create){
+			if (!this.incomingSettings.create){
 				operationNotAllowed('create');
 			}
 
@@ -143,7 +143,7 @@ class Guard extends Controller {
 		} else if (ctx.getMethod() === 'put'){
 			const ids = (ctx.getParam('id')||'').trim();
 
-			if (!this.settings.update){
+			if (!this.incomingSettings.update){
 				operationNotAllowed('update');
 			}
 
@@ -170,7 +170,7 @@ class Guard extends Controller {
 		} else if (ctx.getMethod() === 'patch'){
 			const ids = (ctx.getParam('id')||'').trim();
 
-			if (!this.settings.update){
+			if (!this.incomingSettings.update){
 				operationNotAllowed('update');
 			}
 
@@ -203,12 +203,12 @@ class Guard extends Controller {
 		});
 
 		if (ctx.getMethod() === 'delete'){
-			if (!this.settings.delete){
+			if (!this.incomingSettings.delete){
 				operationNotAllowed('delete');
 			}
 
 			if (ctx.hasQuery()){
-				if (!this.settings.query){
+				if (!this.incomingSettings.query){
 					operationNotAllowed('query');
 				}
 
@@ -267,7 +267,7 @@ class Guard extends Controller {
 				method: 'post'
 			}, 
 			fn: (ctx) => this.write(ctx),
-			hidden: !this.settings.create,
+			hidden: !this.incomingSettings.create,
 			structure: this.view.structure
 		}, {
 			// read / readMany
@@ -276,7 +276,7 @@ class Guard extends Controller {
 				method: 'get'
 			},
 			fn: (ctx) => this.read(ctx),
-			hidden: !this.settings.read,
+			hidden: !this.incomingSettings.read,
 			structure: this.view.structure
 		}, {
 			// readAll, query
@@ -285,7 +285,7 @@ class Guard extends Controller {
 				method: 'get'
 			},
 			fn: (ctx) => this.read(ctx),
-			hidden: !this.settings.read,
+			hidden: !this.incomingSettings.read,
 			structure: this.view.structure
 		}, {
 			// update
@@ -294,7 +294,7 @@ class Guard extends Controller {
 				method: 'put'
 			},
 			fn: (ctx) => this.write(ctx),
-			hidden: !this.settings.update,
+			hidden: !this.incomingSettings.update,
 			structure: this.view.structure
 		}, {
 			// update
@@ -303,7 +303,7 @@ class Guard extends Controller {
 				method: 'patch',
 			},
 			fn: (ctx) => this.write(ctx),
-			hidden: !this.settings.update,
+			hidden: !this.incomingSettings.update,
 			structure: this.view.structure
 		}, {
 			// delete
@@ -312,7 +312,7 @@ class Guard extends Controller {
 				method: 'delete',
 			},
 			fn: (ctx) => this.delete(ctx),
-			hidden: !this.settings.delete,
+			hidden: !this.incomingSettings.delete,
 			structure: this.view.structure
 		}, {
 			// delete w/ query
@@ -321,7 +321,7 @@ class Guard extends Controller {
 				method: 'delete',
 			},
 			fn: (ctx) => this.delete(ctx),
-			hidden: !(this.settings.delete && this.settings.query),
+			hidden: !(this.incomingSettings.delete && this.incomingSettings.query),
 			structure: this.view.structure
 		}];
 	}

@@ -11,7 +11,7 @@ class Mapper {
 	}
 
 	addModel(model){
-		const fields = model.settings.fields;
+		const fields = model.incomingSettings.fields;
 		
 		for (let property in fields){
 			let field = fields[property];

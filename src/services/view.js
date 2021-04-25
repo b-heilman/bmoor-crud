@@ -41,8 +41,8 @@ async function runMap(arr, view, ctx){
 		rtn = arr;
 	}
 
-	if (view.settings.inflate){
-		return rtn.map(view.settings.inflate);
+	if (view.incomingSettings.inflate){
+		return rtn.map(view.incomingSettings.inflate);
 	} else {
 		return rtn;
 	}
@@ -61,7 +61,7 @@ async function runFilter(arr, view, ctx){
 function buildCleaner(type, fields){
 	const cleaner = fields.reduce(
 		(old, field) => {
-			const op = field.settings[type]; // TODO: 2/20
+			const op = field.incomingSettings[type];
 
 			if (typeof(op) === 'string'){
 				if (old){
@@ -105,7 +105,7 @@ class View {
 
 	async configure(connector, settings={}){
 		this.connector = connector;
-		this.settings = settings;
+		this.incomingSettings = settings;
 	}
 
 	// returns a function to clean multiple datums from this instance
@@ -174,8 +174,8 @@ class View {
 		stmt.payload = this.structure.actions.deflate ?
 			this.structure.actions.deflate(payload, ctx) : payload;
 
-		if (this.settings.deflate){
-			stmt.payload = this.settings.deflate(stmt.payload);
+		if (this.incomingSettings.deflate){
+			stmt.payload = this.incomingSettings.deflate(stmt.payload);
 		}
 
 		return runMap(

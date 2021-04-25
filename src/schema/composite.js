@@ -113,10 +113,6 @@ class CompositeProperties {
 				const base = mount.substring(0, isArray ? mount.length-3 : mount.length);
 
 				// TODO: I can do some kind of validation here?
-				// TODO: shared variables, I want to treat these literal fields different from
-				//   include fields or fields from a function.  Think the higher level function
-				//   needs to track which references are added
-				
 				return {
 					type: action.loader,
 					isArray,
@@ -218,6 +214,8 @@ class Composite extends Structure {
 			settings.fields,
 			settings.base
 		);
+
+		// return this.build();
 	}
 
 	assignField(field, settings){
@@ -284,7 +282,7 @@ class Composite extends Structure {
 		};
 		this.context = context;
 
-		const settings = this.settings;
+		const settings = this.incomingSettings;
 		
 		let ext = settings.extends;
 		if (ext){
@@ -295,11 +293,11 @@ class Composite extends Structure {
 			this.properties.extend(parent.properties);
 
 			if (!settings.getChangeType){
-				settings.getChangeType = parent.settings.getChangeType;
+				settings.getChangeType = parent.incomingSettings.getChangeType;
 			}
 
 			if (!settings.onChange){
-				settings.onChange = parent.settings.onChange;
+				settings.onChange = parent.incomingSettings.onChange;
 			}
 		}
 
@@ -503,7 +501,7 @@ class Composite extends Structure {
 		const dex = (await this.testFields('read', ctx))
 		.reduce(
 			(agg, field) => {
-				const series = field.settings.series || field.structure.name;
+				const series = field.incomingSettings.series || field.structure.name;
 				
 				agg.tables[series].fields.push({
 					path: field.storagePath,

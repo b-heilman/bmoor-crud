@@ -506,8 +506,8 @@ describe('src/schema/model.js', function(){
 		});
 	});
 
-	describe('.properties', function(){
-		it('should expand default properties correctly', async function(){
+	describe('.settings', function(){
+		it('should expand default settings correctly', async function(){
 			const model = new Model('test-1');
 
 			await model.configure({
@@ -534,14 +534,14 @@ describe('src/schema/model.js', function(){
 				}
 			});
 
-			expect(model.properties.create)
+			expect(model.settings.create)
 			.to.deep.equal([
 				'zwei',
 				'fier',
 				'funf'
 			]);
 
-			expect(model.properties.read)
+			expect(model.settings.read)
 			.to.deep.equal([
 				'eins',
 				'zwei',
@@ -550,17 +550,17 @@ describe('src/schema/model.js', function(){
 				'funf'
 			]);
 
-			expect(model.properties.update)
+			expect(model.settings.update)
 			.to.deep.equal([
 				'zwei'
 			]);
 
-			expect(model.properties.index)
+			expect(model.settings.index)
 			.to.deep.equal([
 				'funf'
 			]);
 
-			expect(model.properties.key)
+			expect(model.settings.key)
 			.to.equal('eins');
 		});
 	});

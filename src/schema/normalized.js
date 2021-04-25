@@ -1,4 +1,5 @@
 
+const {get, set} = require('bmoor/src/core.js');
 const {create} = require('bmoor/src/lib/error.js');
 
 const {Network} = require('../graph/network.js');
@@ -24,13 +25,11 @@ class Datum {
 	}
 
 	setField(field, value){
-		// TODO: use bmoor.set
-		this.content[field] = value;
+		set(this.content, field, value);
 	}
 
 	getField(field){
-		// TODO: use bmoor.get
-		return this.content[field];
+		return get(this.content, field);
 	}
 
 	getAction(){
@@ -462,7 +461,7 @@ async function inflate(service, query, nexus, ctx){
 			known[service.structure.name] = s;
 		}
 
-		const field = service.structure.properties.key;
+		const field = service.structure.settings.key;
 		const key = datum[field];
 
 		delete datum[field];

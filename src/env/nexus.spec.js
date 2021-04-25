@@ -54,7 +54,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			expect(model.properties.create)
+			expect(model.settings.create)
 			.to.deep.equal([
 				'zwei',
 				'fier',
@@ -233,7 +233,7 @@ describe('src/env/nexus.js', function(){
 
 			const model = await nexus.loadModel('test-12');
 
-			expect(model.properties.create)
+			expect(model.settings.create)
 			.to.deep.equal([
 				'zwei',
 				'fier',

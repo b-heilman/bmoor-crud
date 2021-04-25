@@ -500,7 +500,7 @@ describe('src/services/document.js', function(){
 						'fields': [
 							{
 								'path': 'name',
-								'as': 'test-item_0' //TODO: this needs to change
+								'as': 'test-item_0'
 							}
 						],
 						'query': {

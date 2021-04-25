@@ -29,6 +29,10 @@ const normalized = require('../schema/normalized.js');
 
 		await this.structure.link();
 
+		this.base = await this.structure.nexus.getCrud(
+			this.structure.incomingSettings.base
+		);
+
 		// here's what I need to do.  Go through the mount path, figure out
 		// the last model / field in the path, and mark that.  The rest goes
 		// back into the query
@@ -74,7 +78,7 @@ const normalized = require('../schema/normalized.js');
 				//   is being computed?
 				while(access.length && (
 					this.structure.hasStructure(access[0].model) || 
-					this.structure.settings.base === access[0].model
+					this.structure.incomingSettings.base === access[0].model
 				)){
 					prev = root;
 					root = access.shift();
@@ -84,7 +88,7 @@ const normalized = require('../schema/normalized.js');
 				const tail = access.length ? access[access.length-1] : root;
 
 				const relationship = this.structure.nexus.mapper.getRelationship(
-					tail.model, reference.composite.settings.base
+					tail.model, reference.composite.incomingSettings.base
 				);
 
 				let key = null;
@@ -93,7 +97,7 @@ const normalized = require('../schema/normalized.js');
 					tail.field = relationship.local;
 				} else {
 					throw new Error(tail.model+
-						' can not connect to '+reference.composite.settings.base+
+						' can not connect to '+reference.composite.incomingSettings.base+
 						': '+reference.property.statement
 					);
 				}
@@ -121,7 +125,7 @@ const normalized = require('../schema/normalized.js');
 				
 				access.push({
 					loader: 'access',
-					model: reference.composite.settings.base,
+					model: reference.composite.incomingSettings.base,
 					target: key,
 					relationship
 				});
@@ -198,8 +202,8 @@ const normalized = require('../schema/normalized.js');
 				// delete after incase there's a collision between subs
 				clears.forEach(path => del(datum, path));
 
-				if (this.settings.encoding){
-					return this.settings.encoding(datum, ctx);
+				if (this.incomingSettings.encoding){
+					return this.incomingSettings.encoding(datum, ctx);
 				} else {
 					return datum;
 				}
@@ -211,7 +215,7 @@ const normalized = require('../schema/normalized.js');
 		await this.link();
 
 		const query ={
-			['$'+this.structure.settings.base+'.'+this.structure.settings.key]: id
+			['$'+this.structure.incomingSettings.base+'.'+this.structure.incomingSettings.key]: id
 		};
 
 		return (
@@ -229,7 +233,7 @@ const normalized = require('../schema/normalized.js');
 		const transitions = this.structure.fields
 		.reduce(
 			(agg, field) => {
-				const series = field.settings.series;
+				const series = field.incomingSettings.series;
 
 				let trans = agg[series];
 				if (!trans){
@@ -314,8 +318,8 @@ const normalized = require('../schema/normalized.js');
 		
 		// I don't like this, but for now I'm gonna put hooks in that allow.
 		// eventually I want this to be a function of getChangeType from model
-		if (this.structure.settings.getChangeType){
-			changeType = await this.structure.settings.getChangeType(series);
+		if (this.structure.incomingSettings.getChangeType){
+			changeType = await this.structure.incomingSettings.getChangeType(series);
 		}
 
 		await Promise.all(this.subs.map(
@@ -414,8 +418,8 @@ const normalized = require('../schema/normalized.js');
 			}
 		));
 
-		if (this.structure.settings.onChange && changeType){
-			await this.structure.settings.onChange(changeType, series);
+		if (this.structure.incomingSettings.onChange && changeType){
+			await this.structure.incomingSettings.onChange(changeType, series);
 		}
 
 		return {

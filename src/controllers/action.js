@@ -63,8 +63,14 @@ class Action extends Controller {
 			});
 		}
 
-		// TODO: allow read by other fields, not just id
-		const datum = await this.view.read(id, ctx);
+		let datum = null;
+
+		if (setting.readBy){
+			// TODO: test-me
+			datum = (await this.view.query({[setting.readBy]: id}))[0];
+		} else {
+			datum = await this.view.read(id, ctx);
+		}
 		
 		const params = setting.parseParams	?
 			setting.parseParams(datum, ctx) : [datum, ctx];

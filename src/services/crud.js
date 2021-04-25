@@ -88,7 +88,7 @@ class Crud extends View {
 		const datum = (
 			await super.read(
 				await this.structure.getQuery(
-					{[this.structure.properties.key]: id},
+					{[this.structure.settings.key]: id},
 					{},
 					ctx
 				),
@@ -139,7 +139,7 @@ class Crud extends View {
 			this, 
 			await super.read(
 				await this.structure.getQuery(
-					{[this.structure.properties.key]: ids},
+					{[this.structure.settings.key]: ids},
 					{},
 					ctx
 				),
@@ -160,7 +160,8 @@ class Crud extends View {
 			this, 
 			await super.read(
 				await this.structure.getQuery(
-					settings.params,// await this.clean('query', search, ctx), // TODO : transform external => internal?
+					// TODO : transform external => internal?
+					settings.params,
 					{},
 					ctx
 				),
@@ -195,7 +196,7 @@ class Crud extends View {
 			await super.update(delta, tgt, {
 				model: this.structure.name,
 				query: {
-					[this.structure.properties.key]: id
+					[this.structure.settings.key]: id
 				}
 			}, ctx)
 		)[0];
@@ -246,7 +247,7 @@ class Crud extends View {
 		await super.delete({
 			model: this.structure.name,
 			query: {
-				[this.structure.properties.key]: id
+				[this.structure.settings.key]: id
 			}
 		}, ctx);
 

@@ -66,11 +66,11 @@ class Model extends Structure {
 	}
 
 	getKey(delta){
-		return delta[this.properties.key];
+		return delta[this.settings.key];
 	}
 
 	hasIndex(){
-		return this.properties.index.length !== 0;
+		return this.settings.index.length !== 0;
 	}
 
 	// TODO : I need to get rid of these
@@ -89,7 +89,7 @@ class Model extends Structure {
 	getChanges(datum, delta){
 		delta = this.clean('update', delta);
 
-		return this.properties.update
+		return this.settings.update
 		.reduce(
 			(agg, field) => {
 				if (field in delta && datum[field] !== delta[field]){
@@ -105,7 +105,7 @@ class Model extends Structure {
 	getChangeType(delta){
 		return Object.keys(this.clean('update', delta))
 		.reduce(
-			(agg, property) => compareChanges(agg, this.properties.updateType[property]),
+			(agg, property) => compareChanges(agg, this.settings.updateType[property]),
 			null
 		);
 	}

@@ -86,7 +86,6 @@ async function loadTarget(nexus, type, ref){
 	return entity;
 }
 
-// TODO: a better way to debug the stack when something locks us
 class Nexus {
 	constructor(constructors){
 		this.constructors = constructors || config.sub('constructors');

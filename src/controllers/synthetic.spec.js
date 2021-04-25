@@ -29,7 +29,13 @@ describe('src/controller/synthetic.js', function(){
 					read: true,
 					key: true
 				},
-				name: true
+				name: {
+					read: true,
+					write: true,
+					update: true,
+					delete: true,
+					query: true
+				}
 			}
 		});
 		await nexus.configureCrud('test-user', {});
@@ -143,7 +149,8 @@ describe('src/controller/synthetic.js', function(){
 				await synth.configure({readable: true, read:'can-read'});
 
 				context.query = {
-					id: 'req-1'
+					id: 123,
+					name: 'req-1'
 				};
 
 				permissions = {'can-read': true};
@@ -155,7 +162,9 @@ describe('src/controller/synthetic.js', function(){
 				const args = stubs.query.getCall(0).args;
 
 				expect(args[0])
-				.to.deep.equal({id: 'req-1'});
+				.to.deep.equal({
+					params: {name: 'req-1'}
+				});
 
 				expect(res)
 				.to.deep.equal({hello: 'world'});
