@@ -6,8 +6,12 @@ const {Config} = require('bmoor/src/lib/config.js');
 async function parseQuery(view, ctx){
 	const query = ctx.getQuery() || {};
 
+	// TODO: decode params to a normalized pattern
+	// TODO: decode sort to a normalized pattern
+	// TODO: decode limit to a normalized pattern
+	// TODO: decode join to a normamlized pattern
 	return {
-		params: await view.clean('query', query, ctx)
+		params: await view.structure.clean('query', query, ctx)
 	};
 }
 

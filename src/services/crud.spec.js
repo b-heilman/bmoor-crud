@@ -584,7 +584,7 @@ describe('src/services/crud.js', function(){
 							}, {
 								path: 'json'
 							}],
-							query: null,
+							query: undefined,
 							schema: 'model-1'
 						}]
 					});
@@ -648,7 +648,7 @@ describe('src/services/crud.js', function(){
 							}, {
 								path: 'json'
 							}],
-							query: null,
+							query: undefined,
 							schema: 'model-1'
 						}]
 					});

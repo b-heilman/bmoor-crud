@@ -88,8 +88,11 @@ class Crud extends View {
 		const datum = (
 			await super.read(
 				await this.structure.getQuery(
-					{[this.structure.settings.key]: id},
-					{},
+					{
+						params: {
+							[this.structure.settings.key]: id
+						}
+					},
 					ctx
 				),
 				ctx
@@ -122,7 +125,6 @@ class Crud extends View {
 			this, 
 			await super.read(
 				await this.structure.getQuery(
-					null,
 					{},
 					ctx
 				),
@@ -139,8 +141,11 @@ class Crud extends View {
 			this, 
 			await super.read(
 				await this.structure.getQuery(
-					{[this.structure.settings.key]: ids},
-					{},
+					{
+						params: {
+							[this.structure.settings.key]: ids
+						},
+					},
 					ctx
 				),
 				ctx
@@ -160,9 +165,8 @@ class Crud extends View {
 			this, 
 			await super.read(
 				await this.structure.getQuery(
-					// TODO : transform external => internal?
-					settings.params,
-					{},
+					// TODO : Where do I transform external => internal?
+					settings,
 					ctx
 				),
 				ctx

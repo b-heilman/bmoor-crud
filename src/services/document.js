@@ -162,8 +162,10 @@ const normalized = require('../schema/normalized.js');
 			await this._beforeQuery(search, ctx);
 		}
 
-		const query = await this.structure.getQuery(search, {}, ctx);
-		const res = await super.read(query, ctx);
+		const res = await super.read(
+			await this.structure.getQuery(search, ctx), 
+			ctx
+		);
 		
 		//TODO: figure out how to cache this, because it's not efficient rebuilding every time...
 		return Promise.all(res.map(
@@ -188,14 +190,15 @@ const normalized = require('../schema/normalized.js');
 
 						// call the related document... I could do this up higher?
 						const property = sub.reference.property;
-						return sub.document.query(query)
-						.then(res => {
-							set(
-								datum,
-								property.base,
-								property.isArray ? res : res[0]
-							);
-						});
+						const res = await sub.document.query({
+							params: query
+						}, ctx);
+						
+						set(
+							datum,
+							property.base,
+							property.isArray ? res : res[0]
+						);
 					}
 				));
 
@@ -214,8 +217,11 @@ const normalized = require('../schema/normalized.js');
 	async read(id, ctx){
 		await this.link();
 
-		const query ={
-			['$'+this.structure.incomingSettings.base+'.'+this.structure.incomingSettings.key]: id
+		const index = '$'+this.structure.incomingSettings.base+'.'+this.structure.incomingSettings.key;
+		const query = {
+			params: {
+				[index]: id
+			}
 		};
 
 		return (

@@ -670,35 +670,6 @@ describe('src/schema/model.js', function(){
 		});
 	});
 
-	describe('::cleanDelta', function(){
-		it('pull in a singlar value', async function(){
-			const model = new Model('test-1');
-
-			await model.configure({
-				fields: {
-					eins: {
-						create: false,
-						read: true,
-						update: false,
-						key: true
-					},
-					zwei: false,
-					drei: {
-						update: true
-					}
-				}
-			});
-
-			expect(
-				model.clean('update', {
-					eins: 1,
-					drei: 3,
-					junk: 'asdasd'
-				})
-			).to.deep.equal({drei: 3});
-		});
-	});
-
 	describe('::getChanges', function(){
 		it('pull in a singlar value', async function(){
 			const model = new Model('test-1'); 

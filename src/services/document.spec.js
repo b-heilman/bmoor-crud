@@ -812,7 +812,9 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const res = await doc.query({
-				'$test-user.name > .ownerId$test-item': 'shoup'
+				params: {
+					'$test-user.name > .ownerId$test-item': 'shoup'
+				}
 			}, context);
 			
 			expect(stubs.execute.getCall(0).args[0])
@@ -899,7 +901,9 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const res = await doc.query({
-				'$test-category.name': 'foo-bar'
+				params: {
+					'$test-category.name': 'foo-bar'
+				}
 			}, context);
 			
 			expect(stubs.execute.getCall(0).args[0])

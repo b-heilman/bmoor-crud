@@ -166,13 +166,15 @@ describe('src/schema/composite.js', function(){
 			await lookup.link();
 
 			const res = await lookup.getQuery({
-				'$test-1.name': {
-					op: '=',
-					value: 'foo-bar'
-				},
-				'$test-3.name': {
-					op: '=',
-					value: 'hello-world'
+				params: {
+					'$test-1.name': {
+						op: '=',
+						value: 'foo-bar'
+					},
+					'$test-3.name': {
+						op: '=',
+						value: 'hello-world'
+					}
 				}
 			});
 
@@ -335,8 +337,10 @@ describe('src/schema/composite.js', function(){
 			await lookup.link();
 			
 			expect(await lookup.getQuery({
-				'.id$creator': 123,
-				'.foo$test-6>.id$test-5': 456
+				params: {
+					'.id$creator': 123,
+					'.foo$test-6>.id$test-5': 456
+				}
 			}))
 			.to.deep.equal({
 				'method': 'read',

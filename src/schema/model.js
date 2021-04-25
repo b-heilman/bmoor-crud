@@ -73,15 +73,6 @@ class Model extends Structure {
 		return this.settings.index.length !== 0;
 	}
 
-	// TODO : I need to get rid of these
-	cleanIndex(query){ // getIndex
-		return this.clean('index', query);
-	}
-
-	cleanQuery(query){ // getQuery
-		return this.clean('query', query);
-	}
-
 	cleanDelta(delta, type='update'){
 		return this.clean(type, delta);
 	}
@@ -114,7 +105,7 @@ class Model extends Structure {
 	// similar to lookup, which is a combination of models
 	// TODO: sort-by, limit
 	// TODO: where to add ability to join from another model?
-	async getQuery(query, settings, ctx){
+	async getQuery(settings, ctx){
 		const fields = (await this.testFields('read', ctx))
 		.map(
 			field => ({
@@ -127,8 +118,8 @@ class Model extends Structure {
 				name: this.name,
 				schema: this.schema,
 				fields,
-				query //TODO : maybe convert external => internal?
-			}]
+				query: settings.params //TODO : maybe convert external => internal?
+			}].concat(settings.join||[])
 		};
 	}
 }

@@ -1467,7 +1467,9 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
-					'.id$test-2-foo': 456
+					params: {
+						'.id$test-2-foo': 456
+					}
 				});
 
 				expect(stubs.execute.getCall(1).args[0])
@@ -1516,7 +1518,9 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					'.fooId$test-3-hello': 123
+					params: {
+						'.fooId$test-3-hello': 123
+					}
 				});
 
 				expect(stubs.execute.getCall(2).args[0])
@@ -1730,7 +1734,9 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					'.id$test-2-foo.id>.fooId$test-3-hello': 456
+					params: {
+						'.id$test-2-foo.id>.fooId$test-3-hello': 456
+					}
 				});
 
 				expect(res)
