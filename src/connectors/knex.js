@@ -38,12 +38,13 @@ const config = new Config({
  * ]
  *****/
 function translateSelect(stmt){
-	const settings = stmt.models.reduce(
+	const settings = stmt.query.getInOrder().reduce(
 		(agg, model) => {
-			const modelName = model.schema || model.name;
-			const modelRef = model.series || model.name;
+			const modelName = model.schema;
+			const modelRef = model.series;
 
 			model.fields.forEach(field => {
+				// as => alias
 				if (field.as){
 					agg.select.push(`\`${modelRef}\`.\`${field.path}\` AS \`${field.as}\``);
 				} else {
@@ -51,45 +52,38 @@ function translateSelect(stmt){
 				}
 			});
 
-			if (model.join){
-				const type = model.join.optional ? 'LEFT JOIN' : 'INNER JOIN';
-				const join = `${type} \`${modelName}\` AS \`${modelRef}\``;
+			if (model.joins.length){
+				model.joins.forEach(join => {
+					const type = join.optional ? 'LEFT JOIN' : 'INNER JOIN';
+					const joinPoint = `${type} \`${modelName}\` AS \`${modelRef}\``;
 
-				if (model.join.on){
-					const on = model.join.on.map(on => {
-						const dis = `\`${modelRef}\`.\`${on.local}\``;
-						const dat = `\`${on.name}\`.\`${on.remote}\``;
+					const on = join.mappings.map(on => {
+						const dis = `\`${modelRef}\`.\`${on.from}\``;
+						const dat = `\`${join.name}\`.\`${on.to}\``;
 
 						return `${dis} = ${dat}`;
 					});
-					
-					agg.from.push(`${join} ON ${on.join(' AND ')}`);
-				} else {
-					agg.from.push(`${join}`);
-				}
+
+					agg.from.push(`${joinPoint} ON ${on.join(' AND ')}`);
+				});
 			} else {
 				agg.from.push(`\`${modelName}\` AS \`${modelRef}\``);
 			}
 
-			if (model.query){
-				Object.keys(model.query)
-				.forEach(field => {
-					const match = model.query[field];
+			model.params.forEach(param => {
+				const path = param.path;
+				const operation = param.operation;
 
-					if (Array.isArray(match)){
-						agg.where.push(`\`${modelRef}\`.\`${field}\`IN(?)`);
-						agg.params.push(match);
-					}else if (typeof(match) !== 'object'){
-						agg.where.push(`\`${modelRef}\`.\`${field}\`=?`);
-						agg.params.push(match);
-					}else if (match.value){
-						agg.where.push(`\`${modelRef}\`.\'${field}\`${match.op}?`);
-						agg.params.push(match.value);
-					} else {
-						agg.where.push(`\`${modelRef}\`.\`${field}\`${match.op}\`${match.name}\`.\`${match.field}\``);
-					}
-				});
-			}
+				if (operation.values){
+					agg.where.push(`\`${modelRef}\`.\`${path}\`IN(?)`);
+					agg.params.push(operation.values);
+				} else {
+					const op = operation.op || '=';
+
+					agg.where.push(`\`${modelRef}\`.\`${path}\`${op}?`);
+					agg.params.push(operation.value);
+				}
+			});
 
 			return agg;
 		}, {

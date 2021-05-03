@@ -3,9 +3,9 @@ const {del} = require('bmoor/src/core.js');
 const {create} = require('bmoor/src/lib/error.js');
 
 async function runStatement(view, base, ctx){
-	if (!(view.connector&&view.connector.execute)){
+	if (!(view.connector && view.connector.execute)){
 		console.log(
-			'refusing to run ->', view.structure.name, 
+			'refusing to execute ->', view.structure.name, 
 			JSON.stringify(ctx, null, 2)
 		);
 		

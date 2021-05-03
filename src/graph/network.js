@@ -123,7 +123,8 @@ class Network {
 		});
 	}
 
-	// orders links in a order the ensures requirements come first 
+	// orders links in a order the ensures requirements come first
+	// TODO: need to abstract this function to a common directed graph sort
 	requirements(toSearch, depth = 3){
 		let links = this.search(toSearch, depth);
 

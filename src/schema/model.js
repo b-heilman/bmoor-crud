@@ -1,5 +1,6 @@
 
 const {Structure} = require('./structure.js');
+const {Query, QueryField, QueryParam} = require('./query.js');
 
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -107,20 +108,17 @@ class Model extends Structure {
 	// TODO: where to add ability to join from another model?
 	async getQuery(settings, ctx){
 		const fields = (await this.testFields('read', ctx))
-		.map(
-			field => ({
-				path: field.storagePath
-			})
-		);
+		.map(field => new QueryField(field.storagePath));
 
-		return {
-			models: [{
-				name: this.name,
-				schema: this.schema,
-				fields,
-				query: settings.params //TODO : maybe convert external => internal?
-			}].concat(settings.join||[])
-		};
+		const params = settings.params ?
+			Object.keys(settings.params).map(
+				field => new QueryParam(field, {value: settings.params[field]})
+			) : [];
+
+		return (new Query(this.name))
+		.setSchema(this.name, this.schema)
+		.addFields(this.name, fields)
+		.addParams(this.name, params);
 	}
 }
 

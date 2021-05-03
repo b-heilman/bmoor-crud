@@ -154,6 +154,9 @@ const normalized = require('../schema/normalized.js');
 		this.subs = (await Promise.all(results));
 	}
 
+	/**
+	 * 
+	 **/
 	async query(search, ctx){
 		await this.link();
 
@@ -217,6 +220,8 @@ const normalized = require('../schema/normalized.js');
 	async read(id, ctx){
 		await this.link();
 
+		// so anything pass as param should always be passed as against the base
+		// otherwise it should be a join...
 		const index = '$'+this.structure.incomingSettings.base+'.'+this.structure.incomingSettings.key;
 		const query = {
 			params: {

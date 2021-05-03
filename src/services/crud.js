@@ -87,14 +87,16 @@ class Crud extends View {
 
 		const datum = (
 			await super.read(
-				await this.structure.getQuery(
-					{
-						params: {
-							[this.structure.settings.key]: id
-						}
-					},
-					ctx
-				),
+				{
+					query: await this.structure.getQuery(
+						{
+							params: {
+								[this.structure.settings.key]: id
+							}
+						},
+						ctx
+					)
+				},
 				ctx
 			)
 		)[0];
@@ -124,10 +126,12 @@ class Crud extends View {
 		return massAccess(
 			this, 
 			await super.read(
-				await this.structure.getQuery(
-					{},
-					ctx
-				),
+				{
+					query: await this.structure.getQuery(
+						{},
+						ctx
+					)
+				},
 				ctx
 			), 
 			ctx
@@ -140,14 +144,16 @@ class Crud extends View {
 		return massAccess(
 			this, 
 			await super.read(
-				await this.structure.getQuery(
-					{
-						params: {
-							[this.structure.settings.key]: ids
+				{
+					query: await this.structure.getQuery(
+						{
+							params: {
+								[this.structure.settings.key]: ids
+							}
 						},
-					},
-					ctx
-				),
+						ctx
+					)
+				},
 				ctx
 			), 
 			ctx
@@ -164,11 +170,13 @@ class Crud extends View {
 		return massAccess(
 			this, 
 			await super.read(
-				await this.structure.getQuery(
-					// TODO : Where do I transform external => internal?
-					settings,
-					ctx
-				),
+				{
+					query: await this.structure.getQuery(
+						// TODO : Where do I transform external => internal?
+						settings,
+						ctx
+					)
+				},
 				ctx
 			), 
 			ctx
@@ -198,10 +206,14 @@ class Crud extends View {
 
 		const datum = (
 			await super.update(delta, tgt, {
-				model: this.structure.name,
-				query: {
-					[this.structure.settings.key]: id
-				}
+				query: await this.structure.getQuery(
+					{
+						params: {
+							[this.structure.settings.key]: id
+						}
+					},
+					ctx
+				)
 			}, ctx)
 		)[0];
 
@@ -249,10 +261,14 @@ class Crud extends View {
 		}
 
 		await super.delete({
-			model: this.structure.name,
-			query: {
-				[this.structure.settings.key]: id
-			}
+			query: await this.structure.getQuery(
+				{
+					params: {
+						[this.structure.settings.key]: id
+					}
+				},
+				ctx
+			)
 		}, ctx);
 
 		if (this._afterDelete){
