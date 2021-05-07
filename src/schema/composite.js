@@ -442,19 +442,19 @@ class Composite extends Structure {
 
 	// produces representation for interface layer
 	// TODO: sort-by, limit
-	async getQuery(query={}, ctx={}){
+	async getQuery(settings={}, ctx={}){
 		await this.link();
 
 		const context = this.context;
 
 		// create a temp object, add any tables needed for queries
-		await Object.keys(query.params || {})
+		await Object.keys(settings.params || {})
 		.reduce(
 			async (prom, path) => {
 				// TODO: clean this up once accessors have series defined
 				await prom;
 				
-				const value = query.params[path];
+				const value = settings.params[path];
 				const access = (new Path(path)).access;
 
 				const mountAccessor = access[access.length-1];
