@@ -24,6 +24,11 @@ class QueryParam {
 class QueryJoin {
 	constructor(name, mappings, optional = false){
 		this.name = name;
+
+		if (!mappings.length){
+			throw new Error('mappings needs an array of at least 1');
+		}
+
 		this.mappings = mappings;
 		this.optional = optional;
 	}

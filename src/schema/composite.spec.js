@@ -163,9 +163,7 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			await lookup.link();
-
-			const res = await lookup.getQuery({
+			const query = await lookup.getQuery({
 				params: {
 					'$test-1.name': {
 						op: '=',
@@ -178,68 +176,68 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			expect(res)
+			console.log(JSON.stringify(query.toJSON(), null, 2));
+			expect(query.toJSON())
 			.to.deep.equal({
-				'method': 'read',
-				'models': [
-					{
-						'name': 'test-2',
-						schema: 'test-2',
-						series: 'test-2',
-						'fields': [{
-							as: 'test-2_1',
-							path: 'name'
-						}, {
-							as: 'test-2_2',
-							path: 'title'
-						}],
-						query: null
-					},
-					{
-						'name': 'test-1',
-						schema: 'test-1',
-						series: 'test-1',
-						'fields': [{
-							as: 'test-1_0',
-							path: 'name'
-						}],
-						'query': {
-							'name': {
-								'op': '=',
-								'value': 'foo-bar'
-							}
-						},
-						join: {
-							on: [{
-								name: 'test-2',
-								remote: 'test1Id',
-								local: 'id'
-							}]
-						}
-					},
-					{
-						'name': 'test-3',
-						schema: 'test-3',
-						series: 'test-3',
-						'fields': [{
-							as: 'test-3_3',
-							path: 'name'
-						}],
-						'query': {
-							'name': {
-								'op': '=',
-								'value': 'hello-world'
-							}
-						},
-						join: {
-							on: [{
-								name: 'test-2',
-								remote: 'id',
-								local:'test2Id'
-							}]
-						}
+				models: [{
+					series: 'test-1',
+					schema: 'test-1',
+					joins: []
+				}, {
+					series: 'test-2',
+					schema: 'test-2',
+					joins: [{
+						name: 'test-1',
+						optional: false,
+						mappings: [{
+							from: 'test1Id',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-3',
+					schema: 'test-3',
+					joins: [{
+						name: 'test-2',
+						optional: false,
+						mappings: [{
+							from: 'test2Id',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-1',
+					as: 'test-1_0',
+					path: 'name'
+				}, {
+					series: 'test-2',
+					as: 'test-2_1',
+					path: 'name'
+				}, {
+					series: 'test-2',
+					as: 'test-2_2',
+					path: 'title'
+				}, {
+					series: 'test-3',
+					as: 'test-3_3',
+					path: 'name'
+				}],
+				params: [{
+					series: 'test-1',
+					path: 'name',
+					operation: {
+						op: '=',
+						value: 'foo-bar'
 					}
-				]
+				},{
+					series: 'test-3',
+					path: 'name',
+					operation: {
+						op: '=',
+						value: 'hello-world'
+					}
+				}]
 			});
 		});
 
@@ -256,67 +254,55 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			await lookup.link();
+			const query = await lookup.getQuery();
 
-			expect(await lookup.getQuery())
+			expect(query.toJSON())
 			.to.deep.equal({
-				'method': 'read',
-				'models': [
-					{
-						'name': 'test-2',
-						'series': 'test-2',
-						'schema': 'test-2',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-2_1'
-							},
-							{
-								'path': 'title',
-								'as': 'test-2_2'
-							}
-						],
-						'query': null
-					},
-					{
-						'name': 'test-1',
-						'series': 'test-1',
-						'schema': 'test-1',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-1_0'
-							}
-						],
-						'query': null,
-						'join': {
-							on: [{
-								'remote': 'test1Id',
-								'name': 'test-2',
-								'local': 'id'
-							}]
-						}
-					},
-					{
-						'name': 'test-3',
-						'series': 'test-3',
-						'schema': 'test-3',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-3_3'
-							}
-						],
-						'query': null,
-						'join': {
-							on: [{
-								'local': 'test2Id',
-								'name': 'test-2',
-								'remote': 'id'
-							}]
-						}
-					}
-				]
+				models: [{
+					series: 'test-1',
+					schema: 'test-1',
+					joins: []
+				}, {
+					series: 'test-2',
+					schema: 'test-2',
+					joins: [{
+						name: 'test-1',
+						optional: false,
+						mappings: [{
+							from: 'test1Id',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-3',
+					schema: 'test-3',
+					joins: [{
+						name: 'test-2',
+						optional: false,
+						mappings: [{
+							from: 'test2Id',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-1',
+					as: 'test-1_0',
+					path: 'name'
+				}, {
+					series: 'test-2',
+					as: 'test-2_1',
+					path: 'name'
+				}, {
+					series: 'test-2',
+					as: 'test-2_2',
+					path: 'title'
+				}, {
+					series: 'test-3',
+					as: 'test-3_3',
+					path: 'name'
+				}],
+				params: []
 			});
 		});
 

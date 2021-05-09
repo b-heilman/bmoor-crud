@@ -5,6 +5,7 @@ const {create} = require('bmoor/src/lib/error.js');
 const {Structure} = require('./structure.js');
 const {Network} = require('../graph/Network.js');
 const {Path, pathToAccessors} = require('../graph/path.js');
+const {Query, QueryField, QueryParam, QueryJoin} = require('./query.js');
 
 // this works because of root, since it's expected two instances of the same table will
 // be linked to via different variables.  I don't have any way of self defining aliases
@@ -62,27 +63,7 @@ function linkSeries(composite, prev, accessor){
 
 // this builds the context....
 async function addStuff(composite, prev, accessor){
-	const context = composite.context;
-
-	if (!context.tables[accessor.model]){
-		const table = {
-			name: accessor.model,
-			series: accessor.series || accessor.model,
-			schema: (await composite.nexus.loadModel(accessor.model)).schema,
-			fields: []
-		};
-
-		context.tables[accessor.model] = table;
-		context.refs[accessor.model] = [table];
-	}
-
-	if (prev){
-		if (accessor.target){
-			composite.setConnection(accessor.model, prev.model, accessor.target);
-		} else {
-			composite.setConnection(prev.model, accessor.model, prev.field);
-		}
-	}
+	
 }
 
 // used to parse appart the paths that can be fed into a composite schema
@@ -395,6 +376,8 @@ class Composite extends Structure {
 		
 		this.references = (await Promise.all(results))
 			.filter(info => info);
+
+		this.build();
 	}
 
 	async setConnection(baseModel, targetModel, local=null, settings={}){
@@ -445,7 +428,56 @@ class Composite extends Structure {
 	async getQuery(settings={}, ctx={}){
 		await this.link();
 
+		const query = new Query(this.properties.model);
+
 		const context = this.context;
+
+		Object.keys(context.tables)
+		.forEach(
+			(series) => {
+				const table = context.tables[series];
+
+				query.setSchema(series, table.schema);
+			}
+		);
+
+		(await this.testFields('read', ctx))
+		.forEach(
+			(field) => {
+				const series = field.incomingSettings.series || field.structure.name;
+				
+				query.addFields(series, [
+					new QueryField(field.storagePath, field.reference || null)
+				]);
+			}
+		);
+
+		const tables = Object.values(context.tables);
+		if (tables.length > 1){
+			(new Network(this.nexus.mapper)).anchored(
+				tables.map(table => table.name), 1
+			).forEach(link => {
+				// a table can be referenced by multiple things, so one table, multiple series...
+				// think an item having a creator and owner
+				context.refs[link.name]
+				.forEach(table => {
+					// this.connection is a directed graph, which is fine unless
+					// we have the pattern 2 <- 1 <- 2 and we end up with two tables
+					// not being joined correctly.  The idea is to hoist the primary node
+					// to the front and delegate he connections to the other tables
+					const connections = this.connections[table.series];
+					
+					if (connections){
+						query.addJoins(table.series, connections.map(
+							(connection) => new QueryJoin(connection.name, [{
+								from: connection.local,
+								to: connection.remote
+							}], connection.optional)
+						));
+					}
+				});
+			});
+		}
 
 		// create a temp object, add any tables needed for queries
 		await Object.keys(settings.params || {})
@@ -454,160 +486,48 @@ class Composite extends Structure {
 				// TODO: clean this up once accessors have series defined
 				await prom;
 				
-				const value = settings.params[path];
+				const comparison = settings.params[path];
 				const access = (new Path(path)).access;
 
+				// links in are [model].value > [existingModel]
+				// TODO: I think I want to flip that?
 				const mountAccessor = access[access.length-1];
 				const mountSeries = mountAccessor.series || mountAccessor.model;
 
+				// this verified the mount point is inside the model
 				const mount = context.tables[mountSeries];
 				if (!mount){
 					throw new Error(`unable to mount: ${mountSeries} from ${path}`);
 				}
 
+				/*
 				await access.reduce(
 					async (prev, subAccessor) => {
 						prev = await prev;
 						
+						// this ensures everything is linked accordingly
 						await addStuff(this, prev, subAccessor);
 						
 						return subAccessor;
 					}, 
 					Promise.resolve(null)
 				);
+				*/
 				
 				const rootAccessor = access[0];
 				const rootSeries = rootAccessor.series || rootAccessor.model;
-				const root = context.tables[rootSeries];
-
-				if (!root){
-					throw new Error('unable to connect: '+path);
-				}
-
-				if (!root.query){
-					root.query = {};
-				}
 
 				// So, if you write a query... you shoud use .notation for incoming property
 				// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
 				// flexible.  Use the target incase I decide to change my mind in the future
-				root.query[rootAccessor.target||rootAccessor.field] = value;
+				query.addParams(rootSeries, [
+					new QueryParam(rootAccessor.target||rootAccessor.field, comparison)
+				]);
 			}, 
 			Promise.resolve(true)
 		);
-
-		this.build();
-
-		const dex = (await this.testFields('read', ctx))
-		.reduce(
-			(agg, field) => {
-				const series = field.incomingSettings.series || field.structure.name;
-				
-				agg.tables[series].fields.push({
-					path: field.storagePath,
-					// alias - cleanup
-					as: field.reference || null
-				});
-
-				return agg;
-			},
-			// I want a base object with all the tables, so a table isn't dropped if a field isn't allowed
-			context
-		);
-
-		const tables = Object.values(dex.tables);
-		if (tables.length > 1){
-			const reqs = (new Network(this.nexus.mapper)).anchored(
-				tables.map(table => table.name), 1
-			);
-			
-			const loaded = {};
-			const delegated = {};
-
-			// use this order so tables are defined where how they join in, tables
-			// without joins go first this way
-			return reqs.reduce((agg, link) => {
-				// a table can be referenced by multiple things, so one table, multiple series...
-				// think an item having a creator and owner
-				dex.refs[link.name]
-				.forEach(table => {
-					// this.connection is a directed graph, which is fine unless
-					// we have the pattern 2 <- 1 <- 2 and we end up with two tables
-					// not being joined correctly.  The idea is to hoist the primary node
-					// to the front and delegate he connections to the other tables
-					const connections = [].concat(
-						this.connections[table.series] || [],
-						delegated[table.series] || []
-					);
-					
-					if (connections.length && !table.join){
-						let optional = false;
-						const joins = connections.reduce(
-							(agg, connection) => {
-								// if the table we're joining to has already been loaded
-								// connect, otherwise delegate the connection
-								if (loaded[connection.name]){
-									agg.push({
-										local: connection.local,
-										name: connection.name,
-										remote: connection.remote
-									});
-
-									if (!optional && connection.optional){
-										optional = true;
-									}
-								} else {
-									let group = delegated[connection.name];
-
-									if (!group){
-										group = [];
-
-										delegated[connection.name] = group;
-									}
-
-									// flip the connection, this should be ok
-									group.push({
-										local: connection.remote,
-										name: table.series,
-										remote: connection.local,
-										optional: connection.optional
-									});
-								}
-
-								return agg;
-							},
-							[]
-						);
-
-						if (joins.length){
-							table.join = {
-								on: joins
-							};
-
-							if (optional){
-								table.join.optional = true;
-							}
-						}
-					}
-
-					loaded[table.series] = true;
-
-					agg.models.push(table);
-				});
-
-				return agg;
-			}, {
-				method: 'read',
-				models: []
-			});
-		} else {
-			return {
-				method: 'read',
-				models: [
-					tables[0]
-				]
-			};
-		}
+		
+		return query;
 	}
 
 	// TODO: I might want to get rid of these if I am going to have the possibility of 
@@ -615,8 +535,6 @@ class Composite extends Structure {
 	async getInflater(ctx){
 		await this.link();
 		
-		this.build();
-
 		const inflater = this.actions.inflate;
 
 		return function complexInflate(datum){
@@ -626,8 +544,6 @@ class Composite extends Structure {
 
 	async getDeflater(ctx){
 		await this.link();
-
-		this.build();
 
 		const deflater = this.actions.deflate;
 		
