@@ -170,6 +170,7 @@ function buildSettings(properties, field){
 
 	if (settings.key){
 		if (properties.key){
+			console.log(properties);
 			throw new Error(`bmoor-data.Model does not support compound keys: (${properties.key}, ${path})`);
 		}
 
@@ -314,7 +315,8 @@ class Structure {
 
 			this.actions.inflate = buildInflate(this.actions, this.fields);
 			this.actions.deflate = buildDeflate(this.actions, this.fields);
-
+			console.log('--->');
+			console.log(this.fields);
 			this.settings = this.fields.reduce(buildSettings, {
 				create: [],
 				read: [],

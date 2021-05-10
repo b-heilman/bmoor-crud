@@ -275,6 +275,7 @@ function pathToAccessors(field){
 			throw new Error(`unknown token type: ${token.type}(${token.value}) of ${field}`); 
 		}
 
+		// TODO: rename alias to series
 		if (parsed){
 			if (token.metadata && token.metadata.alias){
 				parsed.alias = token.metadata.alias;

@@ -157,16 +157,21 @@ const normalized = require('../schema/normalized.js');
 	/**
 	 * 
 	 **/
-	async query(search, ctx){
+	async query(settings, ctx){
 		await this.link();
 
 		// prepare the query
 		if (this._beforeQuery){
-			await this._beforeQuery(search, ctx);
+			await this._beforeQuery(settings.params, ctx);
 		}
 
 		const res = await super.read(
-			await this.structure.getQuery(search, ctx), 
+			{
+				query: await this.structure.getQuery(
+					settings,
+					ctx
+				)
+			}, 
 			ctx
 		);
 		
@@ -225,7 +230,9 @@ const normalized = require('../schema/normalized.js');
 		const index = '$'+this.structure.incomingSettings.base+'.'+this.structure.incomingSettings.key;
 		const query = {
 			params: {
-				[index]: id
+				[index]: {
+					value: id
+				}
 			}
 		};
 

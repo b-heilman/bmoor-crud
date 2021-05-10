@@ -176,7 +176,6 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			console.log(JSON.stringify(query.toJSON(), null, 2));
 			expect(query.toJSON())
 			.to.deep.equal({
 				models: [{
@@ -319,96 +318,92 @@ describe('src/schema/composite.js', function(){
 					funf: '.owner1Id > ?$owner:test-1.title'
 				}
 			});
-
-			await lookup.link();
 			
-			expect(await lookup.getQuery({
+			const query = await lookup.getQuery({
 				params: {
-					'.id$creator': 123,
-					'.foo$test-6>.id$test-5': 456
-				}
-			}))
-			.to.deep.equal({
-				'method': 'read',
-				'models': [
-					{
-						'name': 'test-5',
-						'series': 'test-5',
-						'schema': 'test-5',
-						'fields': [
-							{
-								'path': 'title',
-								'as': 'test-5_2'
-							}
-						],
-						'query': null
+					'.id$creator:test-1': {
+						value: 123
 					},
-					{
-						'name': 'test-1',
-						'series': 'creator',
-						'schema': 'test-1',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-1_0'
-							},
-							{
-								'path': 'title',
-								'as': 'test-1_1'
-							}
-						],
-						'query': {
-							id: 123
-						},
-						join: {
-							on: [{
-								'remote': 'creator1Id',
-								'name': 'test-5',
-								'local': 'id'
-							}]
-						}
-					},
-					{
-						'name': 'test-1',
-						'series': 'owner',
-						'schema': 'test-1',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-1_3'
-							},
-							{
-								'path': 'title',
-								'as': 'test-1_4'
-							}
-						],
-						'query': null,
-						join: {
-							on: [{
-								'remote': 'owner1Id',
-								'name': 'test-5',
-								'local': 'id'
-							}],
-							optional: true
-						}
-					},
-					{
-						name: 'test-6',
-						schema: 'test-6',
-						series: 'test-6',
-						fields: [],
-						join: {
-							on: [{
-								local: 'table5Id',
-								name: 'test-5',
-								remote: 'id'
-							}]
-						},
-						query: {
-							foo: 456
-						}
+					'.foo$junk:test-6>.id$test-5': {
+						value: 456
 					}
-				]
+				}
+			});
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-5',
+					schema: 'test-5',
+					joins: []
+				}, {
+					series: 'creator',
+					schema: 'test-1',
+					joins: [{
+						name: 'test-5',
+						optional: false,
+						mappings: [{
+							from: 'id',
+							to: 'creator1Id'
+						}]
+					}]
+				}, {
+					series: 'owner',
+					schema: 'test-1',
+					joins: [{
+						name: 'test-5',
+						optional: true,
+						mappings: [{
+							from: 'id',
+							to: 'owner1Id'
+						}]
+					}]
+				}, {
+					series: 'junk',
+					schema: 'test-6',
+					joins: [{
+						name: 'test-5',
+						optional: false,
+						mappings: [{
+							from: 'table5Id',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-5',
+					as: 'test-5_2',
+					path: 'title'
+				}, {
+					series: 'creator',
+					as: 'test-1_0',
+					path: 'name'
+				}, {
+					series: 'creator',
+					as: 'test-1_1',
+					path: 'title'
+				}, {
+					series: 'owner',
+					as: 'test-1_3',
+					path: 'name'
+				}, {
+					series: 'owner',
+					as: 'test-1_4',
+					path: 'title'
+				}],
+				params: [{
+					series: 'creator',
+					path: 'id',
+					operation: {
+						value: 123
+					}
+				}, {
+					series: 'junk',
+					path: 'foo',
+					operation: {
+						value: 456
+					}
+				}]
 			});
 		});
 	});

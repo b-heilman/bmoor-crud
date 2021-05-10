@@ -115,6 +115,7 @@ describe('src/schema/query.js', function(){
 
 			query.addJoins('b', [new sut.QueryJoin('a', [{from:'aId', to:'id'}])]);
 			query.addJoins('c', [new sut.QueryJoin('b', [{from: 'bId', to:'id'}])]);
+			query.addJoins('b', [new sut.QueryJoin('a', [{from: '---', to:'----'}])]);
 
 			query.addFields('a', [new sut.QueryField('hello.world')]);
 			query.addFields('b', [new sut.QueryField('foo.bar', 'test')]);

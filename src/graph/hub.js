@@ -1,6 +1,7 @@
 
 const {makeGetter} = require('bmoor/src/core.js');
 
+// If I ever refactor, I should copy the from[name, path] + to[name, path]
 class Connection {
 	constructor(localPath, modelName, remotePath, metadata){
 		this.local = localPath;

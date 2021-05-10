@@ -25,10 +25,6 @@ class QueryJoin {
 	constructor(name, mappings, optional = false){
 		this.name = name;
 
-		if (!mappings.length){
-			throw new Error('mappings needs an array of at least 1');
-		}
-
 		this.mappings = mappings;
 		this.optional = optional;
 	}
@@ -55,6 +51,11 @@ class Query {
 		this.getModel(baseModel);
 	}
 
+	hasSeries(series){
+		return !!this.models[series];
+	}
+
+	// TODO: I really should call this series because model is a loaded term
 	getModel(model){
 		let rtn = this.models[model];
 
@@ -63,7 +64,7 @@ class Query {
 				schema: model,
 				fields: [],
 				params: [],
-				joins: []
+				joins: {}
 			};
 
 			this.models[model] = rtn;
@@ -90,13 +91,22 @@ class Query {
 		return this;
 	}
 
-	addJoins(model, joins){
-		if (model === this.base){
+	addJoins(fromModel, joins){
+		if (fromModel === this.base){
 			joins.map(
-				join => this.addJoins(join.name, [join.flip(model)])
+				join => this.addJoins(join.name, [join.flip(fromModel)])
 			);
 		} else {
-			this.getModel(model).joins.push(...joins);
+			const model = this.getModel(fromModel);
+
+			joins.forEach(join => {
+				const toModel = join.name;
+				const targetModel = this.getModel(toModel);
+
+				if (!(model.joins[toModel] || targetModel.joins[fromModel])){
+					model.joins[toModel] = join;
+				}
+			});
 		}
 
 		return this;
@@ -120,7 +130,7 @@ class Query {
 			const names = toProcess.map(model => model.series);
 
 			toProcess = toProcess.filter(link => {
-				const c = link.joins.filter(
+				const c = Object.values(link.joins).filter(
 					join => names.indexOf(join.name) !== -1
 				).length;
 
@@ -149,7 +159,7 @@ class Query {
 				agg.models.push({
 					series,
 					schema: model.schema,
-					joins: model.joins
+					joins: Object.values(model.joins)
 				});
 
 				agg.fields.push(...model.fields.map(

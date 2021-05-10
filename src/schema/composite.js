@@ -61,9 +61,26 @@ function linkSeries(composite, prev, accessor){
 	return series;
 }
 
-// this builds the context....
-async function addStuff(composite, prev, accessor){
-	
+function getOutgoingRelationship(nexus, baseModel, targetModel, local=null){
+	let relationship = nexus.mapper.getRelationship(
+		baseModel, targetModel, local
+	);
+
+	if (!relationship){
+		throw new Error(
+			`unable to connect ${baseModel} to ${targetModel}`+
+			(local ? ' via '+local : '')
+		);
+	}
+
+	// I only want outgoing relationships
+	if (relationship.metadata.direction === 'outgoing'){
+		return relationship;
+	} else {
+		return nexus.mapper.getRelationship(
+			targetModel, baseModel, relationship.remote
+		);
+	}
 }
 
 // used to parse appart the paths that can be fed into a composite schema
@@ -384,29 +401,18 @@ class Composite extends Structure {
 		let baseSeries = null;
 		let targetSeries = null;
 
-		let relationship = this.nexus.mapper.getRelationship(
-			baseModel, targetModel, local
+		let relationship = getOutgoingRelationship(
+			this.nexus, baseModel, targetModel, local
 		);
 
-		if (!relationship){
-			throw new Error(
-				`unable to connect ${baseModel} to ${targetModel}`+
-				(local ? ' via '+local : '')
-			);
-		}
-
 		// I only want outgoing relationships
-		if (relationship.metadata.direction === 'outgoing'){
+		if (relationship.name === targetModel){
 			baseSeries = settings.baseSeries || baseModel;
 			targetSeries = settings.targetSeries || targetModel;
 		} else {
 			// so flip it
 			baseSeries = settings.targetSeries || targetModel;
 			targetSeries = settings.baseSeries || baseModel;
-
-			relationship = this.nexus.mapper.getRelationship(
-				targetModel, baseModel, relationship.remote
-			);
 		}
 
 		let hub = this.connections[baseSeries];
@@ -492,7 +498,7 @@ class Composite extends Structure {
 				// links in are [model].value > [existingModel]
 				// TODO: I think I want to flip that?
 				const mountAccessor = access[access.length-1];
-				const mountSeries = mountAccessor.series || mountAccessor.model;
+				const mountSeries = mountAccessor.alias || mountAccessor.model;
 
 				// this verified the mount point is inside the model
 				const mount = context.tables[mountSeries];
@@ -500,22 +506,49 @@ class Composite extends Structure {
 					throw new Error(`unable to mount: ${mountSeries} from ${path}`);
 				}
 
-				/*
 				await access.reduce(
-					async (prev, subAccessor) => {
+					async (prev, accessor) => {
+						let relationship = null;
+						let from = null;
+						let to = null;
+						let pSeries = prev.alias || prev.model;
+						let aSeries = accessor.alias || accessor.model;
+
 						prev = await prev;
+
+						query.setSchema(aSeries, accessor.model);
 						
 						// this ensures everything is linked accordingly
-						await addStuff(this, prev, subAccessor);
+						// await addStuff(this, prev, subAccessor);
+						if (accessor.target) {
+							relationship = this.nexus.mapper.getRelationship(
+								accessor.model, prev.model, accessor.target
+							);
+							from = accessor.alias || accessor.model;
+							to = prev.alias || prev.model;
+						} else {
+							relationship = this.nexus.mapper.getRelationship(
+								prev.model, accessor.model, prev.field
+							);
+							from = prev.alias || prev.model;
+							to = accessor.alias || accessor.model;
+						}
+
+						query.addJoins(from, [
+							new QueryJoin(to, [{
+								from: relationship.local,
+								to: relationship.remote
+							}], accessor.optional)
+						]);
 						
-						return subAccessor;
-					}, 
-					Promise.resolve(null)
+						return accessor;
+					}
 				);
-				*/
 				
 				const rootAccessor = access[0];
-				const rootSeries = rootAccessor.series || rootAccessor.model;
+				const rootSeries = rootAccessor.alias || rootAccessor.model;
+
+				query.setSchema(rootSeries, rootAccessor.model);
 
 				// So, if you write a query... you shoud use .notation for incoming property
 				// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
