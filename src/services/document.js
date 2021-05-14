@@ -152,6 +152,8 @@ const normalized = require('../schema/normalized.js');
 		});
 
 		this.subs = (await Promise.all(results));
+
+		this.structure.build();
 	}
 
 	/**
@@ -189,7 +191,9 @@ const normalized = require('../schema/normalized.js');
 									clears.push(join.clear);
 								}
 
-								agg[join.path] = get(datum, join.datumPath);
+								agg[join.path] = {
+									value: get(datum, join.datumPath)
+								};
 
 								return agg;
 							}, 

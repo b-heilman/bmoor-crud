@@ -586,21 +586,34 @@ describe('src/env/forge.js', function(){
 						}
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = interface1.execute.getCall(0).args[0];
 
-					expect(args[0])
+					console.log(args);
+
+					expect(args.method)
+					.to.equal('read');
+
+					expect(args.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
 						models: [{
-							name: 'service-1',
+							series: 'service-1',
 							schema: 'service-1',
-							fields: [{
-								path: 'zwei'
-							}, {
-								path: 'drei'
-							}],
-							query: {
-								eins: 1
+							joins: []
+						}],
+						fields: [{
+							series: 'service-1',
+							path: 'zwei',
+							as: null
+						}, {
+							series: 'service-1',
+							path: 'drei',
+							as: null
+						}],
+						params: [{
+							series: 'service-1',
+							path: 'eins',
+							operation: {
+								value: 1
 							}
 						}]
 					});
@@ -664,24 +677,50 @@ describe('src/env/forge.js', function(){
 						}
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = interface1.execute.getCall(0).args[0];
 					
-					expect(args[0])
+					expect(args.method)
+					.to.equal('read');
+
+					expect(args.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
 						models: [{
-							name: 'service-1',
+							series: 'service-1',
 							schema: 'service-1',
-							fields: [{
-								path: 'zwei'
-							}, {
-								path: 'drei'
-							}],
-							query: {
-								eins: 1,
-								zwei: 2,
-								drei: 3,
-								fier: 4
+							joins: []
+						}],
+						fields: [{
+							series: 'service-1',
+							path: 'zwei',
+							as: null
+						}, {
+							series: 'service-1',
+							path: 'drei',
+							as: null
+						}],
+						params: [{
+							series: 'service-1',
+							path: 'eins',
+							operation: {
+								value: 1
+							}
+						}, {
+							series: 'service-1',
+							path: 'zwei',
+							operation: {
+								value: 2
+							}
+						}, {
+							series: 'service-1',
+							path: 'drei',
+							operation: {
+								value: 3
+							}
+						}, {
+							series: 'service-1',
+							path: 'fier',
+							operation: {
+								value: 4
 							}
 						}]
 					});
@@ -791,24 +830,50 @@ describe('src/env/forge.js', function(){
 						}
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = interface1.execute.getCall(0).args[0];
 					
-					expect(args[0])
+					expect(args.method)
+					.to.equal('read');
+
+					expect(args.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
 						models: [{
-							name: 'service-1',
+							series: 'service-1',
 							schema: 'service-1',
-							fields: [{
-								path: 'zwei'
-							}, {
-								path: 'drei'
-							}],
-							query: {
-								eins: 1,
-								zwei: 2,
-								drei: 3,
-								fier: 4
+							joins: []
+						}],
+						fields: [{
+							series: 'service-1',
+							path: 'zwei',
+							as: null
+						}, {
+							series: 'service-1',
+							path: 'drei',
+							as: null
+						}],
+						params: [{
+							series: 'service-1',
+							path: 'eins',
+							operation: {
+								value: 1
+							}
+						}, {
+							series: 'service-1',
+							path: 'zwei',
+							operation: {
+								value: 2
+							}
+						}, {
+							series: 'service-1',
+							path: 'drei',
+							operation: {
+								value: 3
+							}
+						}, {
+							series: 'service-1',
+							path: 'fier',
+							operation: {
+								value: 4
 							}
 						}]
 					});

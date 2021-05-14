@@ -34,12 +34,68 @@ function compareChanges(was, now){
 	return was;
 }
 
+function buildSettings(properties, field){
+	const path = field.path;
+
+	const settings = field.incomingSettings;
+
+	if (settings.create){
+		properties.create.push(path);
+	}
+
+	if (settings.read){
+		properties.read.push(path);
+	}
+
+	if (settings.update){
+		properties.update.push(path);
+
+		if (settings.updateType){
+			properties.updateType[path] = settings.updateType;
+		}
+	}
+
+	if (settings.index){
+		properties.index.push(path);
+	}
+
+	if (settings.query){
+		properties.query.push(path);
+	}
+
+	if (settings.key){
+		if (properties.key){
+			throw new Error(`bmoor-data.Structure does not support compound keys: (${properties.key}, ${path})`);
+		}
+
+		properties.key = path;
+	}
+
+	return properties;
+}
+
 class Model extends Structure {
+	async build(){
+		await super.build();
+
+		if (!this.settings){
+			this.settings = this.fields.reduce(buildSettings, {
+				create: [],
+				read: [],
+				update: [],
+				updateType: {},
+				key: null,
+				index: [],
+				query: []
+			});
+		}
+	}
+
 	async configure(settings){
 		await super.configure(settings);
 
+		this.settings = null;
 		this.schema = settings.schema || this.name;
-		this.settings = settings;
 
 		const fields = settings.fields;
 
@@ -72,6 +128,24 @@ class Model extends Structure {
 
 	hasIndex(){
 		return this.settings.index.length !== 0;
+	}
+
+	clean(type, datum){
+		if (!this.settings){
+			this.build();
+		}
+
+		return this.settings[type]
+		.reduce(
+			(agg, field) => {
+				if (field in datum){
+					agg[field] = datum[field];
+				}
+
+				return agg;
+			}, 
+			{}
+		);
 	}
 
 	cleanDelta(delta, type='update'){
@@ -124,6 +198,7 @@ class Model extends Structure {
 
 module.exports = {
 	config,
+	buildSettings,
 	compareChanges,
 	Model
 };

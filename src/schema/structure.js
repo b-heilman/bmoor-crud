@@ -139,47 +139,6 @@ function buildActions(actions, field){
 	return actions;
 }
 
-function buildSettings(properties, field){
-	const path = field.path;
-
-	const settings = field.incomingSettings;
-
-	if (settings.create){
-		properties.create.push(path);
-	}
-
-	if (settings.read){
-		properties.read.push(path);
-	}
-
-	if (settings.update){
-		properties.update.push(path);
-
-		if (settings.updateType){
-			properties.updateType[path] = settings.updateType;
-		}
-	}
-
-	if (settings.index){
-		properties.index.push(path);
-	}
-
-	if (settings.query){
-		properties.query.push(path);
-	}
-
-	if (settings.key){
-		if (properties.key){
-			console.log(properties);
-			throw new Error(`bmoor-data.Model does not support compound keys: (${properties.key}, ${path})`);
-		}
-
-		properties.key = path;
-	}
-
-	return properties;
-}
-
 function buildInflate(actions, fields){
 	const inflate = actions.inflate;
 
@@ -304,32 +263,22 @@ class Structure {
 		this.fields = [];
 		this.index = {};
 		this.actions = null;
-		this.properties = null;
 	}
 
 	async build(){
-		if (!this.actions || !this.properties){
+		if (!this.actions){
 			this.actions = this.fields.reduce(buildActions, {
 				mutates: false
 			});
 
 			this.actions.inflate = buildInflate(this.actions, this.fields);
 			this.actions.deflate = buildDeflate(this.actions, this.fields);
-			console.log('--->');
-			console.log(this.fields);
-			this.settings = this.fields.reduce(buildSettings, {
-				create: [],
-				read: [],
-				update: [],
-				updateType: {},
-				key: null,
-				index: [],
-				query: []
-			});
 		}
 	}
 
 	assignField(field){
+		this.actions = null; // if we add a field, clear existing actions
+
 		this.index[field.path] = field;
 		this.fields.push(field);
 
@@ -412,8 +361,6 @@ class Structure {
 								}
 							});
 
-							console.log(ex);
-
 							throw ex;
 						}
 					} else {
@@ -424,24 +371,6 @@ class Structure {
 				return agg;
 			},
 			[]
-		);
-	}
-
-	clean(type, datum){
-		if (!this.settings){
-			this.build();
-		}
-
-		return this.settings[type]
-		.reduce(
-			(agg, field) => {
-				if (field in datum){
-					agg[field] = datum[field];
-				}
-
-				return agg;
-			}, 
-			{}
 		);
 	}
 
@@ -476,7 +405,6 @@ module.exports = {
 	types,
 	actionExtend,
 	buildActions,
-	buildSettings,
 	buildInflate,
 	buildDeflate,
 	Structure

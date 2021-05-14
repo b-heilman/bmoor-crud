@@ -52,8 +52,9 @@ function translateSelect(stmt){
 				}
 			});
 
-			if (model.joins.length){
-				model.joins.forEach(join => {
+			const joins = Object.values(model.joins);
+			if (joins.length){
+				joins.forEach(join => {
 					const type = join.optional ? 'LEFT JOIN' : 'INNER JOIN';
 					const joinPoint = `${type} \`${modelName}\` AS \`${modelRef}\``;
 

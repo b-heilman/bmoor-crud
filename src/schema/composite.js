@@ -524,14 +524,14 @@ class Composite extends Structure {
 							relationship = this.nexus.mapper.getRelationship(
 								accessor.model, prev.model, accessor.target
 							);
-							from = accessor.alias || accessor.model;
-							to = prev.alias || prev.model;
+							from = aSeries;
+							to = pSeries;
 						} else {
 							relationship = this.nexus.mapper.getRelationship(
 								prev.model, accessor.model, prev.field
 							);
-							from = prev.alias || prev.model;
-							to = accessor.alias || accessor.model;
+							from = pSeries;
+							to = aSeries;
 						}
 
 						query.addJoins(from, [

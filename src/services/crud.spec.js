@@ -425,7 +425,7 @@ describe('src/services/crud.js', function(){
 										as: null,
 										path: 'json'
 									}],
-									joins: [],
+									joins: {},
 									params: [{
 										path: 'id',
 										operation: {
@@ -601,7 +601,7 @@ describe('src/services/crud.js', function(){
 										as: null,
 										path: 'json'
 									}],
-									joins: [],
+									joins: {},
 									params: [],
 									schema: 'model-1'
 								}
@@ -673,7 +673,7 @@ describe('src/services/crud.js', function(){
 										as: null,
 										path: 'json'
 									}],
-									joins: [],
+									joins: {},
 									params: [],
 									schema: 'model-1'
 								}
@@ -800,7 +800,7 @@ describe('src/services/crud.js', function(){
 										as: null,
 										path: 'title'
 									}],
-									joins: [],
+									joins: {},
 									params: [{
 										path: 'id',
 										operation: {
@@ -924,7 +924,7 @@ describe('src/services/crud.js', function(){
 										as: null,
 										path: 'title'
 									}],
-									joins: [],
+									joins: {},
 									params: [{
 										path: 'name',
 										operation: {
@@ -1003,7 +1003,7 @@ describe('src/services/crud.js', function(){
 										as: null,
 										path: 'title'
 									}],
-									joins: [],
+									joins: {},
 									params: [{
 										path: 'id',
 										operation: {
@@ -1145,7 +1145,7 @@ describe('src/services/crud.js', function(){
 									as: null,
 									path: 'title'
 								}],
-								joins: [],
+								joins: {},
 								params: [{
 									path: 'id',
 									operation: {
@@ -1236,7 +1236,7 @@ describe('src/services/crud.js', function(){
 									as: null,
 									path: 'title'
 								}],
-								joins: [],
+								joins: {},
 								params: [{
 									path: 'id',
 									operation: {
@@ -1333,7 +1333,7 @@ describe('src/services/crud.js', function(){
 									as: null,
 									path: 'title'
 								}],
-								joins: [],
+								joins: {},
 								params: [{
 									path: 'id',
 									operation: {
@@ -1412,7 +1412,7 @@ describe('src/services/crud.js', function(){
 									as: null,
 									path: 'title'
 								}],
-								joins: [],
+								joins: {},
 								params: [{
 									path: 'id',
 									operation: {

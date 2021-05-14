@@ -1170,63 +1170,63 @@ describe('src/env/nexus.js', function(){
 
 			const res = await doc.read(1, {});
 
-			expect(stubs.execute.getCall(0).args[0])
+			const args = stubs.execute.getCall(0).args[0];
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
 			.to.deep.equal({
-				'method': 'read',
 				'models': [
 					{
-						'name': 'test-item',
 						'series': 'test-item',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-item_0'
-							}
-						],
-						'query': {
-							'id': 1
-						},
-						schema: 'test-item'
+						schema: 'test-item',
+						joins: []
 					},
 					{
-						'name': 'test-person',
 						'series': 'test-person',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-person_1'
-							}
-						],
-						'query': null,
-						join: {
-							on: [{
-								name: 'test-item',
-								remote: 'id',
-								local: 'itemId'
+						schema: 'test-person',
+						joins: [{
+							name: 'test-item',
+							optional: false,
+							mappings: [{
+								to: 'id',
+								from: 'itemId'
 							}]
-						},
-						schema: 'test-person'
+						}]
 					},
 					{
-						'name': 'test-category',
 						'series': 'test-category',
-						'fields': [
-							{
-								'path': 'name',
-								'as': 'test-category_2'
-							}
-						],
-						'query': null,
-						join: {
-							on: [{
-								name: 'test-item',
-								remote: 'id',
-								local: 'itemId'
+						schema: 'test-category',
+						joins: [{
+							name: 'test-item',
+							optional: false,
+							mappings: [{
+								to: 'id',
+								from: 'itemId'
 							}]
-						},
-						schema: 'test-category'
+						}]
 					}
-				]
+				],
+				fields: [{
+					'series': 'test-item',
+					'path': 'name',
+					'as': 'test-item_0'
+				}, {
+					'series': 'test-person',
+					'path': 'name',
+					'as': 'test-person_1'
+				}, {
+					'series': 'test-category',
+					'path': 'name',
+					'as': 'test-category_2'
+				}],
+				params: [{
+					series: 'test-item',
+					path: 'id',
+					operation: {
+						value: 1
+					}
+				}]
 			});
 
 			expect(res)
@@ -1402,165 +1402,176 @@ describe('src/env/nexus.js', function(){
 
 				const res = await doc3.read(1, {});
 
-				expect(stubs.execute.getCall(0).args[0])
+				const args0 = stubs.execute.getCall(0).args[0];
+
+				expect(args0.method)
+				.to.equal('read');
+
+				expect(args0.query.toJSON())
 				.to.deep.equal({
-					'method': 'read',
 					'models': [
 						{
-							'name': 'test-item',
 							'series': 'test-item',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-item_0'
-								}
-							],
-							'query': {
-								'id': 1
-							},
-							schema: 'test-item'
+							schema: 'test-item',
+							joins: []
 						},
 						{
-							'name': 'test-person',
 							'series': 'test-person',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-person_1'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-item',
-									remote: 'id',
-									local: 'itemId'
+							schema: 'test-person',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
 								}]
-							},
-							schema: 'test-person'
+							}]
 						},
 						{
-							'name': 'test-category',
 							'series': 'test-category',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-category_2'
-								},
-								{
-									'path': 'fooId',
-									'as': 'test-category_3'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-item',
-									remote: 'id',
-									local: 'itemId'
+							schema: 'test-category',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
 								}]
-							},
-							schema: 'test-category'
+							}]
 						}
-					]
+					],
+					fields: [{
+						'series': 'test-item',
+						'path': 'name',
+						'as': 'test-item_0'
+					},{
+						'series': 'test-person',
+						'path': 'name',
+						'as': 'test-person_1'
+					},{
+						'series': 'test-category',
+						'path': 'name',
+						'as': 'test-category_2'
+					},{
+						'series': 'test-category',
+						'path': 'fooId',
+						'as': 'test-category_3'
+					}],
+					params: [{
+						series: 'test-item',
+						path: 'id',
+						operation: {
+							value: 1
+						}
+					}]
 				});
 
 				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
 					params: {
-						'.id$test-2-foo': 456
+						'.id$test-2-foo': {
+							value: 456
+						}
 					}
 				});
 
-				expect(stubs.execute.getCall(1).args[0])
+				const args1 = stubs.execute.getCall(1).args[0];
+				expect(args1.method)
+				.to.equal('read');
+
+				expect(args1.query.toJSON())
 				.to.deep.equal({
-					'method': 'read',
 					'models': [
 						{
-							'name': 'test-2-foo',
 							'series': 'test-2-foo',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-2-foo_0'
-								},
-								{
-									'path': 'id',
-									'as': 'test-2-foo_2'
-								}
-							],
-							'query': {
-								'id': 456
-							},
-							schema: 'test-2-foo'
+							schema: 'test-2-foo',
+							joins: []
 						},
 						{
-							'name': 'test-2-bar',
 							'series': 'test-2-bar',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-2-bar_1'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-2-foo',
-									remote: 'id',
-									local: 'fooId'
+							schema: 'test-2-bar',
+							joins: [{
+								name: 'test-2-foo',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'fooId'
 								}]
-							},
-							schema: 'test-2-bar'
+							}]
 						}
-					]
+					],
+					fields: [{
+						series: 'test-2-foo',
+						'path': 'name',
+						'as': 'test-2-foo_0'
+					},{
+						series: 'test-2-foo',
+						'path': 'id',
+						'as': 'test-2-foo_2'
+					},{
+						series: 'test-2-bar',
+						'path': 'name',
+						'as': 'test-2-bar_1'
+					}],
+					params: [{
+						series: 'test-2-foo',
+						path: 'id',
+						operation: {
+							value: 456
+						}
+					}]
 				});
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
 					params: {
-						'.fooId$test-3-hello': 123
+						'.fooId$test-3-hello': {
+							value: 123
+						}
 					}
 				});
 
-				expect(stubs.execute.getCall(2).args[0])
+				const args2 = stubs.execute.getCall(2).args[0];
+				expect(args2.method)
+				.to.equal('read');
+
+				expect(args2.query.toJSON())
 				.to.deep.equal({
-					'method': 'read',
 					'models': [
 						{
-							'name': 'test-3-hello',
 							'series': 'test-3-hello',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-3-hello_0'
-								}
-							],
-							'query': {
-								'fooId': 123
-							},
-							schema: 'test-3-hello'
+							schema: 'test-3-hello',
+							joins: []
 						},
 						{
-							'name': 'test-3-world',
 							'series': 'test-3-world',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-3-world_1'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-3-hello',
-									remote: 'id',
-									local: 'helloId'
+							schema: 'test-3-world',
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'helloId'
 								}]
-							},
-							schema: 'test-3-world'
+							}]
 						}
-					]
+					],
+					fields: [{
+						series: 'test-3-hello',
+						'path': 'name',
+						'as': 'test-3-hello_0'
+					}, {
+						series: 'test-3-world',
+						'path': 'name',
+						'as': 'test-3-world_1'
+					}],
+					params: [{
+						series: 'test-3-hello',
+						path: 'fooId',
+						operation: {
+							value: 123
+						}
+					}]
 				});
 
 				expect(res)
@@ -1615,127 +1626,132 @@ describe('src/env/nexus.js', function(){
 
 				const res = await doc3.read(1, {});
 
-				expect(stubs.execute.getCall(0).args[0])
+				const args1 = stubs.execute.getCall(0).args[0];
+
+				expect(args1.method)
+				.to.equal('read');
+				
+				expect(args1.query.toJSON())
 				.to.deep.equal({
-					'method': 'read',
 					'models': [
 						{
-							'name': 'test-item',
 							'series': 'test-item',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-item_0'
-								}
-							],
-							'query': {
-								'id': 1
-							},
-							schema: 'test-item'
+							schema: 'test-item',
+							joins: []
 						},
 						{
-							'name': 'test-person',
 							'series': 'test-person',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-person_1'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-item',
-									remote: 'id',
-									local: 'itemId'
+							schema: 'test-person',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
 								}]
-							},
-							schema: 'test-person'
+							}]
 						},
 						{
-							'name': 'test-category',
 							'series': 'test-category',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-category_2'
-								},
-								{
-									'path': 'fooId',
-									'as': 'test-category_3'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-item',
-									remote: 'id',
-									local: 'itemId'
+							schema: 'test-category',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
 								}]
-							},
-							schema: 'test-category'
+							}]
 						}
-					]
+					],
+					fields: [{
+						series: 'test-item',
+						'path': 'name',
+						'as': 'test-item_0'
+					}, {
+						series: 'test-person',
+						'path': 'name',
+						'as': 'test-person_1'
+					}, {
+						series: 'test-category',
+						'path': 'name',
+						'as': 'test-category_2'
+					}, {
+						series: 'test-category',
+						'path': 'fooId',
+						'as': 'test-category_3'
+					}],
+					params: [{
+						series: 'test-item',
+						path: 'id',
+						operation: {
+							value: 1
+						}
+					}]
 				});
 
-				expect(stubs.execute.getCall(1).args[0])
+				const args2 = stubs.execute.getCall(1).args[0];
+				
+				expect(args2.method)
+				.to.equal('read');
+				
+				expect(args2.query.toJSON())
 				.to.deep.equal({
-					'method': 'read',
 					'models': [
 						{
-							'name': 'test-3-hello',
 							'series': 'test-3-hello',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-3-hello_0'
-								}
-							],
-							'query': null,
-							schema: 'test-3-hello'
+							schema: 'test-3-hello',
+							joins: []
 						},
 						{
-							'name': 'test-3-world',
 							'series': 'test-3-world',
-							'fields': [
-								{
-									'path': 'name',
-									'as': 'test-3-world_1'
-								}
-							],
-							'query': null,
-							join: {
-								on: [{
-									name: 'test-3-hello',
-									remote: 'id',
-									local: 'helloId'
+							schema: 'test-3-world',
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'helloId'
 								}]
-							},
-							schema: 'test-3-world'
+							}]
 						},
 						{
-							name: 'test-2-foo',
 							series: 'test-2-foo',
 							schema: 'test-2-foo',
-							fields: [],
-							'query': {
-								'id': 456
-							},
-							join: {
-								on: [{
-									name: 'test-3-hello',
-									local: 'id',
-									remote: 'fooId'
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'fooId',
+									from: 'id'
 								}]
-							}
+							}]
 						}
-					]
+					],
+					fields: [{
+						series: 'test-3-hello',
+						'path': 'name',
+						'as': 'test-3-hello_0'
+					}, {
+						series: 'test-3-world',
+						'path': 'name',
+						'as': 'test-3-world_1'
+					}],
+					params: [{
+						series: 'test-2-foo',
+						path: 'id',
+						operation: {
+							value: 456
+						}
+					}]
 				});
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
 					params: {
-						'.id$test-2-foo.id>.fooId$test-3-hello': 456
+						'.id$test-2-foo.id>.fooId$test-3-hello': {
+							value: 456
+						}
 					}
 				});
 
