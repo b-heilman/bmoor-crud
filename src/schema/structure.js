@@ -2,8 +2,11 @@
 const {Config} = require('bmoor/src/lib/config.js');
 const {makeGetter, makeSetter} = require('bmoor/src/core.js');
 const {apply} = require('bmoor/src/lib/error.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
+const {Path} = require('../graph/path.js');
+const {Query, QueryField, QueryParam, QueryJoin} = require('./query.js');
 
 const types = new Config({
 	json: {
@@ -139,9 +142,7 @@ function buildActions(actions, field){
 	return actions;
 }
 
-function buildInflate(actions, fields){
-	const inflate = actions.inflate;
-
+function buildInflate(baseInflate, fields, structureSettings={}){
 	const mutator = fields.reduce(
 		(old, field) => {
 			if (field.incomingSettings.onInflate){
@@ -149,8 +150,10 @@ function buildInflate(actions, fields){
 				// being passed in
 				return old;
 			} else {
-				// alias - cleanup
-				const getter = makeGetter(field.reference);
+				// TODO: isFlat needs to come from the adapter? but how...
+				const getter = structureSettings.isFlat ?
+					(datum) => datum[field.reference] :
+					makeGetter(field.reference);
 				const setter = makeSetter(field.path);
 
 				if (old){
@@ -181,13 +184,13 @@ function buildInflate(actions, fields){
 		null
 	);
 
-	if (inflate && mutator){
+	if (baseInflate && mutator){
 		return function mutateInflaterFn(datum, ctx){
-			return inflate(mutator(datum), datum, ctx);
+			return baseInflate(mutator(datum), datum, ctx);
 		};
 	} else if (!mutator){
 		return function inflaterFn(datum, ctx){
-			return inflate({}, datum, ctx);
+			return baseInflate({}, datum, ctx);
 		};
 	} else {
 		return function mutatorFn(datum/*, ctx*/){
@@ -196,17 +199,16 @@ function buildInflate(actions, fields){
 	}
 }
 
-function buildDeflate(actions, fields){
-	const deflate = actions.deflate;
-
+function buildDeflate(baseDeflate, fields, structureSettings={}){
 	const mutator = fields.reduce(
 		(old, field) => {
 			if (field.incomingSettings.onDeflate){
 				return old;
 			} else {
 				const getter = makeGetter(field.path);
-				// alias - cleanup
-				const setter = makeSetter(field.storagePath);
+				const setter = structureSettings.isFlat ?
+					function(datum, value) {datum[field.storagePath] = value;} :
+					makeSetter(field.storagePath) ;
 
 				if (old){
 					return function(src){
@@ -236,13 +238,13 @@ function buildDeflate(actions, fields){
 		null
 	);
 
-	if (deflate && mutator){
+	if (baseDeflate && mutator){
 		return function mutateDeflaterFn(datum, ctx){
-			return deflate(mutator(datum), datum, ctx);
+			return baseDeflate(mutator(datum), datum, ctx);
 		};
 	} else if (!mutator){
 		return function deflaterFn(datum, ctx){
-			return deflate({}, datum, ctx);
+			return baseDeflate({}, datum, ctx);
 		};
 	} else {
 		return function mutatorFn(datum/*, ctx*/){
@@ -271,13 +273,34 @@ class Structure {
 				mutates: false
 			});
 
-			this.actions.inflate = buildInflate(this.actions, this.fields);
-			this.actions.deflate = buildDeflate(this.actions, this.fields);
+			this.actions.inflate = buildInflate(
+				this.actions.inflate,
+				this.fields,
+				this.incomingSettings
+			);
+
+			this.actions.deflate = buildDeflate(
+				this.actions.deflate,
+				this.fields,
+				this.incomingSettings
+			);
 		}
 	}
 
 	assignField(field){
 		this.actions = null; // if we add a field, clear existing actions
+
+		const found = this.index[field.path];
+		if (found){
+			throw create(`Path collision`, {
+				code: 'BMOOR_CRUD_STRUCTURE_COLLISION',
+				context: {
+					name: this.name,
+					existing: this.index[field.path],
+					incoming: field
+				}
+			});
+		}
 
 		this.index[field.path] = field;
 		this.fields.push(field);
@@ -388,6 +411,109 @@ class Structure {
 		}
 
 		return this.actions.inflate(datum, ctx);
+	}
+
+	async getQuery(settings, ctx){
+		const query = settings.query || new Query(this.name);
+
+		(await this.testFields('read', ctx))
+		.forEach(
+			(field) => {
+				query.addFields(field.series, [
+					new QueryField(field.storagePath, field.reference || null)
+				]);
+			}
+		);
+
+		if (settings.params){
+			query.addParams(
+				query.base,
+				Object.keys(settings.params).map(
+					field => {
+						const v = settings.params[field];
+						const q = typeof(v) !== 'object' || Array.isArray(v) ? 
+							{value: v} : v;
+
+						return new QueryParam(field, q);
+					}
+				)
+			);
+		}
+
+		if (settings.joins){
+			await Object.keys(settings.joins || {})
+			.reduce(
+				async (prom, path) => {
+					await prom;
+					
+					const comparison = settings.joins[path];
+					const access = (new Path(path)).access;
+
+					// links in are [model].value > [existingModel]
+					// TODO: I think I want to flip that?
+					const mountAccessor = access[access.length-1];
+					const mountSeries = mountAccessor.series;
+
+					// this verified the mount point is inside the model
+					if (!query.hasSeries(mountSeries)){
+						throw new Error(`unable to mount: ${mountSeries} from ${path}`);
+					}
+
+					await access.reduce(
+						async (prev, accessor) => {
+							let relationship = null;
+							let from = null;
+							let to = null;
+							let pSeries = prev.series;
+							let aSeries = accessor.series;
+
+							prev = await prev;
+
+							query.setSchema(aSeries, accessor.model);
+							
+							// this ensures everything is linked accordingly
+							// await addStuff(this, prev, subAccessor);
+							if (accessor.target) {
+								relationship = this.nexus.mapper.getRelationship(
+									accessor.model, prev.model, accessor.target
+								);
+								from = aSeries;
+								to = pSeries;
+							} else {
+								relationship = this.nexus.mapper.getRelationship(
+									prev.model, accessor.model, prev.field
+								);
+								from = pSeries;
+								to = aSeries;
+							}
+
+							query.addJoins(from, [
+								new QueryJoin(to, [{
+									from: relationship.local,
+									to: relationship.remote
+								}], accessor.optional)
+							]);
+							
+							return accessor;
+						}
+					);
+					
+					const rootAccessor = access[0];
+					
+					query.setSchema(rootAccessor.series, rootAccessor.model);
+
+					// So, if you write a query... you shoud use .notation for incoming property
+					// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
+					// flexible.  Use the target incase I decide to change my mind in the future
+					query.addParams(rootAccessor.series, [
+						new QueryParam(rootAccessor.target||rootAccessor.field, comparison)
+					]);
+				}, 
+				Promise.resolve(true)
+			);
+		}
+
+		return query;
 	}
 
 	toJSON(){

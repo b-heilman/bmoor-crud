@@ -164,7 +164,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			const query = await lookup.getQuery({
-				params: {
+				joins: {
 					'$test-1.name': {
 						op: '=',
 						value: 'foo-bar'
@@ -207,19 +207,19 @@ describe('src/schema/composite.js', function(){
 				}],
 				fields: [{
 					series: 'test-1',
-					as: 'test-1_0',
+					as: 'eins',
 					path: 'name'
 				}, {
 					series: 'test-2',
-					as: 'test-2_1',
+					as: 'zwei',
 					path: 'name'
 				}, {
 					series: 'test-2',
-					as: 'test-2_2',
+					as: 'drei',
 					path: 'title'
 				}, {
 					series: 'test-3',
-					as: 'test-3_3',
+					as: 'fier',
 					path: 'name'
 				}],
 				params: [{
@@ -286,19 +286,19 @@ describe('src/schema/composite.js', function(){
 				}],
 				fields: [{
 					series: 'test-1',
-					as: 'test-1_0',
+					as: 'eins',
 					path: 'name'
 				}, {
 					series: 'test-2',
-					as: 'test-2_1',
+					as: 'zwei',
 					path: 'name'
 				}, {
 					series: 'test-2',
-					as: 'test-2_2',
+					as: 'drei',
 					path: 'title'
 				}, {
 					series: 'test-3',
-					as: 'test-3_3',
+					as: 'fier',
 					path: 'name'
 				}],
 				params: []
@@ -320,7 +320,7 @@ describe('src/schema/composite.js', function(){
 			});
 			
 			const query = await lookup.getQuery({
-				params: {
+				joins: {
 					'.id$creator:test-1': {
 						value: 123
 					},
@@ -372,23 +372,23 @@ describe('src/schema/composite.js', function(){
 				}],
 				fields: [{
 					series: 'test-5',
-					as: 'test-5_2',
+					as: 'drei',
 					path: 'title'
 				}, {
 					series: 'creator',
-					as: 'test-1_0',
+					as: 'eins',
 					path: 'name'
 				}, {
 					series: 'creator',
-					as: 'test-1_1',
+					as: 'zwei',
 					path: 'title'
 				}, {
 					series: 'owner',
-					as: 'test-1_3',
+					as: 'fier',
 					path: 'name'
 				}, {
 					series: 'owner',
-					as: 'test-1_4',
+					as: 'funf',
 					path: 'title'
 				}],
 				params: [{
@@ -425,10 +425,10 @@ describe('src/schema/composite.js', function(){
 			const inflate = await lookup.getInflater({});
 
 			const datum = inflate({
-				'test-1_0': 'field-1',
-				'test-2_1': 'field-2',
-				'test-2_2': 'field-3',
-				'test-3_3': 'field-4'
+				'eins': 'field-1',
+				'zwei': 'field-2',
+				'drei': 'field-3',
+				'fier': 'field-4'
 			});
 
 			expect(datum)
@@ -440,26 +440,29 @@ describe('src/schema/composite.js', function(){
 			});
 		});
 
-		it('should work with types', async function(){
+		it('should work with types and isFlat', async function(){
 			const lookup = new Composite('blah', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
+				isFlat: true,
 				fields: {
 					eins: '.json',
 					zwei: '> $test-2.json',
 					drei: '> $test-2.title',
-					fier: '> $test-2 > $test-3.name'
+					fier: {
+						value: '> $test-2 > $test-3.name'
+					}
 				}
 			});
 
 			const inflate = await lookup.getInflater({});
 
 			const datum = inflate({
-				'test-1_0': '{"foo":"bar"}',
-				'test-2_1': '{"hello":"world"}',
-				'test-2_2': 'field-3',
-				'test-3_3': 'field-4'
+				'eins': '{"foo":"bar"}',
+				'zwei': '{"hello":"world"}',
+				'drei': 'field-3',
+				'fier.value': 'field-4'
 			});
 
 			expect(datum)
@@ -471,7 +474,51 @@ describe('src/schema/composite.js', function(){
 					hello: 'world'
 				},
 				drei: 'field-3',
-				fier: 'field-4'
+				fier: {
+					value: 'field-4'
+				}
+			});
+		});
+
+		it('should work with types and isFlat:false', async function(){
+			const lookup = new Composite('blah', nexus);
+
+			await lookup.configure({
+				base: 'test-1',
+				isFlat: false,
+				fields: {
+					eins: '.json',
+					zwei: '> $test-2.json',
+					drei: '> $test-2.title',
+					fier: {
+						value: '> $test-2 > $test-3.name'
+					}
+				}
+			});
+
+			const inflate = await lookup.getInflater({});
+
+			const datum = inflate({
+				'eins': '{"foo":"bar"}',
+				'zwei': '{"hello":"world"}',
+				'drei': 'field-3',
+				'fier': {
+					value: 'field-4'
+				}
+			});
+
+			expect(datum)
+			.to.deep.equal({
+				eins: {
+					foo: 'bar'
+				},
+				zwei: {
+					hello: 'world'
+				},
+				drei: 'field-3',
+				fier: {
+					value: 'field-4'
+				}
 			});
 		});
 	});

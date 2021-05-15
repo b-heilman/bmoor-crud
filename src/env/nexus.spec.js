@@ -1151,9 +1151,9 @@ describe('src/env/nexus.js', function(){
 
 			stubs.execute.onCall(0)
 			.resolves([{
-				'test-item_0': 'item-1',
-				'test-person_1': 'person-1',
-				'test-category_2': 'category-1'
+				'item': 'item-1',
+				'personName': 'person-1',
+				'categoryName': 'category-1'
 			}]);
 
 			await nexus.configureComposite('comp-1', {
@@ -1210,15 +1210,15 @@ describe('src/env/nexus.js', function(){
 				fields: [{
 					'series': 'test-item',
 					'path': 'name',
-					'as': 'test-item_0'
+					as: 'item'
 				}, {
 					'series': 'test-person',
 					'path': 'name',
-					'as': 'test-person_1'
+					as: 'personName'
 				}, {
 					'series': 'test-category',
 					'path': 'name',
-					'as': 'test-category_2'
+					as: 'categoryName'
 				}],
 				params: [{
 					series: 'test-item',
@@ -1379,25 +1379,29 @@ describe('src/env/nexus.js', function(){
 				// comp-3
 				stubs.execute.onCall(0)
 				.resolves([{
-					'test-item_0': 'item-1',
-					'test-person_1': 'person-1',
-					'test-category_2': 'category-1',
-					'test-category_3': 456
+					'item': 'item-1',
+					'personName': 'person-1',
+					'categoryName': 'category-1',
+					'sub_0': 456
 				}]);
 
 				// comp-2
 				stubs.execute.onCall(1)
 				.resolves([{
-					'test-2-foo_0': 'foo-1',
-					'test-2-bar_1': 'bar-1',
-					'test-2-foo_2': 123
+					'fooName': 'foo-1',
+					'barName': 'bar-1',
+					'sub_0': 123
 				}]);
 
 				// comp-2
 				stubs.execute.onCall(2)
 				.resolves([{
-					'test-3-hello_0': 'eins',
-					'test-3-world_1': 'zwei'
+					hello: {
+						name: 'eins'
+					},
+					world: {
+						name: 'zwei'
+					}
 				}]);
 
 				const res = await doc3.read(1, {});
@@ -1443,19 +1447,19 @@ describe('src/env/nexus.js', function(){
 					fields: [{
 						'series': 'test-item',
 						'path': 'name',
-						'as': 'test-item_0'
+						as: 'item'
 					},{
 						'series': 'test-person',
 						'path': 'name',
-						'as': 'test-person_1'
+						as: 'personName'
 					},{
 						'series': 'test-category',
 						'path': 'name',
-						'as': 'test-category_2'
+						as: 'categoryName'
 					},{
 						'series': 'test-category',
 						'path': 'fooId',
-						'as': 'test-category_3'
+						as: 'sub_0'
 					}],
 					params: [{
 						series: 'test-item',
@@ -1468,7 +1472,7 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
-					params: {
+					joins: {
 						'.id$test-2-foo': {
 							value: 456
 						}
@@ -1503,15 +1507,15 @@ describe('src/env/nexus.js', function(){
 					fields: [{
 						series: 'test-2-foo',
 						'path': 'name',
-						'as': 'test-2-foo_0'
+						'as': 'fooName'
 					},{
 						series: 'test-2-foo',
 						'path': 'id',
-						'as': 'test-2-foo_2'
+						'as': 'sub_0'
 					},{
 						series: 'test-2-bar',
 						'path': 'name',
-						'as': 'test-2-bar_1'
+						'as': 'barName'
 					}],
 					params: [{
 						series: 'test-2-foo',
@@ -1524,7 +1528,7 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					params: {
+					joins: {
 						'.fooId$test-3-hello': {
 							value: 123
 						}
@@ -1559,11 +1563,11 @@ describe('src/env/nexus.js', function(){
 					fields: [{
 						series: 'test-3-hello',
 						'path': 'name',
-						'as': 'test-3-hello_0'
+						'as': 'hello.name'
 					}, {
 						series: 'test-3-world',
 						'path': 'name',
-						'as': 'test-3-world_1'
+						'as': 'world.name'
 					}],
 					params: [{
 						series: 'test-3-hello',
@@ -1611,17 +1615,21 @@ describe('src/env/nexus.js', function(){
 				// comp-3
 				stubs.execute.onCall(0)
 				.resolves([{
-					'test-item_0': 'item-1',
-					'test-person_1': 'person-1',
-					'test-category_2': 'category-1',
-					'test-category_3': 456
+					'item': 'item-1',
+					'personName': 'person-1',
+					'categoryName': 'category-1',
+					'sub_0': 456
 				}]);
 
 				// comp-2
 				stubs.execute.onCall(1)
 				.resolves([{
-					'test-3-hello_0': 'eins',
-					'test-3-world_1': 'zwei'
+					hello: {
+						name: 'eins'
+					},
+					world: {
+						name: 'zwei'
+					}
 				}]);
 
 				const res = await doc3.read(1, {});
@@ -1667,19 +1675,19 @@ describe('src/env/nexus.js', function(){
 					fields: [{
 						series: 'test-item',
 						'path': 'name',
-						'as': 'test-item_0'
+						'as': 'item'
 					}, {
 						series: 'test-person',
 						'path': 'name',
-						'as': 'test-person_1'
+						'as': 'personName'
 					}, {
 						series: 'test-category',
 						'path': 'name',
-						'as': 'test-category_2'
+						'as': 'categoryName'
 					}, {
 						series: 'test-category',
 						'path': 'fooId',
-						'as': 'test-category_3'
+						'as': 'sub_0'
 					}],
 					params: [{
 						series: 'test-item',
@@ -1731,11 +1739,11 @@ describe('src/env/nexus.js', function(){
 					fields: [{
 						series: 'test-3-hello',
 						'path': 'name',
-						'as': 'test-3-hello_0'
+						'as': 'hello.name'
 					}, {
 						series: 'test-3-world',
 						'path': 'name',
-						'as': 'test-3-world_1'
+						'as': 'world.name'
 					}],
 					params: [{
 						series: 'test-2-foo',
@@ -1748,7 +1756,7 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					params: {
+					joins: {
 						'.id$test-2-foo.id>.fooId$test-3-hello': {
 							value: 456
 						}

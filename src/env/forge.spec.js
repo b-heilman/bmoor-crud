@@ -603,11 +603,11 @@ describe('src/env/forge.js', function(){
 						fields: [{
 							series: 'service-1',
 							path: 'zwei',
-							as: null
+							as: 'zwei'
 						}, {
 							series: 'service-1',
 							path: 'drei',
-							as: null
+							as: 'drei'
 						}],
 						params: [{
 							series: 'service-1',
@@ -692,11 +692,11 @@ describe('src/env/forge.js', function(){
 						fields: [{
 							series: 'service-1',
 							path: 'zwei',
-							as: null
+							as: 'zwei'
 						}, {
 							series: 'service-1',
 							path: 'drei',
-							as: null
+							as: 'drei'
 						}],
 						params: [{
 							series: 'service-1',
@@ -845,11 +845,11 @@ describe('src/env/forge.js', function(){
 						fields: [{
 							series: 'service-1',
 							path: 'zwei',
-							as: null
+							as: 'zwei'
 						}, {
 							series: 'service-1',
 							path: 'drei',
-							as: null
+							as: 'drei'
 						}],
 						params: [{
 							series: 'service-1',

@@ -10,6 +10,7 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('$foo-bar.field')).access)
 				.to.deep.equal([{
 					loader: 'access',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: 'field',
 					target: null,
@@ -20,8 +21,8 @@ describe('src/graph/path.js', function(){
 			it('should properly parse an access with alias', function(){
 				expect((new sut.Path('$hello:foo-bar.field')).access)
 				.to.deep.equal([{
-					alias: 'hello',
 					loader: 'access',
+					series: 'hello',
 					model: 'foo-bar',
 					field: 'field',
 					target: null,
@@ -33,6 +34,7 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('#foo-bar')).access)
 				.to.deep.equal([{
 					loader: 'include',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: null,
 					target: null,
@@ -44,6 +46,7 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('.dupe$foo-bar.field')).access)
 				.to.deep.equal([{
 					loader: 'access',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: 'field',
 					target: 'dupe',
@@ -55,6 +58,7 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('> ?$foo-bar.field')).access)
 				.to.deep.equal([{
 					loader: 'access',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: 'field',
 					target: null,
@@ -66,6 +70,7 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('>?.dupe$foo-bar.field')).access)
 				.to.deep.equal([{
 					loader: 'access',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: 'field',
 					target: 'dupe',
@@ -77,6 +82,7 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('.hello-world#foo-bar')).access)
 				.to.deep.equal([{
 					loader: 'include',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: null,
 					target: 'hello-world',
@@ -88,13 +94,14 @@ describe('src/graph/path.js', function(){
 				expect((new sut.Path('$foo-bar.field>$woot:hello-world.id')).access)
 				.to.deep.equal([{
 					loader: 'access',
+					series: 'foo-bar',
 					model: 'foo-bar',
 					field: 'field',
 					target: null,
 					optional: false
 				}, {
-					alias: 'woot',
 					loader: 'access',
+					series: 'woot',
 					model: 'hello-world',
 					field: 'id',
 					target: null,
@@ -107,12 +114,14 @@ describe('src/graph/path.js', function(){
 				.to.deep.equal([{
 					loader: 'access',
 					model: 'foo-bar',
+					series: 'foo-bar',
 					field: 'field',
 					target: null,
 					optional: false
 				}, {
 					loader: 'access',
 					model: 'hello-world',
+					series: 'hello-world',
 					field: 'id',
 					target: null,
 					optional: true
@@ -124,18 +133,21 @@ describe('src/graph/path.js', function(){
 				.to.deep.equal([{
 					loader: 'access',
 					model: 'foo-bar',
+					series: 'foo-bar',
 					field: 'field',
 					target: null,
 					optional: false
 				}, {
 					loader: 'access',
 					model: 'hello-world',
+					series: 'hello-world',
 					field: 'id',
 					target: null,
 					optional: true
 				}, {
 					loader: 'access',
 					model: 'eins-zwei',
+					series: 'eins-zwei',
 					field: null,
 					target: null,
 					optional: true
@@ -145,13 +157,14 @@ describe('src/graph/path.js', function(){
 				.to.deep.equal([{
 					loader: 'access',
 					model: 'test-5',
+					series: 'test-5',
 					field: 'ownerId',
 					target: null,
 					optional: false
 				}, {
 					loader: 'access',
 					model: 'test-1',
-					alias: 'owner',
+					series: 'owner',
 					field: 'title',
 					target: null,
 					optional: true
@@ -166,6 +179,7 @@ describe('src/graph/path.js', function(){
 						[{
 							loader: 'access',
 							model: 'foo-bar',
+							series: 'foo-bar',
 							field: 'eins',
 							target: null,
 							optional: false
@@ -173,6 +187,7 @@ describe('src/graph/path.js', function(){
 						[{
 							loader: 'access',
 							model: 'hello-world',
+							series: 'hello-world',
 							field: 'zwei',
 							target: null,
 							optional: false
@@ -192,18 +207,21 @@ describe('src/graph/path.js', function(){
 				const accessors = [{
 					loader: 'access',
 					model: 'foo-bar',
+					series: 'foo-bar',
 					field: 'field',
 					target: null,
 					optional: false
 				}, {
 					loader: 'access',
 					model: 'hello-world',
+					series: 'hello-world',
 					field: 'id',
 					target: null,
 					optional: false
 				}, {
 					loader: 'access',
 					model: 'eins-zwei',
+					series: 'eins-zwei',
 					field: 'id',
 					target: null,
 					optional: true

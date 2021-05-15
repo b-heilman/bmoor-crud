@@ -7,12 +7,15 @@ const config = new Config({
 // TODO: 2/20 - cleaners / property checks should have an api, no?
 class Field {
 	constructor(path, structure, settings) {
-		const storagePath = settings.storagePath;
-
+		// path should always be considered an unique identifier
 		this.path = path;
-		this.storagePath = storagePath || path;
-		this.reference = settings.reference || storagePath || path;
-		
+		this.series = settings.series || structure.name;
+		this.storagePath = settings.storagePath || path;
+		// using storage path can cause collisions on composites, path should
+		// still be unique.  By writing back to the path I can later optimize
+		// by just inflating the returned response or something else
+		this.reference = settings.reference || path;
+
 		this.structure = structure;
 		
 		/***

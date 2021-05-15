@@ -4,62 +4,8 @@ const {create} = require('bmoor/src/lib/error.js');
 
 const {Structure} = require('./structure.js');
 const {Network} = require('../graph/Network.js');
-const {Path, pathToAccessors} = require('../graph/path.js');
-const {Query, QueryField, QueryParam, QueryJoin} = require('./query.js');
-
-// this works because of root, since it's expected two instances of the same table will
-// be linked to via different variables.  I don't have any way of self defining aliases
-// so .ownerId > $user is different from .creatorId > $user, but $user is not aliases
-function knownSeries(context, accessor){
-	return !!context.aliases[accessor.root];
-}
-
-function getSeries(context, accessor){
-	const names = context.names;
-	const aliases = context.aliases;
-
-	if (!knownSeries(context, accessor)){
-		let name = accessor.alias || accessor.model;
-		let count = names[name];
-
-		if (!count){
-			// first one gets the real name
-			names[name] = 1;
-		} else {
-			// if you didn't define a series for it, you must not care
-			// to link into it
-			name += '_'+count;
-			names[name] = count + 1;
-		}
-
-		aliases[accessor.root] = name;
-	}
-
-	return aliases[accessor.root];
-}
-
-function linkSeries(composite, prev, accessor){
-	const context = composite.context;
-	const aliases = context.aliases;
-
-	let series = aliases[accessor.root];
-	if (!knownSeries(context, accessor)){
-		series = getSeries(context, accessor);
-		aliases[accessor.root] = series;
-
-		if (prev){
-			composite.setConnection(prev.model, accessor.model, prev.field, {
-				baseSeries: prev.series,
-				targetSeries: series,
-				optional: accessor.optional
-			});
-		}
-	}
-
-	accessor.series = series;
-
-	return series;
-}
+const {pathToAccessors} = require('../graph/path.js');
+const {Query, QueryJoin} = require('./query.js');
 
 function getOutgoingRelationship(nexus, baseModel, targetModel, local=null){
 	let relationship = nexus.mapper.getRelationship(
@@ -176,23 +122,6 @@ class CompositeProperties {
 			}
 		}
 	}
-
-	getVariables(){
-		//[variable]
-
-		// get all the raw fields
-		
-		// get everything you need for include queries
-		
-		// get all method variables
-	}
-
-	getExpressions(){
-		//[path]: [expressor]
-
-		// return back an array of methods which, when run against datum of 'references'
-		// will convert into target shape
-	}
 }
 
 class Composite extends Structure {
@@ -224,26 +153,28 @@ class Composite extends Structure {
 	}
 
 	defineField(path, settings={}){
-		if (!settings.field){
+		if (!settings.extends){
 			console.log('complex: failed to define', path, settings);
 			throw new Error(`Attempting to define complex field without a base: ${path}`);
 		}
 
-		const modelName = settings.model;
-		const reference = settings.reference;
-
 		// let's overload the other field's settings
-		const fieldSettings = {};
+		const fieldSettings = {
+			series: settings.series,
+			reference: settings.reference
+		};
 
-		fieldSettings.series = settings.series || settings.model;
-
-		// this can be moved to structure
-		fieldSettings.reference = reference || (modelName+'_'+this.fields.length);
-
-		return settings.field.extend(path, fieldSettings);
+		return settings.extends.extend(path, fieldSettings);
 	}
 
 	async addField(path, settings={}){
+		if (!settings.series){
+			throw create(`Unable to link path without target series`, {
+				code: 'BMOOR_CRUD_COMPLEX_SERIES',
+				context: settings
+			});
+		}
+
 		const modelName = settings.model;
 		const reference = settings.extends;
 
@@ -261,140 +192,9 @@ class Composite extends Structure {
 			});
 		}
 
-		settings.field = field;
+		settings.extends = field;
 
 		return super.addField(path, settings);
-	}
-
-	// connects all the models and all the fields
-	async link(){
-		if (this.references){
-			return;
-		}
-
-		const context = {
-			refs: {},
-			names: {},
-			tables: {},
-			aliases: {}
-		};
-		this.context = context;
-
-		const settings = this.incomingSettings;
-		
-		let ext = settings.extends;
-		if (ext){
-			const parent = await this.nexus.loadComposite(ext);
-
-			await parent.link();
-			
-			this.properties.extend(parent.properties);
-
-			if (!settings.getChangeType){
-				settings.getChangeType = parent.incomingSettings.getChangeType;
-			}
-
-			if (!settings.onChange){
-				settings.onChange = parent.incomingSettings.onChange;
-			}
-		}
-
-		this.properties.calculateRoots();
-
-		if (this.properties.content.length === 0){
-			throw new Error('No properties found');
-		}
-
-		// let's go through all the properties and figure out what is a field and 
-		// a foreign reference
-		const results = this.properties.content
-		.map(async (property) => {
-			const path = property.mountPoint;
-			const accessors = property.accessors.slice(0);
-
-			if (property.type === 'access'){
-				let series = null;
-
-				accessors.reduce(
-					(prev, curr) => {
-						series = linkSeries(this, prev, curr);
-
-						return curr;
-					},
-					null
-				);
-
-				const accessor = accessors.pop();
-
-				if (!accessor.field){
-					throw create('model references need a field: '+path, {
-						code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID'
-					});
-				} else if (property.isArray){
-					throw create('dynamic subschemas not yet supported: '+path, {
-						code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_MAGIC'
-					});
-				}
-
-				// this needs to be get variables, and get variables guarentees where to find
-				// the variable
-				const field = await this.addField(path, {
-					model: accessor.model,
-					extends: accessor.field,
-					series
-				});
-
-				const tables = context.tables;
-				if (!tables[series]){
-					const refs = context.refs;
-
-					// create two indexes, one to reduce duplicates, one to use later
-					const table = {
-						name: field.structure.name,
-						series: series,
-						schema: field.structure.schema,
-						fields: [],
-						query: null
-					};
-
-					tables[series] = table;
-
-					if (!refs[table.name]){
-						refs[table.name] = [];
-					}
-
-					refs[table.name].push(table);
-				}
-			} else if (property.type === 'include'){
-				// I'm going to make sure all previous files are imported
-				const include = accessors.pop();
-
-				if (include.field){
-					throw create('can not pull fields from composites: '+path, {
-						code: 'BMOOR_CRUD_COMPOSITE_SCHEMA_ACCESS'
-					});
-				}
-
-				// I don't like this, it limits me to a single, but I'll fix it down
-				// the road.
-				return {
-					name: include.model,
-					property,
-					connections: [accessors],
-					composite: await this.nexus.loadComposite(include.model)
-					// query: {}
-				};
-			} else {
-				throw create('unknown line type: '+property.type, {
-					code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN'
-				});
-			}
-		});
-		
-		this.references = (await Promise.all(results))
-			.filter(info => info);
-
-		this.build();
 	}
 
 	async setConnection(baseModel, targetModel, local=null, settings={}){
@@ -429,12 +229,164 @@ class Composite extends Structure {
 		hub.push(connection);
 	}
 
+	// connects all the models and all the fields
+	async link(){
+		if (this.references){
+			return;
+		}
+
+		if (this.context){
+			return this.context.isLinking;
+		}
+
+		const context = {
+			refs: {},
+			names: {},
+			tables: {}
+		};
+		this.context = context;
+
+		// doing this is protect from collisions if multiple links are called
+		// in parallel of the same type
+		context.isLinking = new Promise(async (resolve, reject) => {
+			const settings = this.incomingSettings;
+		
+			let ext = settings.extends;
+			if (ext){
+				const parent = await this.nexus.loadComposite(ext);
+
+				await parent.link();
+				
+				this.properties.extend(parent.properties);
+
+				if (!settings.getChangeType){
+					settings.getChangeType = parent.incomingSettings.getChangeType;
+				}
+
+				if (!settings.onChange){
+					settings.onChange = parent.incomingSettings.onChange;
+				}
+			}
+
+			this.properties.calculateRoots();
+
+			if (this.properties.content.length === 0){
+				reject(new Error('No properties found'));
+			}
+
+			// let's go through all the properties and figure out what is a field and 
+			// a foreign reference
+			context.results = this.properties.content
+			.map(async (property) => {
+				const path = property.mountPoint;
+				const accessors = property.accessors.slice(0);
+
+				if (property.type === 'access'){
+					accessors.reduce(
+						(prev, curr) => {
+							// TODO: just send the accessors
+							this.setConnection(prev.model, curr.model, prev.field, {
+								baseSeries: prev.series,
+								targetSeries: curr.series,
+								optional: curr.optional
+							});
+
+							return curr;
+						}
+					);
+
+					const accessor = accessors.pop();
+					const series = accessor.series;
+
+					if (!accessor.field){
+						reject(
+							create('model references need a field: '+path, {
+								code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID'
+							})
+						);
+					} else if (property.isArray){
+						reject(
+							create('dynamic subschemas not yet supported: '+path, {
+								code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_MAGIC'
+							})
+						);
+					}
+
+					// this needs to be get variables, and get variables guarentees where to find
+					// the variable
+					const field = await this.addField(path, {
+						model: accessor.model,
+						extends: accessor.field,
+						series
+					});
+
+					const tables = context.tables;
+					if (!tables[series]){
+						const refs = context.refs;
+
+						// create two indexes, one to reduce duplicates, one to use later
+						const table = {
+							name: field.structure.name,
+							series: series,
+							schema: field.structure.schema,
+							fields: [],
+							query: null
+						};
+
+						tables[series] = table;
+
+						if (!refs[table.name]){
+							refs[table.name] = [];
+						}
+
+						refs[table.name].push(table);
+					}
+				} else if (property.type === 'include'){
+					// I'm going to make sure all previous files are imported
+					const include = accessors.pop();
+
+					if (include.field){
+						reject(
+							create('can not pull fields from composites: '+path, {
+								code: 'BMOOR_CRUD_COMPOSITE_SCHEMA_ACCESS'
+							})
+						);
+					}
+
+					// I don't like this, it limits me to a single, but I'll fix it down
+					// the road.
+					return {
+						name: include.model,
+						property,
+						connections: [accessors],
+						composite: await this.nexus.loadComposite(include.model)
+					};
+				} else {
+					reject(
+						create('unknown line type: '+property.type, {
+							code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN'
+						})
+					);
+				}
+			});
+			
+			this.references = (await Promise.all(context.results))
+				.filter(info => info);
+
+			this.build();
+
+			resolve();
+		});
+		
+		return context.isLinking;
+	}
+
 	// produces representation for interface layer
 	// TODO: sort-by, limit
 	async getQuery(settings={}, ctx={}){
-		await this.link();
+		const query = settings.query || new Query(this.properties.model);
 
-		const query = new Query(this.properties.model);
+		await this.link();
 
 		const context = this.context;
 
@@ -444,17 +396,6 @@ class Composite extends Structure {
 				const table = context.tables[series];
 
 				query.setSchema(series, table.schema);
-			}
-		);
-
-		(await this.testFields('read', ctx))
-		.forEach(
-			(field) => {
-				const series = field.incomingSettings.series || field.structure.name;
-				
-				query.addFields(series, [
-					new QueryField(field.storagePath, field.reference || null)
-				]);
 			}
 		);
 
@@ -485,86 +426,16 @@ class Composite extends Structure {
 			});
 		}
 
-		// create a temp object, add any tables needed for queries
-		await Object.keys(settings.params || {})
-		.reduce(
-			async (prom, path) => {
-				// TODO: clean this up once accessors have series defined
-				await prom;
-				
-				const comparison = settings.params[path];
-				const access = (new Path(path)).access;
-
-				// links in are [model].value > [existingModel]
-				// TODO: I think I want to flip that?
-				const mountAccessor = access[access.length-1];
-				const mountSeries = mountAccessor.alias || mountAccessor.model;
-
-				// this verified the mount point is inside the model
-				const mount = context.tables[mountSeries];
-				if (!mount){
-					throw new Error(`unable to mount: ${mountSeries} from ${path}`);
-				}
-
-				await access.reduce(
-					async (prev, accessor) => {
-						let relationship = null;
-						let from = null;
-						let to = null;
-						let pSeries = prev.alias || prev.model;
-						let aSeries = accessor.alias || accessor.model;
-
-						prev = await prev;
-
-						query.setSchema(aSeries, accessor.model);
-						
-						// this ensures everything is linked accordingly
-						// await addStuff(this, prev, subAccessor);
-						if (accessor.target) {
-							relationship = this.nexus.mapper.getRelationship(
-								accessor.model, prev.model, accessor.target
-							);
-							from = aSeries;
-							to = pSeries;
-						} else {
-							relationship = this.nexus.mapper.getRelationship(
-								prev.model, accessor.model, prev.field
-							);
-							from = pSeries;
-							to = aSeries;
-						}
-
-						query.addJoins(from, [
-							new QueryJoin(to, [{
-								from: relationship.local,
-								to: relationship.remote
-							}], accessor.optional)
-						]);
-						
-						return accessor;
-					}
-				);
-				
-				const rootAccessor = access[0];
-				const rootSeries = rootAccessor.alias || rootAccessor.model;
-
-				query.setSchema(rootSeries, rootAccessor.model);
-
-				// So, if you write a query... you shoud use .notation for incoming property
-				// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
-				// flexible.  Use the target incase I decide to change my mind in the future
-				query.addParams(rootSeries, [
-					new QueryParam(rootAccessor.target||rootAccessor.field, comparison)
-				]);
-			}, 
-			Promise.resolve(true)
+		return super.getQuery(
+			{
+				query: query,
+				joins: settings.joins,
+				params: settings.params
+			},
+			ctx
 		);
-		
-		return query;
 	}
 
-	// TODO: I might want to get rid of these if I am going to have the possibility of 
-	//   multiple variables pointing to the same thing.
 	async getInflater(ctx){
 		await this.link();
 		

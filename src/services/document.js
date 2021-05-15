@@ -109,18 +109,15 @@ const normalized = require('../schema/normalized.js');
 				let clear = null;
 
 				if (!this.structure.hasField(field)){
-					const series = '';// getSeries(composite.context, root);
-					const alias = `sub_${i}`;//race condition: `sub_${this.schema.fields.length}`;
+					const ref = `sub_${i}`;
 					
-					reference.alias = alias;
-
-					field = await this.structure.addField(alias, {
+					field = await this.structure.addField(ref, {
 						model: root.model, 
 						extends: root.field,
-						series
+						series: root.series
 					});
 
-					clear = alias;
+					clear = ref;
 				}
 				
 				access.push({
@@ -203,7 +200,7 @@ const normalized = require('../schema/normalized.js');
 						// call the related document... I could do this up higher?
 						const property = sub.reference.property;
 						const res = await sub.document.query({
-							params: query
+							joins: query
 						}, ctx);
 						
 						set(
@@ -231,10 +228,9 @@ const normalized = require('../schema/normalized.js');
 
 		// so anything pass as param should always be passed as against the base
 		// otherwise it should be a join...
-		const index = '$'+this.structure.incomingSettings.base+'.'+this.structure.incomingSettings.key;
 		const query = {
 			params: {
-				[index]: {
+				[this.structure.incomingSettings.key]: {
 					value: id
 				}
 			}

@@ -28,7 +28,7 @@ const parsings = new Config({
 			}
 
 			if (ch===':'){
-				state.alias = true;
+				state.series = true;
 				return false;
 			}
 
@@ -39,13 +39,13 @@ const parsings = new Config({
 		},
 		toToken: function(content, state){
 			let model = content;
-			let alias = null;
+			let series = null;
 			
-			if (state.alias){
-				[alias, model] = content.split(':');
+			if (state.series){
+				[series, model] = content.split(':');
 			}
 
-			return new Token('reference', model, {alias});
+			return new Token('reference', model, {series});
 		}
 	},
 
@@ -169,7 +169,7 @@ const composites = new Config({
 		tokens: ['reference', 'accessor'],
 		factory: function(tokens){
 			return new Compound('path', tokens, 
-				{alias: tokens[0].metadata.alias}
+				{series: tokens[0].metadata.series}
 			);
 		}
 	},
@@ -178,7 +178,7 @@ const composites = new Config({
 		tokens: ['accessor', 'reference', 'accessor'],
 		factory: function(tokens){
 			return new Compound('incoming-path', tokens,
-				{alias: tokens[1].metadata.alias}
+				{series: tokens[1].metadata.series}
 			);
 		}
 	},
@@ -187,7 +187,7 @@ const composites = new Config({
 		tokens: ['accessor', 'reference'],
 		factory: function(tokens){
 			return new Compound('incoming-reference', tokens, 
-				{alias: tokens[1].metadata.alias}
+				{series: tokens[1].metadata.series}
 			);
 		}
 	},
@@ -275,10 +275,11 @@ function pathToAccessors(field){
 			throw new Error(`unknown token type: ${token.type}(${token.value}) of ${field}`); 
 		}
 
-		// TODO: rename alias to series
 		if (parsed){
-			if (token.metadata && token.metadata.alias){
-				parsed.alias = token.metadata.alias;
+			if (token.metadata && token.metadata.series){
+				parsed.series = token.metadata.series;
+			} else {
+				parsed.series = parsed.model;
 			}
 
 			accessors.push(parsed);

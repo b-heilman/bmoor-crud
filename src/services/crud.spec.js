@@ -413,16 +413,16 @@ describe('src/services/crud.js', function(){
 							models: {
 								'model-1': {
 									fields: [{
-										as: null,
+										as: 'id',
 										path: 'id'
 									}, {
-										as: null,
+										as: 'name',
 										path: 'name'
 									}, {
-										as: null,
+										as: 'title',
 										path: 'title'
 									}, {
-										as: null,
+										as: 'json',
 										path: 'json'
 									}],
 									joins: {},
@@ -592,13 +592,13 @@ describe('src/services/crud.js', function(){
 							models: {
 								'model-1': {
 									fields: [{
-										as: null,
+										as: 'id',
 										path: 'id'
 									}, {
-										as: null,
+										as: 'title',
 										path: 'title'
 									}, {
-										as: null,
+										as: 'json',
 										path: 'json'
 									}],
 									joins: {},
@@ -664,13 +664,13 @@ describe('src/services/crud.js', function(){
 							models: {
 								'model-1': {
 									fields: [{
-										as: null,
+										as: 'id',
 										path: 'id'
 									}, {
-										as: null,
+										as: 'title',
 										path: 'title'
 									}, {
-										as: null,
+										as: 'json',
 										path: 'json'
 									}],
 									joins: {},
@@ -791,13 +791,13 @@ describe('src/services/crud.js', function(){
 							models: {
 								'model-1': {
 									fields: [{
-										as: null,
+										as: 'id',
 										path: 'id'
 									}, {
-										as: null,
+										as: 'name',
 										path: 'name'
 									}, {
-										as: null,
+										as: 'title',
 										path: 'title'
 									}],
 									joins: {},
@@ -915,13 +915,13 @@ describe('src/services/crud.js', function(){
 							models: {
 								'model-1': {
 									fields: [{
-										as: null,
+										as: 'id',
 										path: 'id'
 									}, {
-										as: null,
+										as: 'name',
 										path: 'name'
 									}, {
-										as: null,
+										as: 'title',
 										path: 'title'
 									}],
 									joins: {},
@@ -994,13 +994,13 @@ describe('src/services/crud.js', function(){
 							models: {
 								'model-1': {
 									fields: [{
-										as: null,
+										as: 'id',
 										path: 'id'
 									}, {
-										as: null,
+										as: 'name',
 										path: 'name'
 									}, {
-										as: null,
+										as: 'title',
 										path: 'title'
 									}],
 									joins: {},
@@ -1136,13 +1136,13 @@ describe('src/services/crud.js', function(){
 						models: {
 							'model-1': {
 								fields: [{
-									as: null,
+									as: 'id',
 									path: 'id'
 								}, {
-									as: null,
+									as: 'name',
 									path: 'name'
 								}, {
-									as: null,
+									as: 'title',
 									path: 'title'
 								}],
 								joins: {},
@@ -1227,13 +1227,13 @@ describe('src/services/crud.js', function(){
 						models: {
 							'model-1': {
 								fields: [{
-									as: null,
+									as: 'id',
 									path: 'id'
 								}, {
-									as: null,
+									as: 'name',
 									path: 'name'
 								}, {
-									as: null,
+									as: 'title',
 									path: 'title'
 								}],
 								joins: {},
@@ -1324,13 +1324,13 @@ describe('src/services/crud.js', function(){
 						models: {
 							'model-1': {
 								fields: [{
-									as: null,
+									as: 'id',
 									path: 'id'
 								}, {
-									as: null,
+									as: 'name',
 									path: 'name'
 								}, {
-									as: null,
+									as: 'title',
 									path: 'title'
 								}],
 								joins: {},
@@ -1403,13 +1403,13 @@ describe('src/services/crud.js', function(){
 						models: {
 							'model-1': {
 								fields: [{
-									as: null,
+									as: 'id',
 									path: 'id'
 								}, {
-									as: null,
+									as: 'name',
 									path: 'name'
 								}, {
-									as: null,
+									as: 'title',
 									path: 'title'
 								}],
 								joins: {},

@@ -280,9 +280,9 @@ describe('src/services/document.js', function(){
 	describe('::read', function(){
 		it('should properly generate a sql request', async function(){
 			connectorExecute = [{
-				'test-item_0': 'item-1',
-				'test-person_1': 'person-1',
-				'test-category_2': 'category-1'
+				'item': 'item-1',
+				'personName': 'person-1',
+				'categoryName': 'category-1'
 			}];
 
 			nexus.configureComposite('test-1', {
@@ -341,15 +341,15 @@ describe('src/services/document.js', function(){
 				}],
 				fields: [{
 					series: 'test-item',
-					as: 'test-item_0',
+					as: 'item',
 					path: 'name'
 				}, {
 					series: 'test-person',
-					as: 'test-person_1',
+					as: 'personName',
 					path: 'name'
 				}, {
 					series: 'test-category',
-					as: 'test-category_2',
+					as: 'categoryName',
 					path: 'name'
 				}],
 				params: [{
@@ -371,9 +371,9 @@ describe('src/services/document.js', function(){
 
 		it('should properly inflate a data response, without security', async function(){
 			connectorExecute = [{
-				'test-item_0': 'item-1',
-				'test-person_1': '{"foo":"bar"}',
-				'test-category_2': '{"hello":"world"}'
+				'item': 'item-1',
+				'personInfo': '{"foo":"bar"}',
+				'category': '{"hello":"world"}'
 			}];
 
 			nexus.configureComposite('test-1', {
@@ -431,11 +431,11 @@ describe('src/services/document.js', function(){
 				}],
 				fields: [{
 					series: 'test-item',
-					as: 'test-item_0',
+					as: 'item',
 					path: 'name'
 				}, {
 					series: 'test-person',
-					as: 'test-person_1',
+					as: 'personInfo',
 					path: 'json'
 				}],
 				params: [{
@@ -460,9 +460,9 @@ describe('src/services/document.js', function(){
 			permissions = {admin: true};
 
 			connectorExecute = [{
-				'test-item_0': 'item-1',
-				'test-person_1': '{"foo":"bar"}',
-				'test-category_2': '{"hello":"world"}'
+				'item': 'item-1',
+				'personInfo': '{"foo":"bar"}',
+				'categoryInfo': '{"hello":"world"}'
 			}];
 
 			nexus.configureComposite('test-1', {
@@ -520,15 +520,15 @@ describe('src/services/document.js', function(){
 				}],
 				fields: [{
 					series: 'test-item',
-					as: 'test-item_0',
+					as: 'item',
 					path: 'name'
 				}, {
 					series: 'test-person',
-					as: 'test-person_1',
+					as: 'personInfo',
 					path: 'json'
 				}, {
 					series: 'test-category',
-					as: 'test-category_2',
+					as: 'categoryInfo',
 					path: 'json'
 				}],
 				params: [{
@@ -565,10 +565,10 @@ describe('src/services/document.js', function(){
 			});
 			
 			connectorExecute = [{
-				'test-item_0': 'item-1',
-				'test-person_1': 'personName',
-				'test-user_2': 'user2',
-				'test-user_3': 'user3'
+				'item': 'item-1',
+				'personName': 'personName',
+				'ownerName': 'user2',
+				'creatorName': 'user3'
 			}];
 
 			const comp = await nexus.loadComposite('test-1');
@@ -627,19 +627,19 @@ describe('src/services/document.js', function(){
 				}],
 				fields: [{
 					series: 'test-item',
-					as: 'test-item_0',
+					as: 'item',
 					path: 'name'
 				}, {
 					series: 'test-person',
-					as: 'test-person_1',
+					as: 'personName',
 					path: 'name'
 				}, {
 					series: 'owner',
-					as: 'test-user_2',
+					as: 'ownerName',
 					path: 'name'
 				}, {
 					series: 'creator',
-					as: 'test-user_3',
+					as: 'creatorName',
 					path: 'name'
 				}],
 				params: [{
@@ -775,8 +775,8 @@ describe('src/services/document.js', function(){
 	describe('::query', function(){
 		it('should properly generate a sql request - setting 1', async function(){
 			connectorExecute = [{
-				'test-item_0': 'item-1',
-				'test-category_1': 'category-1'
+				'item': 'item-1',
+				'categoryName': 'category-1'
 			}];
 
 			await nexus.configureComposite('test-comp', {
@@ -796,7 +796,7 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const res = await doc.query({
-				params: {
+				joins: {
 					'$test-user.name > .ownerId$test-item': {
 						value: 'shoup'
 					}
@@ -839,11 +839,11 @@ describe('src/services/document.js', function(){
 				}],
 				fields: [{
 					series: 'test-item',
-					as: 'test-item_0',
+					as: 'item',
 					path: 'name'
 				}, {
 					series: 'test-category',
-					as: 'test-category_1',
+					as: 'categoryName',
 					path: 'name'
 				}],
 				params: [{
@@ -864,8 +864,8 @@ describe('src/services/document.js', function(){
 
 		it('should properly generate a sql request - setting 2', async function(){
 			connectorExecute = [{
-				'test-item_0': 'item-1',
-				'test-category_1': 'category-1'
+				'item': 'item-1',
+				'categoryName': 'category-1'
 			}];
 
 			nexus.configureComposite('test-comp', {
@@ -885,7 +885,7 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const res = await doc.query({
-				params: {
+				joins: {
 					'$test-category.name': {
 						value: 'foo-bar'
 					}
@@ -917,11 +917,11 @@ describe('src/services/document.js', function(){
 				}],
 				fields: [{
 					series: 'test-item',
-					as: 'test-item_0',
+					as: 'item',
 					path: 'name'
 				}, {
 					series: 'test-category',
-					as: 'test-category_1',
+					as: 'categoryName',
 					path: 'name'
 				}],
 				params: [{

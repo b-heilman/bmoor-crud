@@ -1,6 +1,6 @@
 
 const {Structure} = require('./structure.js');
-const {Query, QueryField, QueryParam} = require('./query.js');
+const {Query} = require('./query.js');
 
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -181,18 +181,18 @@ class Model extends Structure {
 	// TODO: sort-by, limit
 	// TODO: where to add ability to join from another model?
 	async getQuery(settings, ctx){
-		const fields = (await this.testFields('read', ctx))
-		.map(field => new QueryField(field.storagePath));
+		const query = settings.baseQuery || new Query(this.name);
 
-		const params = settings.params ?
-			Object.keys(settings.params).map(
-				field => new QueryParam(field, {value: settings.params[field]})
-			) : [];
+		query.setSchema(this.name, this.schema);
 
-		return (new Query(this.name))
-		.setSchema(this.name, this.schema)
-		.addFields(this.name, fields)
-		.addParams(this.name, params);
+		return super.getQuery(
+			{
+				query: query,
+				joins: settings.joins,
+				params: settings.params
+			},
+			ctx
+		);
 	}
 }
 
