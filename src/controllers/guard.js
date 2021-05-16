@@ -35,6 +35,8 @@ const {Controller, parseQuery} = require('../server/controller.js');
 // limit: 
 // join: allow a way to join into the table from another place
 
+// TODO: support pivot tables /model/id/[pivot]/[pivot]...
+//   - security is managed as either checked on request or post read
 // TODO: how would I handle pagination here?
 
 function operationNotAllowed(operation){

@@ -4,14 +4,21 @@ const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
 async function parseQuery(view, ctx){
-	const query = ctx.getQuery() || {};
+	const sort = ctx.getQuery('sort') || null;
+	const joins = ctx.getQuery('join') || [];
+	const limit = ctx.getQuery('limit') || null;
+	const params = ctx.getQuery('filter') || {};
 
-	// TODO: decode params to a normalized pattern
-	// TODO: decode sort to a normalized pattern
-	// TODO: decode limit to a normalized pattern
-	// TODO: decode join to a normamlized pattern
+	// ? param[name]=hello & param[foo.bar][gt]=123
+	// ? join[$foo.id > $world] = 12 & join[$hello.name > @worldId$world] = woof
+	// ? sort=-$foo.name,+bar
+	// ? limit=100
+	// TODO: pagination?
 	return {
-		params: await view.structure.clean('query', query, ctx)
+		params: await view.structure.clean('query', params, ctx),
+		joins,
+		sort,
+		limit
 	};
 }
 

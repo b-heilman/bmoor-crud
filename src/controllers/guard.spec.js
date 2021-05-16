@@ -69,8 +69,10 @@ describe('src/controller/guard.js', function(){
 						new Context({
 							method: 'get',
 							query: {
-								eins: 'bar',
-								zwei: 'foo'
+								filter: {
+									eins: 'bar',
+									zwei: 'foo'
+								}
 							}
 						})
 					);
@@ -81,6 +83,9 @@ describe('src/controller/guard.js', function(){
 					const args = stubs.query.getCall(0).args;
 					expect(args[0])
 					.to.deep.equal({
+						sort: null,
+						joins: [],
+						limit: null,
 						params: {
 							zwei: 'foo'
 						}
@@ -487,8 +492,10 @@ describe('src/controller/guard.js', function(){
 						new Context({
 							method: 'delete',
 							query: {
-								eins: 'foo',
-								zwei: 'bar'
+								filter: {
+									eins: 'foo',
+									zwei: 'bar'
+								}
 							}
 						})
 					);
@@ -504,7 +511,10 @@ describe('src/controller/guard.js', function(){
 					.to.deep.equal({
 						params: {
 							zwei: 'bar'
-						}
+						},
+						joins: [],
+						sort: null,
+						limit: null
 					});
 
 					const args1 = stubs.delete.getCall(0).args;
@@ -643,7 +653,9 @@ describe('src/controller/guard.js', function(){
 							new Context({
 								method: 'get',
 								query: {
-									foo: 'bar'
+									filter: {
+										foo: 'bar'
+									}
 								}
 							})
 						);
@@ -672,7 +684,9 @@ describe('src/controller/guard.js', function(){
 							new Context({
 								method: 'delete',
 								query: {
-									foo: 'bar'
+									filter: {
+										foo: 'bar'
+									}
 								}
 							})
 						);

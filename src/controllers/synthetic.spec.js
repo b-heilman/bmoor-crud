@@ -149,8 +149,10 @@ describe('src/controller/synthetic.js', function(){
 				await synth.configure({readable: true, read:'can-read'});
 
 				context.query = {
-					id: 123,
-					name: 'req-1'
+					filter: {
+						id: 123,
+						name: 'req-1'
+					}
 				};
 
 				permissions = {'can-read': true};
@@ -163,7 +165,10 @@ describe('src/controller/synthetic.js', function(){
 
 				expect(args[0])
 				.to.deep.equal({
-					params: {name: 'req-1'}
+					params: {name: 'req-1'},
+					joins: [],
+					sort: null,
+					limit: null
 				});
 
 				expect(res)
