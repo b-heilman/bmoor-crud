@@ -165,13 +165,9 @@ describe('src/schema/composite.js', function(){
 
 			const query = await lookup.getQuery({
 				joins: {
-					'$test-1.name': {
-						op: '=',
-						value: 'foo-bar'
-					},
+					'$test-1.name': 'foo-bar',
 					'$test-3.name': {
-						op: '=',
-						value: 'hello-world'
+						'eq': 'hello-world'
 					}
 				}
 			});
@@ -225,17 +221,15 @@ describe('src/schema/composite.js', function(){
 				params: [{
 					series: 'test-1',
 					path: 'name',
-					operation: {
-						op: '=',
-						value: 'foo-bar'
-					}
+					operation: '=',
+					value: 'foo-bar',
+					settings: {}
 				},{
 					series: 'test-3',
 					path: 'name',
-					operation: {
-						op: '=',
-						value: 'hello-world'
-					}
+					operation: 'eq',
+					value: 'hello-world',
+					settings: {}
 				}]
 			});
 		});
@@ -321,11 +315,10 @@ describe('src/schema/composite.js', function(){
 			
 			const query = await lookup.getQuery({
 				joins: {
-					'.id$creator:test-1': {
-						value: 123
-					},
+					'.id$creator:test-1': 123,
 					'.foo$junk:test-6>.id$test-5': {
-						value: 456
+						gt: 456,
+						lt: 789
 					}
 				}
 			});
@@ -394,15 +387,21 @@ describe('src/schema/composite.js', function(){
 				params: [{
 					series: 'creator',
 					path: 'id',
-					operation: {
-						value: 123
-					}
+					operation: '=',
+					value: 123,
+					settings: {}
 				}, {
 					series: 'junk',
 					path: 'foo',
-					operation: {
-						value: 456
-					}
+					operation: 'gt',
+					value: 456,
+					settings: {}
+				}, {
+					series: 'junk',
+					path: 'foo',
+					operation: 'lt',
+					value: 789,
+					settings: {}
 				}]
 			});
 		});

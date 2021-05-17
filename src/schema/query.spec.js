@@ -121,9 +121,9 @@ describe('src/schema/query.js', function(){
 			query.addFields('b', [new sut.QueryField('foo.bar', 'test')]);
 			query.addFields('c', [new sut.QueryField('eins', 'zwei')]);
 
-			query.addParams('a', [new sut.QueryParam('param1', {value: 123})]);
-			query.addParams('b', [new sut.QueryParam('param2', {value: '456'})]);
-			query.addParams('c', [new sut.QueryParam('param3', {values: [1,2]})]);
+			query.addParams('a', [new sut.QueryParam('param1', 123)]);
+			query.addParams('b', [new sut.QueryParam('param2', '456')]);
+			query.addParams('c', [new sut.QueryParam('param3', [1,2], '=')]);
 
 			expect(query.toJSON())
 			.to.deep.equal({
@@ -170,21 +170,21 @@ describe('src/schema/query.js', function(){
 				params: [{
 					series: 'a',
 					path: 'param1',
-					operation: {
-						value: 123
-					}
+					operation: '=',
+					value: 123,
+					settings: {}
 				},{
 					series: 'b',
 					path: 'param2',
-					operation: {
-						value: '456'
-					}
+					operation: '=',
+					value: '456',
+					settings: {}
 				},{
 					series: 'c',
 					path: 'param3',
-					operation: {
-						values: [1,2]
-					}
+					operation: '=',
+					value: [1,2],
+					settings: {}
 				}]
 			});
 		});

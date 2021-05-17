@@ -428,9 +428,9 @@ describe('src/services/crud.js', function(){
 									joins: {},
 									params: [{
 										path: 'id',
-										operation: {
-											value: 123
-										}
+										operation: '=',
+										value: 123,
+										settings: {}
 									}],
 									schema: 'model-1'
 								}
@@ -803,9 +803,9 @@ describe('src/services/crud.js', function(){
 									joins: {},
 									params: [{
 										path: 'id',
-										operation: {
-											value: [1,2,3]
-										}
+										operation: '=',
+										value: [1,2,3],
+										settings: {}
 									}],
 									schema: 'model-1'
 								}
@@ -927,9 +927,9 @@ describe('src/services/crud.js', function(){
 									joins: {},
 									params: [{
 										path: 'name',
-										operation: {
-											value: 'test-1'
-										}
+										operation: '=',
+										value: 'test-1',
+										settings: {}
 									}],
 									schema: 'model-1'
 								}
@@ -1006,19 +1006,24 @@ describe('src/services/crud.js', function(){
 									joins: {},
 									params: [{
 										path: 'id',
-										operation: {
-											value: 1
-										}
+										operation: '=',
+										value: 1,
+										settings: {}
 									}, {
 										path: 'name',
-										operation: {
-											value: 'test-1'
-										}
+										operation: 'gt',
+										value: 'test-1.1',
+										settings: {}
+									}, {
+										path: 'name',
+										operation: 'lt',
+										value: 'test-1.9',
+										settings: {}
 									}, {
 										path: 'title',
-										operation: {
-											value: 'title-1'
-										}
+										operation: '=',
+										value: 'title-1',
+										settings: {}
 									}],
 									schema: 'model-1'
 								}
@@ -1037,7 +1042,10 @@ describe('src/services/crud.js', function(){
 			return service.query({
 				params: {
 					id: 1,
-					name: 'test-1',
+					name: {
+						gt: 'test-1.1',
+						lt: 'test-1.9'
+					},
 					title: 'title-1'
 				}
 			}).then(res => {
@@ -1148,9 +1156,9 @@ describe('src/services/crud.js', function(){
 								joins: {},
 								params: [{
 									path: 'id',
-									operation: {
-										value: '1'
-									}
+									operation: '=',
+									value: '1',
+									settings: {}
 								}],
 								schema: 'model-1'
 							}
@@ -1239,9 +1247,9 @@ describe('src/services/crud.js', function(){
 								joins: {},
 								params: [{
 									path: 'id',
-									operation: {
-										value: '1'
-									}
+									operation: '=',
+									value: '1',
+									settings: {}
 								}],
 								schema: 'model-1'
 							}
@@ -1336,9 +1344,9 @@ describe('src/services/crud.js', function(){
 								joins: {},
 								params: [{
 									path: 'id',
-									operation: {
-										value: '1'
-									}
+									operation: '=',
+									value: '1',
+									settings: {}
 								}],
 								schema: 'model-1'
 							}
@@ -1415,9 +1423,9 @@ describe('src/services/crud.js', function(){
 								joins: {},
 								params: [{
 									path: 'id',
-									operation: {
-										value: '1'
-									}
+									operation: '=',
+									value: '1',
+									settings: {}
 								}],
 								schema: 'model-1'
 							}

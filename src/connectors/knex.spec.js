@@ -18,7 +18,7 @@ describe('src/interfaces/knex.js', function(){
 					new QueryField('json')
 				])
 				.addParams('model-1', [
-					new QueryParam('id', {value: 123})
+					new QueryParam('id', 123)
 				])
 			};
 
@@ -125,13 +125,13 @@ describe('src/interfaces/knex.js', function(){
 					new QueryField('name', 'test-item_0')
 				])
 				.addParams('test-item', [
-					new QueryParam('id', {value: 1})
+					new QueryParam('id', 1)
 				])
 				.addFields('test-person', [
 					new QueryField('name', 'test-person_1')
 				])
 				.addParams('test-person', [
-					new QueryParam('foo', {value: 'bar'})
+					new QueryParam('foo', 'bar')
 				])
 				.addJoins('test-person', [
 					new QueryJoin('test-item', [{from:'itemId', to:'id'}])

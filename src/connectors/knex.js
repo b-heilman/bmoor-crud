@@ -37,6 +37,19 @@ const config = new Config({
     }]
  * ]
  *****/
+const arrayMethods = {
+	'=': 'IN'
+};
+
+const scalarMethods = {
+	'=': '=',
+	'eq': '=',
+	'lt': '<',
+	'lte': '<=',
+	'gt': '>',
+	'gte': '>='
+};
+
 function translateSelect(stmt){
 	const settings = stmt.query.getInOrder().reduce(
 		(agg, model) => {
@@ -73,16 +86,18 @@ function translateSelect(stmt){
 
 			model.params.forEach(param => {
 				const path = param.path;
-				const operation = param.operation;
+				const op = param.operation;
 
-				if (operation.values){
-					agg.where.push(`\`${modelRef}\`.\`${path}\`IN(?)`);
-					agg.params.push(operation.values);
+				if (Array.isArray(param.value)){
+					const comp = arrayMethods[op];
+
+					agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}(?)`);
+					agg.params.push(param.value);
 				} else {
-					const op = operation.op || '=';
+					const comp = scalarMethods[op];
 
-					agg.where.push(`\`${modelRef}\`.\`${path}\`${op}?`);
-					agg.params.push(operation.value);
+					agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}?`);
+					agg.params.push(param.value);
 				}
 			});
 

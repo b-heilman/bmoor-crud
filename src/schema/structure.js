@@ -253,6 +253,20 @@ function buildDeflate(baseDeflate, fields, structureSettings={}){
 	}
 }
 
+function buildParam(field, v){
+	if (typeof(v) === 'object'){
+		if (Array.isArray(v)){
+			return new QueryParam(field, v, '=');
+		} else {
+			return Object.keys(v).map(
+				op => new QueryParam(field, v[op], op)
+			);
+		}
+	} else {
+		return new QueryParam(field, v, '=');
+	}
+}
+
 class Structure {
 	constructor(name, nexus){
 		this.name = name;
@@ -429,13 +443,7 @@ class Structure {
 			query.addParams(
 				query.base,
 				Object.keys(settings.params).map(
-					field => {
-						const v = settings.params[field];
-						const q = typeof(v) !== 'object' || Array.isArray(v) ? 
-							{value: v} : v;
-
-						return new QueryParam(field, q);
-					}
+					field => buildParam(field, settings.params[field])
 				)
 			);
 		}
@@ -506,7 +514,7 @@ class Structure {
 					// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
 					// flexible.  Use the target incase I decide to change my mind in the future
 					query.addParams(rootAccessor.series, [
-						new QueryParam(rootAccessor.target||rootAccessor.field, comparison)
+						buildParam(rootAccessor.target||rootAccessor.field, comparison)
 					]);
 				}, 
 				Promise.resolve(true)

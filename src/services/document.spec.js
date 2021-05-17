@@ -355,9 +355,9 @@ describe('src/services/document.js', function(){
 				params: [{
 					series: 'test-item',
 					path: 'id',
-					operation: {
-						value: 1
-					}
+					operation: '=',
+					settings: {},
+					value: 1
 				}]
 			});
 
@@ -441,9 +441,9 @@ describe('src/services/document.js', function(){
 				params: [{
 					series: 'test-item',
 					path: 'id',
-					operation: {
-						value: 1
-					}
+					operation: '=',
+					settings: {},
+					value: 1
 				}]
 			});
 
@@ -534,9 +534,9 @@ describe('src/services/document.js', function(){
 				params: [{
 					series: 'test-item',
 					path: 'id',
-					operation: {
-						value: 1
-					}
+					operation: '=',
+					settings: {},
+					value: 1
 				}]
 			});
 
@@ -645,9 +645,9 @@ describe('src/services/document.js', function(){
 				params: [{
 					series: 'test-item',
 					path: 'id',
-					operation: {
-						value: 1
-					}
+					operation: '=',
+					settings: {},
+					value: 1
 				}]
 			});
 
@@ -797,9 +797,7 @@ describe('src/services/document.js', function(){
 
 			const res = await doc.query({
 				joins: {
-					'$test-user.name > .ownerId$test-item': {
-						value: 'shoup'
-					}
+					'$test-user.name > .ownerId$test-item': 'shoup'
 				}
 			}, context);
 			
@@ -849,9 +847,9 @@ describe('src/services/document.js', function(){
 				params: [{
 					series: 'test-user',
 					path: 'name',
-					operation: {
-						value: 'shoup'
-					}
+					operation: '=',
+					settings: {},
+					value: 'shoup'
 				}]
 			});
 
@@ -886,9 +884,7 @@ describe('src/services/document.js', function(){
 
 			const res = await doc.query({
 				joins: {
-					'$test-category.name': {
-						value: 'foo-bar'
-					}
+					'$test-category.name': 'foo-bar'
 				}
 			}, context);
 			
@@ -927,9 +923,9 @@ describe('src/services/document.js', function(){
 				params: [{
 					series: 'test-category',
 					path: 'name',
-					operation: {
-						value: 'foo-bar'
-					}
+					operation: '=',
+					settings: {},
+					value: 'foo-bar'
 				}]
 			});
 

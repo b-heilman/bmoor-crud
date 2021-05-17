@@ -14,9 +14,11 @@ class QueryParam {
 	 * value
 	 * op
 	 ***/
-	constructor(path, op = {}){
+	constructor(path, value, operation = '=', settings = {}){
 		this.path = path;
-		this.operation = op;
+		this.operation = operation;
+		this.value = value;
+		this.settings = settings;
 	}
 }
 
@@ -80,13 +82,13 @@ class Query {
 	}
 
 	addFields(model, fields){
-		this.getModel(model).fields.push(...fields);
+		this.getModel(model).fields.push(...fields.flat());
 
 		return this;
 	}
 
 	addParams(model, params){
-		this.getModel(model).params.push(...params);
+		this.getModel(model).params.push(...params.flat());
 
 		return this;
 	}
@@ -174,7 +176,9 @@ class Query {
 					param => ({
 						series,
 						path: param.path,
-						operation: param.operation
+						operation: param.operation,
+						value: param.value,
+						settings: param.settings
 					})
 				));
 

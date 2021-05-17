@@ -1223,9 +1223,9 @@ describe('src/env/nexus.js', function(){
 				params: [{
 					series: 'test-item',
 					path: 'id',
-					operation: {
-						value: 1
-					}
+					operation: '=',
+					value: 1,
+					settings: {}
 				}]
 			});
 
@@ -1464,18 +1464,16 @@ describe('src/env/nexus.js', function(){
 					params: [{
 						series: 'test-item',
 						path: 'id',
-						operation: {
-							value: 1
-						}
+						operation: '=',
+						value: 1,
+						settings:{}
 					}]
 				});
 
 				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
 					joins: {
-						'.id$test-2-foo': {
-							value: 456
-						}
+						'.id$test-2-foo': 456
 					}
 				});
 
@@ -1520,18 +1518,16 @@ describe('src/env/nexus.js', function(){
 					params: [{
 						series: 'test-2-foo',
 						path: 'id',
-						operation: {
-							value: 456
-						}
+						operation: '=',
+						value: 456,
+						settings: {}
 					}]
 				});
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
 					joins: {
-						'.fooId$test-3-hello': {
-							value: 123
-						}
+						'.fooId$test-3-hello': 123
 					}
 				});
 
@@ -1572,9 +1568,9 @@ describe('src/env/nexus.js', function(){
 					params: [{
 						series: 'test-3-hello',
 						path: 'fooId',
-						operation: {
-							value: 123
-						}
+						operation: '=',
+						value: 123,
+						settings: {}
 					}]
 				});
 
@@ -1692,9 +1688,9 @@ describe('src/env/nexus.js', function(){
 					params: [{
 						series: 'test-item',
 						path: 'id',
-						operation: {
-							value: 1
-						}
+						operation: '=',
+						value: 1,
+						settings: {}
 					}]
 				});
 
@@ -1748,18 +1744,16 @@ describe('src/env/nexus.js', function(){
 					params: [{
 						series: 'test-2-foo',
 						path: 'id',
-						operation: {
-							value: 456
-						}
+						operation: '=',
+						value: 456,
+						settings: {}
 					}]
 				});
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
 					joins: {
-						'.id$test-2-foo.id>.fooId$test-3-hello': {
-							value: 456
-						}
+						'.id$test-2-foo.id>.fooId$test-3-hello': 456
 					}
 				});
 

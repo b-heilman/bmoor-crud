@@ -188,9 +188,7 @@ const normalized = require('../schema/normalized.js');
 									clears.push(join.clear);
 								}
 
-								agg[join.path] = {
-									value: get(datum, join.datumPath)
-								};
+								agg[join.path] = get(datum, join.datumPath);
 
 								return agg;
 							}, 
@@ -230,9 +228,7 @@ const normalized = require('../schema/normalized.js');
 		// otherwise it should be a join...
 		const query = {
 			params: {
-				[this.structure.incomingSettings.key]: {
-					value: id
-				}
+				[this.structure.incomingSettings.key]: id
 			}
 		};
 
