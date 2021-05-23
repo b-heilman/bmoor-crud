@@ -4,7 +4,7 @@ const sinon = require('sinon');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
-const {deflate, inflate} = require('./normalized.js');
+const {deflate, inflate} = require('./normalization.js');
 
 describe('src/schema/normalized', function(){
 	let ctx = null;

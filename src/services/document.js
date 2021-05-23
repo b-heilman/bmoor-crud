@@ -8,7 +8,8 @@ const {compareChanges} = require('../schema/model.js');
 const {View} = require('../services/view.js');
 const {Path} = require('../graph/path.js');
 
-const normalized = require('../schema/normalized.js');
+const {Normalized, DatumRef} = require('../schema/normalized.js');
+const normalization = require('./normalization.js');
 
 /***
  * composite schema
@@ -241,7 +242,7 @@ const normalized = require('../schema/normalized.js');
 		await this.link();
 
 		if (!instructions){
-			instructions = new normalized.Schema(this.structure.nexus);
+			instructions = new Normalized(this.structure.nexus);
 		}
 
 		const transitions = this.structure.fields
@@ -293,11 +294,11 @@ const normalized = require('../schema/normalized.js');
 						ref = key;
 						content.$type = 'update-create';
 					} else {
-						ref = new normalized.DatumRef(series);
+						ref = new DatumRef(series);
 						content.$type = 'update';
 					}
 				} else {
-					ref = new normalized.DatumRef(series);
+					ref = new DatumRef(series);
 					content.$type = 'create';
 				}
 
@@ -395,7 +396,7 @@ const normalized = require('../schema/normalized.js');
 								} else {
 									datum = subSeries.create(
 										left,
-										new normalized.DatumRef(left),
+										new DatumRef(left),
 										'create', 
 										{}
 									);
@@ -409,7 +410,7 @@ const normalized = require('../schema/normalized.js');
 								} else {
 									s = subSeries.create(
 										right, 
-										new normalized.DatumRef(right), 
+										new DatumRef(right), 
 										'create', 
 										{}
 									);
@@ -444,7 +445,7 @@ const normalized = require('../schema/normalized.js');
 	}
 
 	async push(datum, ctx){
-		return normalized.deflate(
+		return normalization.deflate(
 			(await this.normalize(datum)).instructions,
 			this.structure.nexus,
 			ctx

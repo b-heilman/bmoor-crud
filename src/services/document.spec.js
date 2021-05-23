@@ -4,7 +4,7 @@ const sinon = require('sinon');
 
 const {Nexus, config} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
-const normalized = require('../schema/normalized.js');
+const normalization = require('./normalization.js');
 	
 describe('src/services/document.js', function(){
 	const sut = require('./document.js');
@@ -1111,7 +1111,7 @@ describe('src/services/document.js', function(){
 				name: 'category-update'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			const doc = new sut.Document(comp);
 			
@@ -1228,7 +1228,7 @@ describe('src/services/document.js', function(){
 				name: 'category-created'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			permissions = {
 				admin: true
@@ -1366,7 +1366,7 @@ describe('src/services/document.js', function(){
 				name: 'tag-created'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			permissions = {
 				admin: true
@@ -1479,7 +1479,7 @@ describe('src/services/document.js', function(){
 				name: 'tag-created'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			permissions = {
 				admin: true
@@ -1630,7 +1630,7 @@ describe('src/services/document.js', function(){
 				materialId: 'material-1-1'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			permissions = {
 				admin: true
@@ -1753,7 +1753,7 @@ describe('src/services/document.js', function(){
 				materialId: 'material-1-1'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			permissions = {
 				admin: true
@@ -2372,7 +2372,7 @@ describe('src/services/document.js', function(){
 				materialId: 'material-1-1'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			stubs.getChangeType.onCall(0)
 			.resolves(changeTypes.major);
@@ -2570,7 +2570,7 @@ describe('src/services/document.js', function(){
 				materialId: 'material-1-1'
 			});
 
-			stubs.deflateSpy = sinon.spy(normalized, 'deflate');
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
 
 			await doc.push({
 				id: 'user-id',
