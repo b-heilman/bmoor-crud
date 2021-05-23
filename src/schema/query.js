@@ -45,10 +45,27 @@ class QueryJoin {
 	}
 }
 
+class QuerySort {
+	constructor(series, path, ascending = true){
+		this.series = series;
+		this.path = path;
+		this.ascending = ascending;
+	}
+}
+
+class QueryPosition {
+	constructor(start, limit){
+		this.start = start;
+		this.limit = limit;
+	}
+}
+
 class Query {
 	constructor(baseModel){
 		this.base = baseModel;
 		this.models = {};
+		this.sorts = null;
+		this.position = null;
 
 		this.getModel(baseModel);
 	}
@@ -114,6 +131,18 @@ class Query {
 		return this;
 	}
 
+	setSorts(sorts){
+		this.sorts = sorts;
+
+		return this;
+	}
+
+	setPosition(position){
+		this.position = position;
+
+		return this;
+	}
+
 	getInOrder(){
 		// TODO: need to abstract this function to a common directed graph sort
 		// TODO: cache?
@@ -154,7 +183,7 @@ class Query {
 	}
 
 	toJSON(){
-		return this.getInOrder().reduce(
+		const res = this.getInOrder().reduce(
 			(agg, model) => {
 				const series = model.series;
 
@@ -190,6 +219,16 @@ class Query {
 				params: []
 			}
 		);
+
+		if (this.sort){
+			res.sort = this.sort;
+		}
+
+		if (this.position){
+			res.position = this.position;
+		}
+
+		return res;
 	}
 }
 
@@ -197,5 +236,7 @@ module.exports = {
 	QueryField,
 	QueryParam,
 	QueryJoin,
+	QuerySort,
+	QueryPosition,
 	Query
 };

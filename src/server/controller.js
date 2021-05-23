@@ -18,7 +18,7 @@ async function parseQuery(view, ctx){
 		params: await view.structure.clean('query', params, ctx),
 		joins,
 		sort,
-		limit
+		position: {limit}
 	};
 }
 

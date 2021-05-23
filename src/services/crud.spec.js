@@ -344,9 +344,14 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request.method).to.equal('create');
-					expect(request.model).to.equal('model-1');
-					expect(request.payload).to.deep.equal({
+					expect(request.method)
+					.to.equal('create');
+
+					expect(request.model)
+					.to.equal('model-1');
+
+					expect(request.payload)
+					.to.deep.equal({
 						name: 'name-1',
 						title: 'title-1'
 					});
@@ -405,37 +410,40 @@ describe('src/services/crud.js', function(){
 
 			service.configure({
 				execute: function(request){
-					expect(request)
+					expect(request.method)
+					.to.equal('read');
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
-						query: {
-							base: 'model-1',
-							models: {
-								'model-1': {
-									fields: [{
-										as: 'id',
-										path: 'id'
-									}, {
-										as: 'name',
-										path: 'name'
-									}, {
-										as: 'title',
-										path: 'title'
-									}, {
-										as: 'json',
-										path: 'json'
-									}],
-									joins: {},
-									params: [{
-										path: 'id',
-										operation: '=',
-										value: 123,
-										settings: {}
-									}],
-									schema: 'model-1'
-								}
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}, {
+							series: 'model-1',
+							as: 'json',
+							path: 'json'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						}]
 					});
 
 					return Promise.resolve([{
@@ -584,29 +592,30 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request)
+					expect(request.method)
+					.to.equal('read');
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
-						query: {
-							base: 'model-1',
-							models: {
-								'model-1': {
-									fields: [{
-										as: 'id',
-										path: 'id'
-									}, {
-										as: 'title',
-										path: 'title'
-									}, {
-										as: 'json',
-										path: 'json'
-									}],
-									joins: {},
-									params: [],
-									schema: 'model-1'
-								}
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}, {
+							series: 'model-1',
+							as: 'json',
+							path: 'json'
+						}],
+						params: []
 					});
 
 					return Promise.resolve([{
@@ -656,29 +665,31 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request)
+					expect(request.method)
+					.to.equal('read');
+
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
-						query: {
-							base: 'model-1',
-							models: {
-								'model-1': {
-									fields: [{
-										as: 'id',
-										path: 'id'
-									}, {
-										as: 'title',
-										path: 'title'
-									}, {
-										as: 'json',
-										path: 'json'
-									}],
-									joins: {},
-									params: [],
-									schema: 'model-1'
-								}
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}, {
+							series: 'model-1',
+							as: 'json',
+							path: 'json'
+						}],
+						params: []
 					});
 
 					return Promise.resolve([{
@@ -783,34 +794,36 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request)
+					expect(request.method)
+					.to.equal('read');
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
-						query: {
-							base: 'model-1',
-							models: {
-								'model-1': {
-									fields: [{
-										as: 'id',
-										path: 'id'
-									}, {
-										as: 'name',
-										path: 'name'
-									}, {
-										as: 'title',
-										path: 'title'
-									}],
-									joins: {},
-									params: [{
-										path: 'id',
-										operation: '=',
-										value: [1,2,3],
-										settings: {}
-									}],
-									schema: 'model-1'
-								}
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: [1,2,3],
+							settings: {}
+						}]
 					});
 
 					return Promise.resolve([{
@@ -907,34 +920,36 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request)
+					expect(request.method)
+					.to.equal('read');
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
-						query: {
-							base: 'model-1',
-							models: {
-								'model-1': {
-									fields: [{
-										as: 'id',
-										path: 'id'
-									}, {
-										as: 'name',
-										path: 'name'
-									}, {
-										as: 'title',
-										path: 'title'
-									}],
-									joins: {},
-									params: [{
-										path: 'name',
-										operation: '=',
-										value: 'test-1',
-										settings: {}
-									}],
-									schema: 'model-1'
-								}
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'name',
+							operation: '=',
+							value: 'test-1',
+							settings: {}
+						}]
 					});
 
 					return Promise.resolve([{
@@ -986,49 +1001,54 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request)
+					expect(request.method)
+					.to.equal('read');
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						method: 'read',
-						query: {
-							base: 'model-1',
-							models: {
-								'model-1': {
-									fields: [{
-										as: 'id',
-										path: 'id'
-									}, {
-										as: 'name',
-										path: 'name'
-									}, {
-										as: 'title',
-										path: 'title'
-									}],
-									joins: {},
-									params: [{
-										path: 'id',
-										operation: '=',
-										value: 1,
-										settings: {}
-									}, {
-										path: 'name',
-										operation: 'gt',
-										value: 'test-1.1',
-										settings: {}
-									}, {
-										path: 'name',
-										operation: 'lt',
-										value: 'test-1.9',
-										settings: {}
-									}, {
-										path: 'title',
-										operation: '=',
-										value: 'title-1',
-										settings: {}
-									}],
-									schema: 'model-1'
-								}
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: 1,
+							settings: {}
+						}, {
+							series: 'model-1',
+							path: 'name',
+							operation: 'gt',
+							value: 'test-1.1',
+							settings: {}
+						}, {
+							series: 'model-1',
+							path: 'name',
+							operation: 'lt',
+							value: 'test-1.9',
+							settings: {}
+						}, {
+							series: 'model-1',
+							path: 'title',
+							operation: '=',
+							value: 'title-1',
+							settings: {}
+						}]
 					});
 
 					return Promise.resolve([{
@@ -1137,32 +1157,36 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request.method).to.equal('update');
-					expect(request.query)
+					expect(request.method)
+					.to.equal('update');
+
+					expect(request.query.toJSON())
 					.to.deep.equal({
-						base: 'model-1',
-						models: {
-							'model-1': {
-								fields: [{
-									as: 'id',
-									path: 'id'
-								}, {
-									as: 'name',
-									path: 'name'
-								}, {
-									as: 'title',
-									path: 'title'
-								}],
-								joins: {},
-								params: [{
-									path: 'id',
-									operation: '=',
-									value: '1',
-									settings: {}
-								}],
-								schema: 'model-1'
-							}
-						}
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: '1',
+							settings: {}
+						}]
 					});
 					expect(request.payload)
 					.to.deep.equal({
@@ -1229,31 +1253,36 @@ describe('src/services/crud.js', function(){
 
 			service.configure({
 				execute: function(request){
-					expect(request.method).to.equal('update');
-					expect(request.query).to.deep.equal({
-						base: 'model-1',
-						models: {
-							'model-1': {
-								fields: [{
-									as: 'id',
-									path: 'id'
-								}, {
-									as: 'name',
-									path: 'name'
-								}, {
-									as: 'title',
-									path: 'title'
-								}],
-								joins: {},
-								params: [{
-									path: 'id',
-									operation: '=',
-									value: '1',
-									settings: {}
-								}],
-								schema: 'model-1'
-							}
-						}
+					expect(request.method)
+					.to.equal('update');
+
+					expect(request.query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: '1',
+							settings: {}
+						}]
 					});
 					expect(request.payload)
 					.to.deep.equal({
@@ -1326,31 +1355,36 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request.method).to.equal('delete');
-					expect(request.query).to.deep.equal({
-						base: 'model-1',
-						models: {
-							'model-1': {
-								fields: [{
-									as: 'id',
-									path: 'id'
-								}, {
-									as: 'name',
-									path: 'name'
-								}, {
-									as: 'title',
-									path: 'title'
-								}],
-								joins: {},
-								params: [{
-									path: 'id',
-									operation: '=',
-									value: '1',
-									settings: {}
-								}],
-								schema: 'model-1'
-							}
-						}
+					expect(request.method)
+					.to.equal('delete');
+
+					expect(request.query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: '1',
+							settings: {}
+						}]
 					});
 
 					return Promise.resolve([{
@@ -1405,31 +1439,36 @@ describe('src/services/crud.js', function(){
 
 			await service.configure({
 				execute: function(request){
-					expect(request.method).to.equal('delete');
-					expect(request.query).to.deep.equal({
-						base: 'model-1',
-						models: {
-							'model-1': {
-								fields: [{
-									as: 'id',
-									path: 'id'
-								}, {
-									as: 'name',
-									path: 'name'
-								}, {
-									as: 'title',
-									path: 'title'
-								}],
-								joins: {},
-								params: [{
-									path: 'id',
-									operation: '=',
-									value: '1',
-									settings: {}
-								}],
-								schema: 'model-1'
-							}
-						}
+					expect(request.method)
+					.to.equal('delete');
+
+					expect(request.query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'model-1',
+							as: 'id',
+							path: 'id'
+						}, {
+							series: 'model-1',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'model-1',
+							as: 'title',
+							path: 'title'
+						}],
+						params: [{
+							series: 'model-1',
+							path: 'id',
+							operation: '=',
+							value: '1',
+							settings: {}
+						}]
 					});
 
 					return Promise.resolve([{

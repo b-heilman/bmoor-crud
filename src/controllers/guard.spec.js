@@ -85,7 +85,9 @@ describe('src/controller/guard.js', function(){
 					.to.deep.equal({
 						sort: null,
 						joins: [],
-						limit: null,
+						position: {
+							limit: null
+						},
 						params: {
 							zwei: 'foo'
 						}
@@ -514,7 +516,9 @@ describe('src/controller/guard.js', function(){
 						},
 						joins: [],
 						sort: null,
-						limit: null
+						position: {
+							limit: null
+						}
 					});
 
 					const args1 = stubs.delete.getCall(0).args;

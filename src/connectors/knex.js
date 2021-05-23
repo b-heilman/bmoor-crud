@@ -51,7 +51,9 @@ const scalarMethods = {
 };
 
 function translateSelect(stmt){
-	const settings = stmt.query.getInOrder().reduce(
+	const query = stmt.query;
+
+	const settings = query.getInOrder().reduce(
 		(agg, model) => {
 			const modelName = model.schema;
 			const modelRef = model.series;
@@ -110,17 +112,25 @@ function translateSelect(stmt){
 		}
 	);
 
+	const position = query.position;
 	return {
 		select: `${settings.select.join(',\n\t')}`,
 		from: `${settings.from.join('\n\t')}`,
 		where: settings.where.length ?
 			settings.where.join('\n\tAND ') : null,
-		params: settings.params
+		params: settings.params,
+		orderBy: query.sorts ? query.sorts.map(
+				order => `\`${order.series}\`.\`${order.path}\` `+
+					(order.ascending ? 'ASC' : 'DESC')
+			).join(',') : null,
+		limit: position ?
+			(position.start ? position.start+','+position.limit : position.limit) :
+			null
 	};
 }
 
 const connector = {
-	execute: function(stmt){
+	execute: async function(stmt){
 		const knex = config.get('knex');
 
 		if (!knex){
@@ -133,13 +143,18 @@ const connector = {
 		if (stmt.method === 'read'){
 			const query = translateSelect(stmt);
 
-			let sql = `
-				SELECT ${query.select}
-				FROM ${query.from}
-			`;
+			let sql = `SELECT ${query.select} \nFROM ${query.from}`;
 
 			if (query.where){
-				sql += `WHERE ${query.where}`;
+				sql += `\nWHERE ${query.where}`;
+			}
+
+			if (query.orderBy){
+				sql += `\nORDER BY ${query.orderBy}`;
+			}
+
+			if (query.limit){
+				sql += `\nLIMIT ${query.limit}`;
 			}
 
 			const rtn = knex.raw(sql, query.params)

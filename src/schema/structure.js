@@ -6,7 +6,7 @@ const {create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
-const {Query, QueryField, QueryParam, QueryJoin} = require('./query.js');
+const {Query, QueryField, QueryParam, QueryJoin, QuerySort, QueryPosition} = require('./query.js');
 
 const types = new Config({
 	json: {
@@ -519,6 +519,37 @@ class Structure {
 				}, 
 				Promise.resolve(true)
 			);
+		}
+
+		if (settings.sort){
+			const sorts = settings.sort.split(',')
+				.map(option => {
+					let ascending = true;
+					let char = option[0];
+
+					if (char === '-'){
+						ascending = false;
+						option = option.substr(1);
+					} else if (char === '+'){
+						option = option.substr(1);
+					}
+
+					let base = query.base;
+					if (option[0] === '$'){
+						const pos = option.indexOf('.');
+
+						base = option.substr(1, pos);
+						option = option.substr(pos+1);
+					}
+
+					return new QuerySort(base, option, ascending);
+				});
+
+			query.setSort(sorts);
+		}
+
+		if (settings.position && settings.position.limit){
+			query.setPosition(new QueryPosition(0, settings.position.limit));
 		}
 
 		return query;

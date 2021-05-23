@@ -168,7 +168,9 @@ describe('src/controller/synthetic.js', function(){
 					params: {name: 'req-1'},
 					joins: [],
 					sort: null,
-					limit: null
+					position: {
+						limit: null
+					}
 				});
 
 				expect(res)
