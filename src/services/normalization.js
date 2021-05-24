@@ -33,6 +33,7 @@ async function getDatum(service, query, ctx){
 }
 
 async function ensure(mapper, modelName, payload, ctx){
+	console.log('ensure', modelName);
 	return Promise.all(mapper.getByDirection(modelName, 'outgoing')
 	.map( 
 		async (link) => {
@@ -42,7 +43,7 @@ async function ensure(mapper, modelName, payload, ctx){
 				// if it's a DatumRef, what will the value be?
 				if (typeof(value) === 'string'){
 					// this means it's a reference string
-					
+					console.log('awaiting', link.name, value);
 					let foreign = await ctx.waitlist.await(link.name, value);
 
 					payload[link.local] = foreign.key;
@@ -114,6 +115,7 @@ async function install(datum, service, master, mapper, ctx){
 	}
 
 	// when this thing is processed, update any references to it
+	console.log('resolving', service, ref);
 	ctx.waitlist.resolve(service, ref, rtn);
 
 	return rtn;
@@ -145,12 +147,12 @@ async function deflate(schema, nexus, ctx){
 	// If I don't do this, I can make alterations to the incoming data, causing a possible
 	// mutation.  I might make this an option in the future to not run if you want to save
 	// data
-	master = master.lock();
+	master = master.clone();
 
 	// for now, I'm going to convert it back.  In the future I will write this
 	//  to 
 	const references = Array.from(master.keys());
-	
+	console.log('=> references', references);
 	if (!ctx){
 		throw create(`missing ctx in deflate`, {
 			status: 404,
@@ -174,12 +176,16 @@ async function deflate(schema, nexus, ctx){
 
 	return order.reduce(
 		async (prom, serviceName) => {
+			console.log('serviceName', serviceName);
 			const service = await nexus.loadCrud(serviceName);
 
-			return master.get(serviceName).reduce(
+			return master.get(serviceName).toArray()
+			.reduce(
 				async (prom, datum) => {
+					console.log('cp-1');
 					const agg = await prom;
 
+					console.log('cp-2');
 					const res = await install(
 						datum,
 						service,
@@ -188,6 +194,7 @@ async function deflate(schema, nexus, ctx){
 						ctx
 					);
 
+					console.log('cp-3');
 					agg.push(res);
 
 					return agg;

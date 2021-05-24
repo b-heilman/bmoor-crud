@@ -269,10 +269,11 @@ const normalization = require('./normalization.js');
 			{}
 		);
 
-		const doc = {};
 		const references = {};
 
 		let changeType = null;
+
+		const seriesSession = instructions.getSession();
 
 		const cbs = await Promise.all(
 			Object.keys(transitions)
@@ -288,30 +289,23 @@ const normalization = require('./normalization.js');
 				
 				const key = service.structure.getKey(content);
 				let ref = null;
+				let action = null;
 
 				if (key){
 					if (typeof(key) === 'string' && key.charAt(0) === '$'){
-						ref = key;
-						content.$type = 'update-create';
+						action = 'update-create';
 					} else {
-						ref = new DatumRef(series);
-						content.$type = 'update';
+						action = 'update';
 					}
+
+					ref = new DatumRef(key);
 				} else {
-					ref = new DatumRef(series);
-					content.$type = 'create';
+					ref = new DatumRef();
+					action = 'create';
 				}
 
-				content.$ref = ref;
-				references[series] = ref;
-
-				let model = doc[trans.model];
-				if (!model){
-					model = [];
-					doc[trans.model] = model;
-				}
-
-				model.push(content);
+				seriesSession.getDatum(series, ref, action)
+					.setContent(content);
 
 				// generate a series of call back methods to be called once
 				// everything is resolved
@@ -329,12 +323,10 @@ const normalization = require('./normalization.js');
 
 		await cbs.map(cb => cb());
 
-		const series = instructions.import(doc);
-		
 		// I don't like this, but for now I'm gonna put hooks in that allow.
 		// eventually I want this to be a function of getChangeType from model
 		if (this.structure.incomingSettings.getChangeType){
-			changeType = await this.structure.incomingSettings.getChangeType(series);
+			changeType = await this.structure.incomingSettings.getChangeType(seriesSession);
 		}
 
 		await Promise.all(this.subs.map(
@@ -350,12 +342,13 @@ const normalization = require('./normalization.js');
 
 				return Promise.all(content.map(
 					async (subDatum) => {
-						const {series: subSeries, changeType: subChange} = 
+						const {seriesSession: subSeries, changeType: subChange} = 
 							await sub.document.normalize(subDatum, instructions);
 
 						changeType = compareChanges(changeType, subChange);
 
 						let found = false;
+						console.log('subSeries', subSeries);
 						const access = accessor.filter(d => {
 							if (!subSeries.has(d.model)){
 								return true;
@@ -394,38 +387,28 @@ const normalization = require('./normalization.js');
 								if (target){
 									datum = target[0];
 								} else {
-									datum = subSeries.create(
-										left,
-										new DatumRef(left),
-										'create', 
-										{}
-									);
+									datum = subSeries.stub(left);
 								}
 
-								const source = prev.series.get(right);
+								const source = prev.seriesSession.get(right);
 								let s = null;
 
 								if (source){
 									s = source[0];
 								} else {
-									s = subSeries.create(
-										right, 
-										new DatumRef(right), 
-										'create', 
-										{}
-									);
+									s = subSeries.stub(right);
 								}
 
 								datum.setField(field, s.getReference());
 
 								return {
 									model: cur.model,
-									series: subSeries
+									seriesSession: subSeries
 								};
 							}, 
 							{
 								model: root.model,
-								series
+								seriesSession
 							}
 						);
 					}
@@ -434,11 +417,13 @@ const normalization = require('./normalization.js');
 		));
 
 		if (this.structure.incomingSettings.onChange && changeType){
-			await this.structure.incomingSettings.onChange(changeType, series);
+			await this.structure.incomingSettings.onChange(changeType, seriesSession);
 		}
 
+		console.log('-> seriesSession', seriesSession);
+
 		return {
-			series,
+			seriesSession,
 			instructions,
 			changeType
 		};

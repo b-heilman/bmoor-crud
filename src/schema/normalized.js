@@ -5,8 +5,16 @@ const {get, set} = require('bmoor/src/core.js');
 // into a series of service calls
 
 class DatumRef {
-	constructor(value){
+	constructor(value=null){
 		this.value = value;
+	}
+
+	setValue(value){
+		this.value = value;
+	}
+
+	getValue(){
+		return this.value;
 	}
 
 	toJson(){
@@ -15,9 +23,13 @@ class DatumRef {
 }
 
 class Datum {
-	constructor(ref, action, content){
+	constructor(ref, action){
 		this.ref = ref;
 		this.action = action;
+		this.content = null;
+	}
+
+	setContent(content){
 		this.content = content;
 	}
 
@@ -34,10 +46,10 @@ class Datum {
 	}
 
 	getReference(){
-		return this.ref;
+		return this.ref.value;
 	}
 
-	toJSON(){
+	writeTo(tgt = {}){
 		return Object.keys(this.content)
 		.reduce(
 			(rtn, path) => {
@@ -47,76 +59,42 @@ class Datum {
 
 				return rtn;
 			},
-			{
-				$ref: this.ref,
-				$type: this.action
-			}
+			tgt
 		);
 	}
 
-	lock(){
-		return new Datum(
-			this.ref,
-			this.action,
-			Object.keys(this.content) // TODO: need a better way to do this
-			.reduce(
-				(rtn, path) => {
-					const d = this.content[path];
-
-					rtn[path] = d instanceof DatumRef ? d.value : d;
-
-					return rtn;
-				},
-				{}
-			)
-		);
+	toJSON(){
+		return this.writeTo({
+			$ref: this.ref.value,
+			$type: this.action
+		});
 	}
 }
 
-class SeriesMap extends Map {
-	constructor(series, parent){
+class Series extends Map {
+	constructor(series){
 		super();
 
-		this.parent = parent;
 		this.series = series;
 	}
 
-	install(index, value){
-		if (this.has(index)){
-			this.get(index).push(value);
-		} else {
-			this.set(index, [value]);
+	getDatum(ref, action){
+		if (!ref.value){
+			ref.setValue(this.series+':'+this.size);
 		}
 
-		if (this.parent){
-			this.parent.install(index, value);
-		}
-	}
-
-	create(index, ref, action, content){
 		// the concept if someone builds a smart series, they can
 		// attach DatumRefs in places and we will update inline
-		let alias = null;
-		if (ref instanceof(DatumRef)){
-			ref.value += ':'+this.series;
-			alias = ref.value;
+		if (this.has(ref.value)){
+			return this.get(ref.value);
 		} else {
-			alias = ref;
+			const datum = new Datum(ref, action);
+
+			this.set(ref.value, datum);
+
+			return datum;
 		}
-
-		const datum = new Datum(alias, action, content);
-
-		this.install(index, datum);
-
-		return datum;
-	}
-
-	import(index, arr){
-		return arr.map(command => {
-			const {$ref: ref, $type: action, ...content} = command;
-
-			return this.create(index, ref, action, content);
-		});
+		
 	}
 
 	process(index, cb){
@@ -124,52 +102,118 @@ class SeriesMap extends Map {
 			return this.get(index).map(cb);
 		}
 	}
+
+	toArray(){
+		return Array.from(this, ([name, value]) => value);
+	}
+
+	toJSON(){
+		const rtn = [];
+
+		for(let datum of this.values()){
+			rtn.push(datum.toJSON());
+		}
+
+		return rtn;
+	}
 }
 
-class Normalized extends SeriesMap {
+class Session extends Map {
+	constructor(normalized){
+		super();
+		
+		this.normalized = normalized;
+	}
+
+	add(series, datum){
+		if (this.has(series)){
+			this.get(series).push(datum);
+		} else {
+			this.set(series, [datum]);
+		}
+
+		return datum;
+	}
+
+	stub(series){
+		const datum = this.normalized.getDatum(
+			series,
+			new DatumRef(),
+			'create'
+		);
+
+		datum.setContent({});
+
+		return this.add(
+			series,
+			datum
+		);
+	}
+
+	getDatum(series, ref, action){
+		return this.add(
+			series,
+			this.normalized.getDatum(series, ref, action)
+		);
+	}
+}
+
+class Normalized extends Map {
 	constructor(nexus){
-		super(0);
+		super();
 
 		this.nexus = nexus;
-		this.position = 1;
 	}
 
-	nextSeries(){
-		const series = new SeriesMap(this.position, this);
-
-		this.position++;
-
-		return series;
+	getSession(){
+		return new Session(this);
 	}
 
-	import(schema){
-		return Object.keys(schema).reduce(
-			(master, model) => {
-				master.import(model, schema[model]);
+	getDatum(series, ref, action){
+		if (this.has(series)){
+			return this.get(series).getDatum(ref, action);
+		} else {
+			const map = new Series(series);
 
-				return master;
-			},
-			this.nextSeries()
+			this.set(series, map);
+
+			const datum = map.getDatum(ref, action);
+
+			return datum;
+		}
+	}
+
+	import(content){
+		return Object.keys(content).map(
+			(series) => content[series].map(
+				(datum) => {
+					const {$ref: ref, $type: action, ...content} = datum;
+
+					this.getDatum(series, new DatumRef(ref), action)
+						.setContent(content);
+				}
+			)
 		);
 	}
 
 	toJSON(){
 		const agg = {};
 
-		for (let [index, arr] of this.entries()) {
-			agg[index] = arr.map(datum => datum.toJSON());
+		for (let [index, series] of this.entries()) {
+			agg[index] = series.toJSON();
 		}
 
 		return agg;
 	}
 
-	lock(){
+	clone(){
 		const schema = new Normalized(this.nexus);
 
-		schema.position = this.position;
-
-		for (let [index, arr] of this.entries()) {
-			schema.set(index, arr.map(datum => datum.lock()));
+		for (let [index, series] of this.entries()) {
+			for (let datum of series.values()){
+				schema.getDatum(index, datum.ref, datum.action)
+					.setContent(datum.writeTo({}));
+			}
 		}
 
 		return schema;
