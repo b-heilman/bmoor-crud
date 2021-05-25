@@ -304,8 +304,11 @@ const normalization = require('./normalization.js');
 					action = 'create';
 				}
 
-				seriesSession.getDatum(series, ref, action)
-					.setContent(content);
+				references[series] = ref;
+
+				const newDatum = seriesSession.getDatum(series, ref, action);
+
+				newDatum.setContent(content);
 
 				// generate a series of call back methods to be called once
 				// everything is resolved
@@ -314,7 +317,10 @@ const normalization = require('./normalization.js');
 
 					if (connections){
 						connections.forEach(connection => {
-							set(content, connection.local, references[connection.name]);
+							newDatum.setField(
+								connection.local,
+								references[connection.name]
+							);
 						});	
 					}
 				};
@@ -348,7 +354,7 @@ const normalization = require('./normalization.js');
 						changeType = compareChanges(changeType, subChange);
 
 						let found = false;
-						console.log('subSeries', subSeries);
+						
 						const access = accessor.filter(d => {
 							if (!subSeries.has(d.model)){
 								return true;
@@ -419,8 +425,6 @@ const normalization = require('./normalization.js');
 		if (this.structure.incomingSettings.onChange && changeType){
 			await this.structure.incomingSettings.onChange(changeType, seriesSession);
 		}
-
-		console.log('-> seriesSession', seriesSession);
 
 		return {
 			seriesSession,

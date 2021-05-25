@@ -1021,7 +1021,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	describe('::push', function(){
+	xdescribe('::push', function(){
 		it('should load decode a object push - 1', async function(){
 			const items = await nexus.loadCrud('test-item');
 
@@ -1162,7 +1162,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	describe('sub-composites', function(){
+	xdescribe('sub-composites', function(){
 		let items = null;
 		let families = null;
 		let categories = null;
@@ -1555,7 +1555,7 @@ describe('src/services/document.js', function(){
 	});
 
 	//------------ pivot table 
-	describe('pivot table', function(){
+	xdescribe('pivot table', function(){
 		let items = null;
 		let itemMaterials = null;
 		let materials = null;
@@ -1835,7 +1835,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	describe('change type - versioning', function(){
+	xdescribe('change type - versioning', function(){
 		const changeTypes = require('../schema/model.js').config.get('changeTypes');
 
 		let items = null;
@@ -2113,7 +2113,7 @@ describe('src/services/document.js', function(){
 			});
 		});
 
-		describe('assign getChangeType via extends', async function(){
+		xdescribe('assign getChangeType via extends', async function(){
 			let typeCb = null;
 			let changeCb = null;
 
@@ -2221,7 +2221,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	describe('multi tiered', function(){
+	xdescribe('multi tiered', function(){
 		let doc = null;
 
 		const changeTypes = require('../schema/model.js').config.get('changeTypes');

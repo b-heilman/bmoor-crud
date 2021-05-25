@@ -32,7 +32,7 @@ class Waitlist {
 		if (!rtn){
 			rtn = new Promise((resolve, reject) => {
 				const looking = `${modelName}.${ref}`;
-				console.log('looking', looking);
+				console.log('looking for', looking);
 				const timeout = config.get('timeout');
 
 				const clear = setTimeout(function(){
@@ -65,7 +65,7 @@ class Waitlist {
 		waiting[ref] = response;
 
 		const triggering = `${modelName}.${ref}`;
-		console.log('triggering', triggering);
+		console.log('triggering', triggering, response);
 		this.broadcast.trigger(triggering, response);
 	}
 }

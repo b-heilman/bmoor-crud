@@ -26,19 +26,19 @@ class Datum {
 	constructor(ref, action){
 		this.ref = ref;
 		this.action = action;
-		this.content = null;
+		this._content = null;
 	}
 
 	setContent(content){
-		this.content = content;
+		this._content = Object.assign({}, content);
 	}
 
 	setField(field, value){
-		set(this.content, field, value);
+		set(this._content, field, value);
 	}
 
 	getField(field){
-		return get(this.content, field);
+		return get(this._content, field);
 	}
 
 	getAction(){
@@ -50,10 +50,10 @@ class Datum {
 	}
 
 	writeTo(tgt = {}){
-		return Object.keys(this.content)
+		return Object.keys(this._content)
 		.reduce(
 			(rtn, path) => {
-				const d = this.content[path];
+				const d = this._content[path];
 
 				rtn[path] = d instanceof DatumRef ? d.value : d;
 
@@ -80,7 +80,7 @@ class Series extends Map {
 
 	getDatum(ref, action){
 		if (!ref.value){
-			ref.setValue(this.series+':'+this.size);
+			ref.setValue(this.series+':'+(this.size+1));
 		}
 
 		// the concept if someone builds a smart series, they can
