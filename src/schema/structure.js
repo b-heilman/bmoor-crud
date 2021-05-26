@@ -440,11 +440,27 @@ class Structure {
 		);
 
 		if (settings.params){
-			query.addParams(
-				query.base,
-				Object.keys(settings.params).map(
-					field => buildParam(field, settings.params[field])
-				)
+			Object.keys(settings.params).map(
+				field => {
+					let path = null;
+					let series = query.base;
+
+					const params = settings.params[field];
+
+					if (field[0] === '$'){
+						const pos = field.indexOf('.');
+
+						series = field.substr(1, pos-1);
+						path = field.substr(pos+1);
+					} else {
+						path = field;
+					}
+
+					query.addParams(
+						series,
+						[buildParam(path, params)]
+					);
+				}
 			);
 		}
 
@@ -538,7 +554,7 @@ class Structure {
 					if (option[0] === '$'){
 						const pos = option.indexOf('.');
 
-						base = option.substr(1, pos);
+						base = option.substr(1, pos-1);
 						option = option.substr(pos+1);
 					}
 

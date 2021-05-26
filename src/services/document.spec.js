@@ -883,6 +883,9 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const res = await doc.query({
+				params: {
+					'$test-category.foo': 'bar'
+				},
 				joins: {
 					'$test-category.name': 'foo-bar'
 				}
@@ -921,6 +924,12 @@ describe('src/services/document.js', function(){
 					path: 'name'
 				}],
 				params: [{
+					series: 'test-category',
+					path: 'foo',
+					operation: '=',
+					settings: {},
+					value: 'bar'
+				}, {
 					series: 'test-category',
 					path: 'name',
 					operation: '=',
@@ -1005,23 +1014,23 @@ describe('src/services/document.js', function(){
 			expect(res.instructions.toJSON())
 			.to.deep.equal({
 				'test-item': [{
-					$ref: 'test-item:1',
+					$ref: 123,
 					$type: 'update',
 					id: 123,
 					name: 'item-1'
 				}],
 				'test-category': [{
-					$ref: 'test-category:1',
+					$ref: 456,
 					$type: 'update',
 					id: 456,
 					name: 'category-1',
-					itemId: 'test-item:1'
+					itemId: 123
 				}]
 			});
 		});
 	});
 
-	xdescribe('::push', function(){
+	describe('::push', function(){
 		it('should load decode a object push - 1', async function(){
 			const items = await nexus.loadCrud('test-item');
 
@@ -1128,17 +1137,17 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-item': [{
-					$ref: 'test-item:1',
+					$ref: 123,
 					$type: 'update',
 					id: 123,
 					name: 'item-1'
 				}],
 				'test-category': [{
-					$ref: 'test-category:1',
+					$ref: 456,
 					$type: 'update',
 					id: 456,
 					name: 'category-1',
-					itemId: 'test-item:1'
+					itemId: 123
 				}]
 			});
 
@@ -1162,7 +1171,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	xdescribe('sub-composites', function(){
+	describe('sub-composites', function(){
 		let items = null;
 		let families = null;
 		let categories = null;
@@ -1256,36 +1265,36 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
-					$ref: 'test-family:1',
+					$ref: 12,
 					$type: 'update',
 					id: 12,
 					name: 'family-1'
 				}],
 				'test-item': [{
-					$ref: 'test-item:2',
+					$ref: 34,
 					$type: 'update',
 					id: 34,
 					name: 'item-1'
 				},{
-					$ref: 'test-item:3',
+					$ref: 78,
 					$type: 'update',
 					id: 78,
 					name: 'item-2'
 				}],
 				'test-category': [{
-					$ref: 'test-category:2',
+					$ref: 56,
 					$type: 'update',
 					id: 56,
 					name: 'category-1',
-					itemId: 'test-item:2',
-					familyId: 'test-family:1'
+					itemId: 34,
+					familyId: 12
 				},{
-					$ref: 'test-category:3',
+					$ref: 'test-category:2',
 					$type: 'create',
 					id: undefined,
 					name: 'category-2',
-					itemId: 'test-item:3',
-					familyId: 'test-family:1'
+					itemId: 78,
+					familyId: 12
 				}]
 			});
 
@@ -1390,7 +1399,7 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
-					$ref: 'test-family:1',
+					$ref: 12,
 					$type: 'update',
 					id: 12,
 					name: 'family-name-1'
@@ -1400,15 +1409,15 @@ describe('src/services/document.js', function(){
 					$type: 'create',
 					id: undefined,
 					name: 'category-name-1',
-					familyId: 'test-family:1'
+					familyId: 12
 				}],
 				'test-tag': [{
-					$ref: 'test-tag:2',
+					$ref: 'test-tag:1',
 					$type: 'create',
 					name: 'tag-name-1',
 					categoryId: 'test-category:1'
 				},{
-					$ref: 'test-tag:3',
+					$ref: 'test-tag:2',
 					$type: 'create',
 					name: 'tag-name-2',
 					categoryId: 'test-category:1'
@@ -1502,30 +1511,30 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
-					$ref: 'test-family:1',
+					$ref: 12,
 					$type: 'update',
 					id: 12,
 					name: 'family-name-1'
 				}],
 				'test-category': [{
+					$ref: 'test-category:1',
+					$type: 'create',
+					familyId: 12
+				},{
 					$ref: 'test-category:2',
 					$type: 'create',
-					familyId: 'test-family:1'
-				},{
-					$ref: 'test-category:3',
-					$type: 'create',
-					familyId: 'test-family:1'
+					familyId: 12
 				}],
 				'test-tag': [{
-					$ref: 'test-tag:2',
+					$ref: 'test-tag:1',
 					$type: 'create',
 					name: 'tag-name-1',
-					categoryId: 'test-category:2'
+					categoryId: 'test-category:1'
 				},{
-					$ref: 'test-tag:3',
+					$ref: 'test-tag:2',
 					$type: 'create',
 					name: 'tag-name-2',
-					categoryId: 'test-category:3'
+					categoryId: 'test-category:2'
 				}]
 			});
 
@@ -1555,7 +1564,7 @@ describe('src/services/document.js', function(){
 	});
 
 	//------------ pivot table 
-	xdescribe('pivot table', function(){
+	describe('pivot table', function(){
 		let items = null;
 		let itemMaterials = null;
 		let materials = null;
@@ -1656,17 +1665,17 @@ describe('src/services/document.js', function(){
 					name: 'item-name-1'
 				}],
 				'test-material': [{
-					$ref: 'test-material:2',
+					$ref: 'test-material:1',
 					$type: 'create',
 					id: undefined,
 					name: 'material-name-1'
 				}],
 				'test-item-material': [{
-					$ref: 'test-item-material:2',
+					$ref: 'test-item-material:1',
 					$type: 'create',
 					id: undefined,
 					itemId: 'test-item:1',
-					materialId: 'test-material:2',
+					materialId: 'test-material:1',
 					mask: undefined
 				}]
 			});
@@ -1777,23 +1786,23 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-item': [{
-					$ref: 'test-item:1',
+					$ref: 'item-id-1',
 					$type: 'update',
 					id: 'item-id-1',
 					name: 'item-name-10'
 				}],
 				'test-material': [{
-					$ref: 'test-material:2',
+					$ref: 'material-1',
 					$type: 'update',
 					id: 'material-1',
 					name: 'material-name-10'
 				}],
 				'test-item-material': [{
-					$ref: 'test-item-material:2',
+					$ref: 'join-1',
 					$type: 'update',
 					id: 'join-1',
-					itemId: 'test-item:1',
-					materialId: 'test-material:2',
+					itemId: 'item-id-1',
+					materialId: 'material-1',
 					mask: 'it-is-a-cowl'
 				}]
 			});
@@ -1835,7 +1844,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	xdescribe('change type - versioning', function(){
+	describe('change type - versioning', function(){
 		const changeTypes = require('../schema/model.js').config.get('changeTypes');
 
 		let items = null;
@@ -2113,7 +2122,7 @@ describe('src/services/document.js', function(){
 			});
 		});
 
-		xdescribe('assign getChangeType via extends', async function(){
+		describe('assign getChangeType via extends', async function(){
 			let typeCb = null;
 			let changeCb = null;
 
@@ -2221,7 +2230,7 @@ describe('src/services/document.js', function(){
 		});
 	});
 
-	xdescribe('multi tiered', function(){
+	describe('multi tiered', function(){
 		let doc = null;
 
 		const changeTypes = require('../schema/model.js').config.get('changeTypes');
@@ -2416,70 +2425,70 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-user': [{
-					'$ref': 'test-user:1',
+					'$ref': 'user-id-1',
 					'$type': 'update',
 					'id': 'user-id-1',
 					'name': 'user-name-10'
 				}],
 				'test-item': [{
-					'$ref': 'test-item:2',
+					'$ref': 'item-id-1',
 					'$type': 'update',
 					'id': 'item-id-1',
 					'name': 'item-name-10.1',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id-1'
 				},
 				{
-					'$ref': 'test-item:3',
+					'$ref': 'item-id-2',
 					'$type': 'update',
 					'id': 'item-id-2',
 					'name': 'item-name-20.2',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id-1'
 				},
 				{
-					'$ref': 'test-item:4',
+					'$ref': 'item-id-3',
 					'$type': 'update',
 					'id': 'item-id-3',
 					'name': 'item-name-30.1',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id-1'
 				}],
 				'test-material': [{
-					'$ref': 'test-material:5',
+					'$ref': 'material-1',
 					'$type': 'update',
 					'id': 'material-1',
 					'name': 'material-name-10'
 				},
 				{
-					'$ref': 'test-material:6',
+					'$ref': 'material-2',
 					'$type': 'update',
 					'id': 'material-2',
 					'name': 'material-name-20'
 				},
 				{
-					'$ref': 'test-material:7',
+					'$ref': 'material-3',
 					'$type': 'update',
 					'id': 'material-3',
 					'name': 'material-name-30'
 				}],
 				'test-item-material': [{
-					'$ref': 'test-item-material:5',
+					'$ref': 'join-1',
 					'$type': 'update',
 					'id': 'join-1',
-					'materialId': 'test-material:5',
-					'itemId': 'test-item:2'
+					'materialId': 'material-1',
+					'itemId': 'item-id-1'
 				},
 				{
-					'$ref': 'test-item-material:6',
+					'$ref': 'join-2',
 					'$type': 'update',
 					'id': 'join-2',
-					'materialId': 'test-material:6',
-					'itemId': 'test-item:3'
+					'materialId': 'material-2',
+					'itemId': 'item-id-2'
 				},
 				{
-					'$ref': 'test-item-material:7',
+					'$ref': 'join-3',
 					'$type': 'update',
 					'id': 'join-3',
-					'materialId': 'test-material:7',
-					'itemId': 'test-item:4'
+					'materialId': 'material-3',
+					'itemId': 'item-id-3'
 				}]
 			});
 
@@ -2612,7 +2621,7 @@ describe('src/services/document.js', function(){
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-user': [{
-					'$ref': 'test-user:1',
+					'$ref': 'user-id',
 					'$type': 'update',
 					'id': 'user-id'
 				}],
@@ -2621,70 +2630,70 @@ describe('src/services/document.js', function(){
 					'$type': 'update-create',
 					'id': '$item-id-1',
 					'name': 'item-name-10',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$item-id-2',
 					'$type': 'update-create',
 					'id': '$item-id-2',
 					'name': 'item-name-20',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$item-id-3',
 					'$type': 'update-create',
 					'id': '$item-id-3',
 					'name': 'item-name-30',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				}],
 				'test-material': [{
 					'$ref': '$material-id-1',
 					'$type': 'update-create',
 					'id': '$material-id-1',
 					'name': 'material-name-10',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$material-id-2',
 					'$type': 'update-create',
 					'id': '$material-id-2',
 					'name': 'material-name-20',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$material-id-3',
 					'$type': 'update-create',
 					'id': '$material-id-3',
 					'name': 'material-name-30',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				}],
 				'test-item-material': [{
-					'$ref': 'test-item-material:8',
+					'$ref': 'test-item-material:1',
 					'$type': 'create',
 					'materialId': '$material-id-1',
 					'itemId': '$item-id-1',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
-					'$ref': 'test-item-material:9',
+					'$ref': 'test-item-material:2',
 					'$type': 'create',
 					'materialId': '$material-id-2',
 					'itemId': '$item-id-2',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
-					'$ref': 'test-item-material:10',
+					'$ref': 'test-item-material:3',
 					'$type': 'create',
 					'materialId': '$material-id-3',
 					'itemId': '$item-id-2',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				},
 				{
-					'$ref': 'test-item-material:11',
+					'$ref': 'test-item-material:4',
 					'$type': 'create',
 					'materialId': '$material-id-3',
 					'itemId': '$item-id-3',
-					'creatorId': 'test-user:1'
+					'creatorId': 'user-id'
 				}]
 			});
 		});

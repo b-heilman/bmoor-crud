@@ -33,6 +33,10 @@ class Datum {
 		this._content = Object.assign({}, content);
 	}
 
+	getContent(){
+		return this._content;
+	}
+
 	setField(field, value){
 		set(this._content, field, value);
 	}

@@ -3,11 +3,16 @@ const {Route} = require('./route.js');
 const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
+const config = new Config({
+	formatResponse,
+	handleRollback
+});
+
 async function parseQuery(view, ctx){
 	const sort = ctx.getQuery('sort') || null;
 	const joins = ctx.getQuery('join') || [];
 	const limit = ctx.getQuery('limit') || null;
-	const params = ctx.getQuery('filter') || {};
+	const params = ctx.getQuery('param') || {};
 
 	// ? param[name]=hello & param[foo.bar][gt]=123
 	// ? join[$foo.id > $world] = 12 & join[$hello.name > @worldId$world] = woof
@@ -83,11 +88,6 @@ async function handleRollback(changes, ctx, nexus){
 
 	ctx.trackChanges(true);
 }
-
-const config = new Config({
-	formatResponse,
-	handleRollback
-});
 
 class Controller {
 	constructor(view){

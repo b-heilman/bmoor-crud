@@ -71,7 +71,7 @@ async function install(datum, service, master, mapper, ctx){
 			});
 		}
 	} else {
-		const content = datum.content;
+		const content = datum.getContent();
 		const modelName = service.structure.name;
 
 		await ensure(mapper, modelName, content, ctx);
