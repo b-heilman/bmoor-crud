@@ -3,11 +3,6 @@ const {Route} = require('./route.js');
 const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
-const config = new Config({
-	formatResponse,
-	handleRollback
-});
-
 async function parseQuery(view, ctx){
 	const sort = ctx.getQuery('sort') || null;
 	const joins = ctx.getQuery('join') || [];
@@ -88,6 +83,11 @@ async function handleRollback(changes, ctx, nexus){
 
 	ctx.trackChanges(true);
 }
+
+const config = new Config({
+	formatResponse,
+	handleRollback
+});
 
 class Controller {
 	constructor(view){

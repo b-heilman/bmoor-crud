@@ -149,7 +149,7 @@ describe('src/controller/synthetic.js', function(){
 				await synth.configure({readable: true, read:'can-read'});
 
 				context.query = {
-					filter: {
+					param: {
 						id: 123,
 						name: 'req-1'
 					}

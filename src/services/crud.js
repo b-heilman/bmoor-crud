@@ -172,7 +172,6 @@ class Crud extends View {
 			await super.read(
 				{
 					query: await this.structure.getQuery(
-						// TODO : Where do I transform external => internal?
 						settings,
 						ctx
 					)

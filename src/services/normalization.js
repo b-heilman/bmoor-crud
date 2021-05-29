@@ -58,7 +58,7 @@ async function install(datum, service, master, mapper, ctx){
 
 	if (datum.getAction() === 'read'){
 		// either search by key, or the whop thing sent in
-		rtn = await getDatum(service, datum.content, ctx);
+		rtn = await getDatum(service, datum.getContent(), ctx);
 
 		if (!rtn){
 			throw create(`unable to read expected datum of type ${service.structure.name}`, {

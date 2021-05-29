@@ -35,9 +35,21 @@ describe('src/controller/guard.js', function(){
 			}
 		});
 
-		interface = {};
+		stubs.execute = sinon.stub();
+
+		interface = {
+			execute: stubs.execute
+		};
 			
 		service = await nexus.configureCrud('service-1', interface);
+	});
+
+	afterEach(function(){
+		for(let key in stubs){
+			if (stubs[key].restore){
+				stubs[key].restore();
+			}
+		}
 	});
 
 	describe('::Controller', function(){
@@ -69,7 +81,7 @@ describe('src/controller/guard.js', function(){
 						new Context({
 							method: 'get',
 							query: {
-								filter: {
+								param: {
 									eins: 'bar',
 									zwei: 'foo'
 								}
@@ -91,6 +103,57 @@ describe('src/controller/guard.js', function(){
 						params: {
 							zwei: 'foo'
 						}
+					});
+				});
+
+				it('should call query and properly decode', async function(){
+					const content = [{
+						hello: 'world',
+						eins: 1
+					}];
+
+					stubs.execute.resolves(content);
+
+					const res = await controller.read(
+						new Context({
+							method: 'get',
+							query: {
+								param: {
+									eins: 'bar',
+									zwei: 'foo'
+								}
+							}
+						})
+					);
+
+					expect(res)
+					.to.deep.equal([{
+						eins: 1
+					}]);
+
+					const args = stubs.execute.getCall(0).args[0];
+					expect(args.method)
+					.to.deep.equal('read');
+
+					expect(args.query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'service-1',
+							schema: 'service-1',
+							joins: []
+						}],
+						fields: [{
+							as: 'eins',
+							path: 'eins',
+							series: 'service-1'
+						}],
+						params: [{
+							series: 'service-1',
+							path: 'zwei',
+							operation: '=',
+							value: 'foo',
+							settings: {}
+						}]
 					});
 				});
 
@@ -494,7 +557,7 @@ describe('src/controller/guard.js', function(){
 						new Context({
 							method: 'delete',
 							query: {
-								filter: {
+								param: {
 									eins: 'foo',
 									zwei: 'bar'
 								}

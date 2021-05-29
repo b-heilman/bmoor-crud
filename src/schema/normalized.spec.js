@@ -39,12 +39,12 @@ describe('src/schema/normalized', function(){
 					$type: 'create',
 					foo: 'bar'
 				}, {
-					$ref: 'model-1:1',
+					$ref: 'model-1:2',
 					$type: 'update-create',
 					eins: 'zwei'
 				}],
 				'model-2': [{
-					$ref: 'model-2:0',
+					$ref: 'model-2:1',
 					$type: 'update',
 					hello: 'world'
 				}]
