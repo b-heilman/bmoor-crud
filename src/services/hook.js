@@ -2,38 +2,24 @@
 function asyncWrap(fn, old, before = true){
 	if (before){
 		if (old){
-			return async function(datum, ctx, self){
-				await fn(datum, ctx, self);
+			return async function(datum, ctx, self, delta = {}){
+				await fn(datum, ctx, self, delta);
 
-				return old(datum, ctx, self);
+				return old(datum, ctx, self, delta);
 			};
 		} else {
 			return fn;
 		}
 	} else {
 		if (old){
-			return async function(datum, ctx, self){
-				await old(datum, ctx, self);
+			return async function(datum, ctx, self, delta = {}){
+				await old(datum, ctx, self, delta);
 
-				return fn(datum, ctx, self);
+				return fn(datum, ctx, self, delta);
 			};
 		} else {
 			return fn;
 		}
-	}
-}
-
-function boolWrap(fn, old){
-	if (old){
-		return async function(datum, ctx, self){
-			if (await fn(datum, ctx, self)){
-				return old(datum, ctx, self);
-			} else {
-				return false;
-			}
-		};
-	} else {
-		return fn;
 	}
 }
 
@@ -47,25 +33,6 @@ function mapFactory(fn, old){
 
 			return function(datum){
 				return zwei(eins(datum));
-			};
-		};
-	}
-}
-
-function filterFactory(fn, old){
-	if (!old){
-		return fn;
-	} else {
-		return async function(ctx){
-			const eins = await old(ctx);
-			const zwei = await fn(ctx);
-
-			return function(datum){
-				if (eins(datum)){
-					return zwei(datum);
-				} else {
-					return false;
-				}
 			};
 		};
 	}
@@ -88,10 +55,10 @@ function hook(crud, settings){
 		);
 	}
 
-	if (settings.beforeQuery){
-		crud.hooks.beforeQuery = asyncWrap(
-			settings.beforeQuery, 
-			crud.hooks.beforeQuery,
+	if (settings.beforeRead){
+		crud.hooks.beforeRead = asyncWrap(
+			settings.beforeRead, 
+			crud.hooks.beforeRead,
 			true
 		);
 	}
@@ -128,40 +95,7 @@ function hook(crud, settings){
 		);
 	}
 
-	//------------
-	// TODO: move these to 'security'
-	if (settings.canCreate){
-		crud.hooks.canCreate = boolWrap(
-			settings.canCreate, 
-			crud.hooks.canCreate
-		);
-	}
-
-	// .....canAccess....
-	if (settings.canRead){
-		// Idea is that different models can chain this.  I can be accessed if a 
-		// higher model can access me.
-		// event-version-section -> event-version -> event
-		// TODO: to support, need to cache reads/write/update
-		crud.hooks.canRead = boolWrap(
-			settings.canRead, 
-			crud.hooks.canRead
-		);
-	}
-
-	if (settings.canUpdate){
-		crud.hooks.canUpdate = boolWrap(
-			settings.canUpdate, 
-			crud.hooks.canUpdate
-		);
-	}
-
-	if (settings.canDelete){
-		crud.hooks.canDelete = boolWrap(
-			settings.canDelete, 
-			crud.hooks.canDelete
-		);
-	}
+	
 	//------------
 
 	if (settings.mapFactory){
@@ -171,12 +105,7 @@ function hook(crud, settings){
 		);
 	}
 
-	if (settings.filterFactory){
-		crud.hooks.filterFactory = filterFactory(
-			settings.filterFactory,
-			crud.hooks.filterFactory
-		);
-	}
+	
 }
 
 module.exports = {

@@ -4,13 +4,13 @@ const {create} = require('bmoor/src/lib/error.js');
 const {View} = require('./view.js');
 
 async function massAccess(service, arr, ctx){
-	const hooks = service.hooks;
+	const security = service.security;
 
-	if (hooks.canRead){
+	if (security.canRead){
 		return (await Promise.all(
 			arr.map(
 				async (datum) => 
-				(await hooks.canRead(datum, ctx)) ? datum : null
+				(await security.canRead(datum, ctx)) ? datum : null
 			)
 		)).filter(v => !!v);
 	} else {
@@ -26,6 +26,7 @@ class Crud extends View {
 
 	async create(proto, ctx){
 		const hooks = this.hooks;
+		const security = this.security;
 
 		if (!ctx){
 			throw create(`missing ctx in create of ${this.structure.name}`, {
@@ -39,8 +40,8 @@ class Crud extends View {
 			await hooks.beforeCreate(proto, ctx, this);
 		}
 
-		if (hooks.canCreate){
-			if (!(await hooks.canCreate(proto, ctx))){
+		if (security.canCreate){
+			if (!(await security.canCreate(proto, ctx))){
 				throw create(`now allowed to create instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_CREATE',
@@ -78,6 +79,13 @@ class Crud extends View {
 
 	async read(id, ctx){
 		const hooks = this.hooks;
+		const security = this.security;
+
+		await this.structure.build();
+
+		if (hooks.beforeRead){
+			await hooks.beforeRead(null, ctx, this);
+		}
 
 		if (!ctx){
 			throw create(`missing ctx in read of ${this.structure.name}`, {
@@ -89,23 +97,19 @@ class Crud extends View {
 			});
 		}
 
-		await this.structure.build();
-
-		const datum = (
-			await super.read(
-				{
-					query: await this.structure.getQuery(
-						{
-							params: {
-								[this.structure.settings.key]: id
-							}
-						},
-						ctx
-					)
-				},
-				ctx
-			)
-		)[0];
+		const [datum] = await super.read(
+			{
+				query: await this.structure.getQuery(
+					{
+						params: {
+							[this.structure.settings.key]: id
+						}
+					},
+					ctx
+				)
+			},
+			ctx
+		);
 		
 		if (!datum){
 			throw create(`unable to view ${id} of ${this.structure.name}`, {
@@ -115,8 +119,8 @@ class Crud extends View {
 					id
 				}
 			});
-		} else if (hooks.canRead){
-			if (!(await hooks.canRead(datum, ctx))){
+		} else if (security.canRead){
+			if (!(await security.canRead(datum, ctx))){
 				throw create(`now allowed to read instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
@@ -129,6 +133,14 @@ class Crud extends View {
 	}
 
 	async readAll(ctx){
+		const hooks = this.hooks;
+
+		await this.structure.build();
+
+		if (hooks.beforeRead){
+			await hooks.beforeRead(null, ctx, this);
+		}
+
 		return massAccess(
 			this, 
 			await super.read(
@@ -145,7 +157,13 @@ class Crud extends View {
 	}
 
 	async readMany(ids, ctx){
+		const hooks = this.hooks;
+
 		await this.structure.build();
+
+		if (hooks.beforeRead){
+			await hooks.beforeRead(null, ctx, this);
+		}
 
 		return massAccess(
 			this, 
@@ -171,8 +189,8 @@ class Crud extends View {
 
 		await this.structure.build();
 
-		if (hooks.beforeQuery){
-			await hooks.beforeQuery(settings.params, ctx);
+		if (hooks.beforeRead){
+			await hooks.beforeRead(null, ctx, this);
 		}
 
 		return massAccess(
@@ -192,17 +210,18 @@ class Crud extends View {
 
 	async update(id, delta, ctx){
 		const hooks = this.hooks;
+		const security = this.security;
 
 		await this.structure.build();
 
 		const tgt = await this.read(id, ctx);
 
 		if (hooks.beforeUpdate){
-			await hooks.beforeUpdate(id, delta, tgt, ctx, this);
+			await hooks.beforeUpdate(tgt, ctx, this, delta);
 		}
 
-		if (hooks.canUpdate){
-			if (!(await hooks.canUpdate(tgt, ctx))){
+		if (security.canUpdate){
+			if (!(await security.canUpdate(tgt, ctx))){
 				throw create(`now allowed to update instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_UPDATE',
@@ -227,7 +246,7 @@ class Crud extends View {
 		)[0];
 
 		if (hooks.afterUpdate){
-			await hooks.afterUpdate(datum, tgt, ctx, this);
+			await hooks.afterUpdate(datum, ctx, this);
 		}
 
 		if (ctx){
@@ -250,17 +269,18 @@ class Crud extends View {
 	 **/
 	async delete(id, ctx){
 		const hooks = this.hooks;
+		const security = this.security;
 
 		await this.structure.build();
 
 		const datum = await this.read(id, ctx);
 
 		if (hooks.beforeDelete){
-			await hooks.beforeDelete(id, datum, ctx, this);
+			await hooks.beforeDelete(datum, ctx, this);
 		}
 
-		if (hooks.canDelete){
-			if (!(await hooks.canDelete(datum, ctx))){
+		if (security.canDelete){
+			if (!(await security.canDelete(datum, ctx))){
 				throw create(`now allowed to update instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_DELETE',

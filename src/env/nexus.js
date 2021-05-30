@@ -1,8 +1,8 @@
 
 const {Config} = require('bmoor/src/lib/config.js');
-const {create} = require('bmoor/src/lib/error.js');
 
 const {hook} = require('../services/hook.js');
+const {secure} = require('../services/secure.js');
 const {Mapper} = require('../graph/mapper.js');
 
 const {Model} = require('../schema/model.js');
@@ -21,7 +21,7 @@ const config = new Config({
 });
 
 const waiting = [];
-async function secure(prom, label){
+async function ensure(prom, label){
 	waiting.push(label);
 
 	return new Promise((resolve, reject) => {
@@ -113,7 +113,7 @@ class Nexus {
 	async awaitConfigured(type, ref){
 		const path = `configured.${type}.${ref}`;
 
-		return secure(
+		return ensure(
 			this.ether.promised(path, res => res),
 			path
 		);
@@ -171,134 +171,12 @@ class Nexus {
 		return service;
 	}
 
-	// isAdmin can be defined on each model, allowing a new permission to be the admin permission 
-	// for each model.  I am hoping this simplifies things rather than allowing an array to be passed
-	// to has permission
 	async configureSecurity(ref, settings){
-		const accessCfg = {};
+		const service = await this.loadCrud(ref);
 
-		// filters on data read out of the db
-		accessCfg.filterFactory = settings.filter ? 
-				typeof(settings.filter) === 'function' ? function(ctx){
-					return (datum) => (settings.isAdmin && ctx.hasPermission(settings.isAdmin)) || 
-						ctx.hasPermission(settings.filter(datum));
-				}
-				: function(ctx){
-					return () => ctx.hasPermission(settings.filter) || 
-						(settings.isAdmin && ctx.hasPermission(settings.isAdmin));
-				}
-			: null;
+		secure(service, settings);
 
-		// do you have a permission to write a particular datum
-		if (settings.allowCreate){
-			accessCfg.beforeCreate = async function(datum, ctx, service){
-				const permission = await settings.allowCreate(datum);
-				
-				if (!(ctx.hasPermission(permission) || 
-					(settings.isAdmin && ctx.hasPermission(settings.isAdmin)))
-				){
-					throw create('Not allowed to create', {
-						status: 403,
-						code: 'BMOOR_CRUD_NEXUS_ALLOW_CREATE',
-						context: {
-							model: service.structure.name
-						}
-					});
-				}
-			};
-		}
-
-		// do you have a permission to update a particular datum
-		if (settings.allowUpdate){
-			accessCfg.beforeUpdate = async function(id, delta, datum, ctx, service){
-				const permission = await settings.allowUpdate(id, delta, datum);
-				
-				if (!(ctx.hasPermission(permission) || 
-					(settings.isAdmin && ctx.hasPermission(settings.isAdmin)))
-				){
-					throw create('Not allowed to update', {
-						status: 403,
-						code: 'BMOOR_CRUD_NEXUS_ALLOW_UPDATE',
-						context: {
-							id,
-							model: service.structure.name
-						}
-					});
-				}
-			};
-		}
-
-		// do you have a permission to delete a particular datum
-		if (settings.allowDelete){
-			accessCfg.beforeDelete = async function(id, datum, ctx, service){
-				const permission = await settings.allowDelete(id, datum);
-				
-				if (!(ctx.hasPermission(permission) || 
-					(settings.isAdmin && ctx.hasPermission(settings.isAdmin)))
-				){
-					throw create('Not allowed to delete', {
-						status: 403,
-						code: 'BMOOR_CRUD_NEXUS_ALLOW_DELETE',
-						context: {
-							id,
-							model: service.structure.name
-						}
-					});
-				}
-			};
-		}
-
-		await this.configureHook(ref, accessCfg);
-
-		const canCfg = {};
-
-		if (settings.create){
-			canCfg.beforeCreate = async function(datum, ctx, service){
-				if (!ctx.hasPermission(settings.create)){
-					throw create('Can not create', {
-						status: 403,
-						code: 'BMOOR_CRUD_NEXUS_CAN_CREATE',
-						context: {
-							model: service.structure.name
-						}
-					});
-				}
-			};
-		}
-
-		// do you have a permission to update a particular datum
-		if (settings.update){
-			canCfg.beforeUpdate = async function(id, delta, datum, ctx, service){
-				if (!ctx.hasPermission(settings.update)){
-					throw create('Can not update', {
-						status: 403,
-						code: 'BMOOR_CRUD_NEXUS_CAN_UPDATE',
-						context: {
-							id,
-							model: service.structure.name
-						}
-					});
-				}
-			};
-		}
-
-		// do you have a permission to delete a particular datum
-		if (settings.delete){
-			canCfg.beforeDelete = async function(id, datum, ctx, service){
-				if (!ctx.hasPermission(settings.delete)){
-					throw create('Can not delete', {
-						status: 403,
-						code: 'BMOOR_CRUD_NEXUS_CAN_DELETE',
-						context: {
-							id,
-							model: service.structure.name
-						}
-					});
-				}
-			};
-		}
-
-		return this.configureHook(ref, canCfg);
+		return service;
 	}
 
 	getComposite(ref){

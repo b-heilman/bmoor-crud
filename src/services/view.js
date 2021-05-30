@@ -154,8 +154,8 @@ class View {
 	}
 
 	async buildFilter(ctx){
-		if (this.hooks.filterFactory){
-			return this.hooks.filterFactory(ctx);
+		if (this.security.filterFactory){
+			return this.security.filterFactory(ctx);
 		} else {
 			return null;
 		}

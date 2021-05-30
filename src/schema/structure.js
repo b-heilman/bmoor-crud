@@ -188,14 +188,16 @@ function buildInflate(baseInflate, fields, structureSettings={}){
 		return function mutateInflaterFn(datum, ctx){
 			return baseInflate(mutator(datum), datum, ctx);
 		};
-	} else if (!mutator){
+	} else if (baseInflate){
 		return function inflaterFn(datum, ctx){
 			return baseInflate({}, datum, ctx);
 		};
-	} else {
+	} else if (mutator){
 		return function mutatorFn(datum/*, ctx*/){
 			return mutator(datum);
 		};
+	} else {
+		return (datum) => datum;
 	}
 }
 
@@ -242,14 +244,16 @@ function buildDeflate(baseDeflate, fields, structureSettings={}){
 		return function mutateDeflaterFn(datum, ctx){
 			return baseDeflate(mutator(datum), datum, ctx);
 		};
-	} else if (!mutator){
+	} else if (baseDeflate){
 		return function deflaterFn(datum, ctx){
 			return baseDeflate({}, datum, ctx);
 		};
-	} else {
+	} else if (mutator){
 		return function mutatorFn(datum/*, ctx*/){
 			return mutator(datum);
 		};
+	} else {
+		return (datum) => datum;
 	}
 }
 

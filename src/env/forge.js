@@ -21,29 +21,6 @@ class Forge {
 		this.messageBus = messageBus;
 	}
 
-	async configureCrud(ref, settings={}){
-		const service = await this.nexus.loadCrud(ref);
-
-		await hook(service, {
-			afterCreate: (datum, ctx) => {
-				return this.messageBus.triggerEvent(ref, 'create', [null, datum, ctx]);
-			},
-			afterUpdate: (datum, was, ctx) => {
-				return this.messageBus.triggerEvent(ref, 'update', [was, datum, ctx]);
-			},
-			afterDelete: (datum, ctx) => {
-				return this.messageBus.triggerEvent(ref, 'delete', [datum, null, ctx]);
-			}
-		});
-
-		const security = settings.security;
-		if (security){
-			await this.nexus.configureSecurity(ref, security);
-		}
-
-		return service;
-	}
-
 	async subscribe(ref, subscriptions){
 		const service = await this.nexus.loadCrud(ref);
 
@@ -62,12 +39,10 @@ class Forge {
 		return Promise.all(
 			(await load('model', directories, stubs))
 			.map(async (file) => {
+				const ref = file.name;
 				const settings = file.settings;
 
-				await this.nexus.configureModel(
-					file.name,
-					settings
-				);
+				await this.nexus.configureModel(ref, settings);
 
 				const service = await this.nexus.configureCrud(
 					file.name,
@@ -75,7 +50,17 @@ class Forge {
 					settings
 				);
 
-				await this.configureCrud(file.name, settings);
+				hook(service, {
+					afterCreate: (datum, ctx) => {
+						return this.messageBus.triggerEvent(ref, 'create', [null, datum, ctx]);
+					},
+					afterUpdate: (datum, ctx, self, was) => {
+						return this.messageBus.triggerEvent(ref, 'update', [was, datum, ctx]);
+					},
+					afterDelete: (datum, ctx) => {
+						return this.messageBus.triggerEvent(ref, 'delete', [datum, null, ctx]);
+					}
+				});
 
 				return service;
 			})
@@ -118,6 +103,13 @@ class Forge {
 		);
 	}
 
+	async configureSecurity(directories, stubs){
+		return Promise.all(
+			(await load('security', directories, stubs))
+			.map(async (file) => this.nexus.configureSecurity(file.name, file.settings))
+		);
+	}
+
 	async configureEffects(directories, stubs){
 		return Promise.all(
 			(await load('effect', directories, stubs))
@@ -136,10 +128,12 @@ class Forge {
 
 		const [services, docs] = 
 		await Promise.all([
+			// TODO: documents should inherit their connectors
 			this.configureCruds(connectors, directories, stubs),
 			this.configureDocuments(connectors, directories, stubs),
 			this.configureDecorators(directories, stubs),
 			this.configureHooks(directories, stubs),
+			this.configureSecurity(directories, stubs),
 			this.configureEffects(directories, stubs)
 		]);
 

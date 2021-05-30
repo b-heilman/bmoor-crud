@@ -533,8 +533,10 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					filter: function(datum){
-						return 'event-'+datum.eins;
+					filterFactory: function(ctx){
+						return function(datum){
+							return ctx.hasPermission('event-'+datum.eins);
+						};
 					}
 				});
 
@@ -553,8 +555,10 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					filter: function(datum){
-						return 'event-'+datum.eins;
+					filterFactory: function(ctx){
+						return function(datum){
+							return ctx.hasPermission('event-'+datum.eins);
+						};
 					}
 				});
 
@@ -571,10 +575,8 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					filter: function(datum){
-						return 'event-'+datum.eins;
-					},
-					isAdmin: 'boom-shaka-laka'
+					filterPermission: 'event-something-1',
+					adminPermission: 'boom-shaka-laka'
 				});
 
 				expect(await service.readAll(ctx))
@@ -592,7 +594,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					filter: 'event-something-1'
+					filterPermission: 'event-something-1'
 				});
 
 				expect(await service.readAll(ctx))
@@ -610,7 +612,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					filter: 'event-something-1'
+					filterPermission: 'event-something-1'
 				});
 
 				expect(await service.readAll(ctx))

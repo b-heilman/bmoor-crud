@@ -2,9 +2,12 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
+const {Config} = require('bmoor/src/lib/config.js');
+
 const {Bus} = require('../server/bus.js');
 const {Nexus} = require('./nexus.js');
 const {Context} = require('../server/context.js');
+const loader = require('../server/loader.js');
 
 const sut = require('./forge.js');
 
@@ -41,6 +44,16 @@ describe('src/env/forge.js', function(){
 		let interface1 = null;
 		let interface2 = null;
 
+		const connectors = new Config({
+			interface1: () => interface1,
+
+			interface2: () => interface2
+		});
+
+		const directories = new Config({
+			model: 'models'
+		});
+
 		beforeEach(async function(){
 			ctx = new Context({method: ''});
 
@@ -69,8 +82,39 @@ describe('src/env/forge.js', function(){
 			interface1 = {};
 			interface2 = {};
 
-			service1 = await nexus.configureCrud('service-1', interface1);
-			service2 = await nexus.configureCrud('service-2', interface2);
+			service1 = nexus.getCrud('service-1');
+			service2 = nexus.getCrud('service-2');
+
+			stubs.loader = sinon.stub(loader, 'loadFiles')
+			.resolves([{
+				name: 'service-1',
+				settings: {
+					connector: 'interface1',
+					fields: {
+						id: {
+							key: true,
+							read: true
+						},
+						foo: true,
+						hello: false
+					}
+				}
+			}, {
+				name: 'service-2',
+				settings: {
+					connector: 'interface2',
+					fields: {
+						id: {
+							key: true,
+							read: true
+						},
+						foo: true,
+						hello: true
+					}
+				}
+			}]);
+
+			await forge.configureCruds(connectors, directories);
 		});
 
 		describe('::configureCrud', function(){
@@ -89,8 +133,6 @@ describe('src/env/forge.js', function(){
 
 					myCtx.addChange('foo', 'bar', 2, {hello: 'world'});
 				});
-
-				await forge.configureCrud('service-1');
 
 				const res = await service1.create({eins: 1}, ctx);
 
@@ -130,8 +172,6 @@ describe('src/env/forge.js', function(){
 
 					myCtx.addChange('foo', 'bar', 3, {hello: 'world'});
 				});
-
-				await forge.configureCrud('service-1');
 
 				const res = await service1.update(1, {eins: 1}, ctx);
 
@@ -176,8 +216,6 @@ describe('src/env/forge.js', function(){
 
 					myCtx.addChange('foo', 'bar', 3, {hello: 'world'});
 				});
-
-				await forge.configureCrud('service-1');
 
 				const res = await service1.delete(1, ctx);
 
@@ -318,8 +356,6 @@ describe('src/env/forge.js', function(){
 					hello: 'world'
 				}]);
 
-				await forge.configureCrud('service-1');
-
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'create',
@@ -370,8 +406,6 @@ describe('src/env/forge.js', function(){
 					hello: 'world',
 					id: 41
 				}]);
-
-				await forge.configureCrud('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -426,8 +460,6 @@ describe('src/env/forge.js', function(){
 					id: 101,
 					hello: 'world'
 				}]);
-
-				await forge.configureCrud('service-1');
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -587,8 +619,6 @@ describe('src/env/forge.js', function(){
 					}, ctx);
 
 					const args = interface1.execute.getCall(0).args[0];
-
-					console.log(args);
 
 					expect(args.method)
 					.to.equal('read');
@@ -977,11 +1007,18 @@ describe('src/env/forge.js', function(){
 				path: 'hook-path-1'
 			}]);
 
-			// actions
+			// security
 			stubs.getFile.onCall(4)
 			.resolves([{
 				name: 'service-1',
-				path: 'action-path-1'
+				path: 'security-path-1'
+			}]);
+
+			// effects
+			stubs.getFile.onCall(5)
+			.resolves([{
+				name: 'service-1',
+				path: 'effect-path-1'
 			}]);
 
 			// this overloads what settings are returned
@@ -1038,12 +1075,20 @@ describe('src/env/forge.js', function(){
 				}
 			});
 
-			stubs.action = sinon.stub();
-			stubs.getSettings.withArgs('action-path-1')
+			stubs.getSettings.withArgs('security-path-1')
+			.resolves({
+				canCreate: async function(){
+					trace.push(2);
+					return true;
+				}
+			});
+
+			stubs.effect = sinon.stub();
+			stubs.getSettings.withArgs('effect-path-1')
 			.resolves([{
 				model: 'service-2',
 				action: 'update',
-				callback: stubs.action
+				callback: stubs.effect
 			}]);
 
 			await forge.install(cfg.sub('connectors'), cfg.sub('crud'));
@@ -1214,7 +1259,7 @@ describe('src/env/forge.js', function(){
 			});
 		});
 
-		it('should properly apply the actions', async function(){
+		it('should properly apply the effects', async function(){
 			permissions['can-read'] = true;
 
 			stubs.execute.resolves([{
@@ -1226,7 +1271,7 @@ describe('src/env/forge.js', function(){
 
 			let called = false;
 
-			stubs.action.callsFake(function(myService, from, to, myCtx){
+			stubs.effect.callsFake(function(myService, from, to, myCtx){
 				called = true;
 
 				expect(service)
@@ -1347,15 +1392,27 @@ describe('src/env/forge.js', function(){
 				}
 			}]);
 
-			// actions
-			stubs.action = sinon.stub();
+			// security
+			mockery.set('security', [{
+				name: 'service-1',
+				path: 'security-path-1',
+				settings: {
+					canCreate: async function(){
+						trace.push(2);
+						return true;
+					}
+				}
+			}]);
+
+			// effects
+			stubs.effect = sinon.stub();
 			mockery.set('effect', [{
 				name: 'service-1',
-				path: 'action-path-1',
+				path: 'effect-path-1',
 				settings: [{
 					model: 'service-2',
 					action: 'update',
-					callback: stubs.action
+					callback: stubs.effect
 				}]
 			}]);
 
@@ -1527,7 +1584,7 @@ describe('src/env/forge.js', function(){
 			});
 		});
 
-		it('should properly apply the actions', async function(){
+		it('should properly apply the effects', async function(){
 			permissions['can-read'] = true;
 
 			stubs.execute.resolves([{
@@ -1539,7 +1596,7 @@ describe('src/env/forge.js', function(){
 
 			let called = false;
 
-			stubs.action.callsFake(function(myService, from, to, myCtx){
+			stubs.effect.callsFake(function(myService, from, to, myCtx){
 				called = true;
 
 				expect(service)
