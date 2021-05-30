@@ -648,14 +648,14 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowCreate: function(datum){
+					canCreate: function(datum, ctx){
 						expect(datum)
 						.to.deep.equal({
 							eins: 'something-in',
 							zwei: 'v-in'
 						});
 
-						return 'allow-something';
+						return ctx.hasPermission('allow-something');
 					},
 				});
 
@@ -679,8 +679,8 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowCreate: function(){
-						return 'allow-something';
+					canCreate: (datum, ctx) => {
+						return ctx.hasPermission('allow-something');
 					}
 				});
 
@@ -695,9 +695,9 @@ describe('src/env/nexus.js', function(){
 					);
 				} catch(ex){
 					failed = true;
-					console.log(ex);
+					
 					expect(ex.code)
-					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_CREATE');
+					.to.equal('BMOOR_CRUD_SERVICE_CAN_CREATE');
 				}
 
 				expect(failed)
@@ -713,16 +713,16 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowCreate: function(datum){
+					canCreate: function(datum, ctx){
 						expect(datum)
 						.to.deep.equal({
 							eins: 'something-in',
 							zwei: 'v-in'
 						});
 
-						return 'allow-something';
+						return ctx.hasPermission('allow-something');
 					},
-					isAdmin: 'has-admin'
+					adminPermission: 'has-admin'
 				});
 
 				expect(await service.create(
@@ -748,23 +748,14 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowUpdate: function(id, delta, datum){
-						expect(id)
-						.to.deep.equal(123);
-
-						expect(delta)
-						.to.deep.equal({
-							eins: 'something-in',
-							zwei: 'v-in'
-						});
-
+					canUpdate: function(datum, ctx){
 						expect(datum)
 						.to.deep.equal({
 							eins: 'something-1',
 							zwei: 'v-1'
 						});
 
-						return 'allow-something';
+						return ctx.hasPermission('allow-something');
 					}
 				});
 
@@ -790,8 +781,8 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowUpdate: function(){
-						return 'allow-something';
+					canUpdate: function(datum, ctx){
+						return ctx.hasPermission('allow-something');
 					}
 				});
 
@@ -809,7 +800,7 @@ describe('src/env/nexus.js', function(){
 					failed = true;
 
 					expect(ex.code)
-					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_UPDATE');
+					.to.equal('BMOOR_CRUD_SERVICE_CAN_UPDATE');
 				}
 
 				expect(failed)
@@ -825,10 +816,10 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowUpdate: function(){
-						return 'allow-something';
+					canUpdate: function(datum, ctx){
+						return ctx.hasPermission('allow-something');
 					},
-					isAdmin: 'has-admin'
+					adminPermission: 'has-admin'
 				});
 
 				expect(await service.update(
@@ -855,17 +846,14 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowDelete: function(id, datum){
-						expect(id)
-						.to.deep.equal(123);
-
+					canDelete: function(datum, ctx){
 						expect(datum)
 						.to.deep.equal({
 							eins: 'something-1',
 							zwei: 'v-1'
 						});
 
-						return 'allow-something';
+						return ctx.hasPermission('allow-something');
 					}
 				});
 
@@ -887,8 +875,8 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowDelete: function(){
-						return 'allow-something';
+					canDelete: function(datum, ctx){
+						return ctx.hasPermission('allow-something');
 					}
 				});
 
@@ -902,7 +890,7 @@ describe('src/env/nexus.js', function(){
 					failed = true;
 
 					expect(ex.code)
-					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_DELETE');
+					.to.equal('BMOOR_CRUD_SERVICE_CAN_DELETE');
 				}
 
 				expect(failed)
@@ -918,10 +906,10 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					allowDelete: function(){
-						return 'allow-something';
+					canDelete: function(datum, ctx){
+						return ctx.hasPermission('allow-something');
 					},
-					isAdmin: 'has-admin'
+					adminPermission: 'has-admin'
 				});
 
 				expect(await service.delete(
@@ -943,7 +931,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					create: 'allow-something'
+					createPermission: 'allow-something'
 				});
 
 				expect(await service.create(
@@ -966,7 +954,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					create: 'allow-something'
+					createPermission: 'allow-something'
 				});
 
 				let failed = false;
@@ -982,7 +970,7 @@ describe('src/env/nexus.js', function(){
 					failed = true;
 
 					expect(ex.code)
-					.to.equal('BMOOR_CRUD_NEXUS_CAN_CREATE');
+					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_CREATE');
 				}
 
 				expect(failed)
@@ -1023,7 +1011,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					update: 'allow-something'
+					updatePermission: 'allow-something'
 				});
 
 				let failed = false;
@@ -1040,7 +1028,7 @@ describe('src/env/nexus.js', function(){
 					failed = true;
 
 					expect(ex.code)
-					.to.equal('BMOOR_CRUD_NEXUS_CAN_UPDATE');
+					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_UPDATE');
 				}
 
 				expect(failed)
@@ -1077,7 +1065,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureSecurity('test-17', {
-					delete: 'allow-something'
+					deletePermission: 'allow-something'
 				});
 
 				let failed = false;
@@ -1090,7 +1078,7 @@ describe('src/env/nexus.js', function(){
 					failed = true;
 
 					expect(ex.code)
-					.to.equal('BMOOR_CRUD_NEXUS_CAN_DELETE');
+					.to.equal('BMOOR_CRUD_NEXUS_ALLOW_DELETE');
 				}
 
 				expect(failed)

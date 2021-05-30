@@ -18,7 +18,6 @@ function boolWrap(fn, old){
 }
 
 function filterFactory(fn, old){
-	console.log('-->', fn, old);
 	if (!old){
 		return fn;
 	} else {
@@ -34,6 +33,8 @@ function filterFactory(fn, old){
 function secure(crud, settings){
 	const accessCfg = {};
 	const adminPermission = settings.adminPermission;
+
+	// TODO: do I want to do an 'isAdmin' here?
 
 	// filters on data read out of the db
 	if (settings.readPermission){
@@ -112,48 +113,64 @@ function secure(crud, settings){
 	//------------
 	if (settings.canCreate){
 		crud.security.canCreate = boolWrap(
-			settings.canCreate, 
+			async function(datum, ctx){
+				return (await settings.canCreate(datum, ctx)) ||
+					!!(adminPermission && ctx.hasPermission(adminPermission));
+			}, 
 			crud.security.canCreate
 		);
 	}
 
 	if (settings.canRead){
 		crud.security.canRead = boolWrap(
-			settings.canRead, 
+			async function(datum, ctx){
+				return (await settings.canRead(datum, ctx)) ||
+					!!(adminPermission && ctx.hasPermission(adminPermission));
+			}, 
 			crud.security.canRead
 		);
 	}
 
 	if (settings.canUpdate){
 		crud.security.canUpdate = boolWrap(
-			settings.canUpdate, 
+			async function(datum, ctx){
+				return (await settings.canUpdate(datum, ctx)) ||
+					!!(adminPermission && ctx.hasPermission(adminPermission));
+			}, 
 			crud.security.canUpdate
 		);
 	}
 
 	if (settings.canDelete){
 		crud.security.canDelete = boolWrap(
-			settings.canDelete, 
+			async function(datum, ctx){
+				return (await settings.canDelete(datum, ctx)) ||
+					!!(adminPermission && ctx.hasPermission(adminPermission));
+			}, 
 			crud.security.canDelete
 		);
 	}
 
 	if (settings.filterPermission){
-		const filterFactory = function(ctx){
-			console.log('ctx', ctx);
+		const filterFn = function(ctx){
 			return () => ctx.hasPermission(settings.filterPermission) || 
-				(adminPermission && ctx.hasPermission(adminPermission));
+				!!(adminPermission && ctx.hasPermission(adminPermission));
 		};
 
 		crud.security.filterFactory = filterFactory(
-			filterFactory,
+			filterFn,
 			crud.security.filterFactory
 		);
 	}
 
 	if (settings.filterFactory){
 		crud.security.filterFactory = filterFactory(
-			settings.filterFactory,
+			function(ctx){
+				const fn = settings.filterFactory(ctx);
+
+				return datum => fn(datum) || 
+					!!(adminPermission && ctx.hasPermission(adminPermission));
+			},
 			crud.security.filterFactory
 		);
 	}
