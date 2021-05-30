@@ -4,11 +4,13 @@ const {create} = require('bmoor/src/lib/error.js');
 const {View} = require('./view.js');
 
 async function massAccess(service, arr, ctx){
-	if (service._canRead){
+	const hooks = service.hooks;
+
+	if (hooks.canRead){
 		return (await Promise.all(
 			arr.map(
 				async (datum) => 
-				(await service._canRead(datum, ctx)) ? datum : null
+				(await hooks.canRead(datum, ctx)) ? datum : null
 			)
 		)).filter(v => !!v);
 	} else {
@@ -23,6 +25,8 @@ class Crud extends View {
 	}
 
 	async create(proto, ctx){
+		const hooks = this.hooks;
+
 		if (!ctx){
 			throw create(`missing ctx in create of ${this.structure.name}`, {
 				status: 500,
@@ -31,12 +35,12 @@ class Crud extends View {
 			});
 		}
 
-		if (this._beforeCreate){
-			await this._beforeCreate(proto, ctx, this);
+		if (hooks.beforeCreate){
+			await hooks.beforeCreate(proto, ctx, this);
 		}
 
-		if (this._canCreate){
-			if (!(await this._canCreate(proto, ctx))){
+		if (hooks.canCreate){
+			if (!(await hooks.canCreate(proto, ctx))){
 				throw create(`now allowed to create instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_CREATE',
@@ -55,8 +59,8 @@ class Crud extends View {
 			)
 		)[0];
 
-		if (this._afterCreate){
-			await this._afterCreate(datum, ctx, this);
+		if (hooks.afterCreate){
+			await hooks.afterCreate(datum, ctx, this);
 		}
 
 		if (ctx){
@@ -73,6 +77,8 @@ class Crud extends View {
 	}
 
 	async read(id, ctx){
+		const hooks = this.hooks;
+
 		if (!ctx){
 			throw create(`missing ctx in read of ${this.structure.name}`, {
 				status: 500,
@@ -109,8 +115,8 @@ class Crud extends View {
 					id
 				}
 			});
-		} else if (this._canRead){
-			if (!(await this._canRead(datum, ctx))){
+		} else if (hooks.canRead){
+			if (!(await hooks.canRead(datum, ctx))){
 				throw create(`now allowed to read instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
@@ -161,10 +167,12 @@ class Crud extends View {
 	}
 
 	async query(settings, ctx){
+		const hooks = this.hooks;
+
 		await this.structure.build();
 
-		if (this._beforeQuery){
-			await this._beforeQuery(settings.params, ctx);
+		if (hooks.beforeQuery){
+			await hooks.beforeQuery(settings.params, ctx);
 		}
 
 		return massAccess(
@@ -183,16 +191,18 @@ class Crud extends View {
 	}
 
 	async update(id, delta, ctx){
+		const hooks = this.hooks;
+
 		await this.structure.build();
 
 		const tgt = await this.read(id, ctx);
 
-		if (this._beforeUpdate){
-			await this._beforeUpdate(id, delta, tgt, ctx, this);
+		if (hooks.beforeUpdate){
+			await hooks.beforeUpdate(id, delta, tgt, ctx, this);
 		}
 
-		if (this._canUpdate){
-			if (!(await this._canUpdate(tgt, ctx))){
+		if (hooks.canUpdate){
+			if (!(await hooks.canUpdate(tgt, ctx))){
 				throw create(`now allowed to update instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_UPDATE',
@@ -216,8 +226,8 @@ class Crud extends View {
 			}, ctx)
 		)[0];
 
-		if (this._afterUpdate){
-			await this._afterUpdate(datum, tgt, ctx, this);
+		if (hooks.afterUpdate){
+			await hooks.afterUpdate(datum, tgt, ctx, this);
 		}
 
 		if (ctx){
@@ -239,16 +249,18 @@ class Crud extends View {
 	 * issue.  I'm ok with that for now.
 	 **/
 	async delete(id, ctx){
+		const hooks = this.hooks;
+
 		await this.structure.build();
 
 		const datum = await this.read(id, ctx);
 
-		if (this._beforeDelete){
-			await this._beforeDelete(id, datum, ctx, this);
+		if (hooks.beforeDelete){
+			await hooks.beforeDelete(id, datum, ctx, this);
 		}
 
-		if (this._canDelete){
-			if (!(await this._canDelete(datum, ctx))){
+		if (hooks.canDelete){
+			if (!(await hooks.canDelete(datum, ctx))){
 				throw create(`now allowed to update instance of ${this.structure.name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_DELETE',
@@ -270,8 +282,8 @@ class Crud extends View {
 			)
 		}, ctx);
 
-		if (this._afterDelete){
-			await this._afterDelete(datum, ctx, this);
+		if (hooks.afterDelete){
+			await hooks.afterDelete(datum, ctx, this);
 		}
 
 		if (ctx){

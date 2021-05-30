@@ -101,6 +101,8 @@ class View {
 	constructor(structure){
 		this.structure = structure; 
 		this.cleaners = {};
+		this.hooks = {};
+		this.security = {};
 	}
 
 	async configure(connector, settings={}){
@@ -152,8 +154,8 @@ class View {
 	}
 
 	async buildFilter(ctx){
-		if (this._filterFactory){
-			return this._filterFactory(ctx);
+		if (this.hooks.filterFactory){
+			return this.hooks.filterFactory(ctx);
 		} else {
 			return null;
 		}

@@ -1,5 +1,41 @@
 
-const {asyncWrap, boolWrap} = require('./wrap.js');
+function asyncWrap(fn, old, before = true){
+	if (before){
+		if (old){
+			return async function(datum, ctx, self){
+				await fn(datum, ctx, self);
+
+				return old(datum, ctx, self);
+			};
+		} else {
+			return fn;
+		}
+	} else {
+		if (old){
+			return async function(datum, ctx, self){
+				await old(datum, ctx, self);
+
+				return fn(datum, ctx, self);
+			};
+		} else {
+			return fn;
+		}
+	}
+}
+
+function boolWrap(fn, old){
+	if (old){
+		return async function(datum, ctx, self){
+			if (await fn(datum, ctx, self)){
+				return old(datum, ctx, self);
+			} else {
+				return false;
+			}
+		};
+	} else {
+		return fn;
+	}
+}
 
 function mapFactory(fn, old){
 	if (!old){
@@ -37,103 +73,108 @@ function filterFactory(fn, old){
 
 function hook(crud, settings){
 	if (settings.beforeCreate){
-		crud._beforeCreate = asyncWrap(
+		crud.hooks.beforeCreate = asyncWrap(
 			settings.beforeCreate, 
-			crud._beforeCreate,
+			crud.hooks.beforeCreate,
 			true
 		);
 	}
 
 	if (settings.afterCreate){
-		crud._afterCreate = asyncWrap(
+		crud.hooks.afterCreate = asyncWrap(
 			settings.afterCreate, 
-			crud._afterCreate,
+			crud.hooks.afterCreate,
 			false
 		);
 	}
 
 	if (settings.beforeQuery){
-		crud._beforeQuery = asyncWrap(
+		crud.hooks.beforeQuery = asyncWrap(
 			settings.beforeQuery, 
-			crud._beforeQuery,
+			crud.hooks.beforeQuery,
 			true
 		);
 	}
 
 	if (settings.beforeUpdate){
-		crud._beforeUpdate = asyncWrap(
+		crud.hooks.beforeUpdate = asyncWrap(
 			settings.beforeUpdate, 
-			crud._beforeUpdate,
+			crud.hooks.beforeUpdate,
 			true
 		);
 	}
 
 	if (settings.afterUpdate){
-		crud._afterUpdate = asyncWrap(
+		crud.hooks.afterUpdate = asyncWrap(
 			settings.afterUpdate, 
-			crud._afterUpdate,
+			crud.hooks.afterUpdate,
 			false
 		);
 	}
 
 	if (settings.beforeDelete){
-		crud._beforeDelete = asyncWrap(
+		crud.hooks.beforeDelete = asyncWrap(
 			settings.beforeDelete, 
-			crud._beforeDelete,
+			crud.hooks.beforeDelete,
 			true
 		);
 	}
 
 	if (settings.afterDelete){
-		crud._afterDelete = asyncWrap(
+		crud.hooks.afterDelete = asyncWrap(
 			settings.afterDelete, 
-			crud._afterDelete,
+			crud.hooks.afterDelete,
 			false
 		);
 	}
 
+	//------------
+	// TODO: move these to 'security'
 	if (settings.canCreate){
-		crud._canCreate = boolWrap(
+		crud.hooks.canCreate = boolWrap(
 			settings.canCreate, 
-			crud._canCreate
+			crud.hooks.canCreate
 		);
 	}
 
+	// .....canAccess....
 	if (settings.canRead){
 		// Idea is that different models can chain this.  I can be accessed if a 
 		// higher model can access me.
 		// event-version-section -> event-version -> event
-		crud._canRead = boolWrap(
+		// TODO: to support, need to cache reads/write/update
+		crud.hooks.canRead = boolWrap(
 			settings.canRead, 
-			crud._canRead
+			crud.hooks.canRead
 		);
 	}
 
 	if (settings.canUpdate){
-		crud._canUpdate = boolWrap(
+		crud.hooks.canUpdate = boolWrap(
 			settings.canUpdate, 
-			crud._canUpdate
+			crud.hooks.canUpdate
 		);
 	}
 
 	if (settings.canDelete){
-		crud._canDelete = boolWrap(
+		crud.hooks.canDelete = boolWrap(
 			settings.canDelete, 
-			crud._canDelete
+			crud.hooks.canDelete
 		);
 	}
+	//------------
 
 	if (settings.mapFactory){
-		crud._mapFactory = mapFactory(
+		crud.hooks.mapFactory = mapFactory(
 			settings.mapFactory,
-			crud._mapFactory
+			crud.hooks.mapFactory
 		);
 	}
 
 	if (settings.filterFactory){
-		crud._filterFactory = filterFactory(
+		crud.hooks.filterFactory = filterFactory(
 			settings.filterFactory,
-			crud._filterFactory
+			crud.hooks.filterFactory
 		);
 	}
 }

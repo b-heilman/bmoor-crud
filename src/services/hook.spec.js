@@ -30,7 +30,9 @@ describe('src/services/hook.js', function(){
 		let base = null;
 
 		beforeEach(function(){
-			base = {};
+			base = {
+				hooks: {}
+			};
 		});
 
 		describe('::beforeCreate', async function(){
@@ -43,7 +45,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._beforeCreate();
+				await base.hooks.beforeCreate();
 
 				expect(trace)
 				.to.deep.equal([1]);
@@ -64,7 +66,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._beforeCreate();
+				await base.hooks.beforeCreate();
 
 				expect(trace)
 				.to.deep.equal([2, 1]);
@@ -81,7 +83,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._afterCreate();
+				await base.hooks.afterCreate();
 
 				expect(trace)
 				.to.deep.equal([1]);
@@ -102,7 +104,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._afterCreate();
+				await base.hooks.afterCreate();
 
 				expect(trace)
 				.to.deep.equal([1, 2]);
@@ -119,7 +121,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._beforeUpdate();
+				await base.hooks.beforeUpdate();
 
 				expect(trace)
 				.to.deep.equal([1]);
@@ -140,7 +142,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._beforeUpdate();
+				await base.hooks.beforeUpdate();
 
 				expect(trace)
 				.to.deep.equal([2, 1]);
@@ -157,7 +159,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._afterUpdate();
+				await base.hooks.afterUpdate();
 
 				expect(trace)
 				.to.deep.equal([1]);
@@ -178,7 +180,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._afterUpdate();
+				await base.hooks.afterUpdate();
 
 				expect(trace)
 				.to.deep.equal([1, 2]);
@@ -195,7 +197,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._beforeDelete();
+				await base.hooks.beforeDelete();
 
 				expect(trace)
 				.to.deep.equal([1]);
@@ -216,7 +218,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._beforeDelete();
+				await base.hooks.beforeDelete();
 
 				expect(trace)
 				.to.deep.equal([2, 1]);
@@ -233,7 +235,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._afterDelete();
+				await base.hooks.afterDelete();
 
 				expect(trace)
 				.to.deep.equal([1]);
@@ -254,7 +256,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				await base._afterDelete();
+				await base.hooks.afterDelete();
 
 				expect(trace)
 				.to.deep.equal([1, 2]);
@@ -269,10 +271,10 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				expect(await base._canCreate({id:10}))
+				expect(await base.hooks.canCreate({id:10}))
 				.to.equal(true);
 
-				expect(await base._canCreate({id:20}))
+				expect(await base.hooks.canCreate({id:20}))
 				.to.equal(false);
 			});
 
@@ -289,13 +291,13 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				expect(await base._canCreate({id:3}))
+				expect(await base.hooks.canCreate({id:3}))
 				.to.equal(false);
 
-				expect(await base._canCreate({id:2}))
+				expect(await base.hooks.canCreate({id:2}))
 				.to.equal(false);
 
-				expect(await base._canCreate({id:6}))
+				expect(await base.hooks.canCreate({id:6}))
 				.to.equal(true);
 			});
 		});
@@ -308,10 +310,10 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				expect(await base._canRead({id:10}))
+				expect(await base.hooks.canRead({id:10}))
 				.to.equal(true);
 
-				expect(await base._canRead({id:20}))
+				expect(await base.hooks.canRead({id:20}))
 				.to.equal(false);
 			});
 
@@ -328,13 +330,13 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				expect(await base._canRead({id:3}))
+				expect(await base.hooks.canRead({id:3}))
 				.to.equal(false);
 
-				expect(await base._canRead({id:2}))
+				expect(await base.hooks.canRead({id:2}))
 				.to.equal(false);
 
-				expect(await base._canRead({id:6}))
+				expect(await base.hooks.canRead({id:6}))
 				.to.equal(true);
 			});
 		});
@@ -349,7 +351,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				const mapFn = await base._mapFactory();
+				const mapFn = await base.hooks.mapFactory();
 
 				expect([{uno: 1},{dos: 2}].map(mapFn))
 				.to.deep.equal([
@@ -379,7 +381,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				const mapFn = await base._mapFactory();
+				const mapFn = await base.hooks.mapFactory();
 
 				expect([{uno: 1},{dos: 2}].map(mapFn))
 				.to.deep.equal([
@@ -418,7 +420,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				const mapFn = await base._mapFactory();
+				const mapFn = await base.hooks.mapFactory();
 
 				expect([{uno: 1},{dos: 2}].map(mapFn))
 				.to.deep.equal([
@@ -446,7 +448,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				const filterFn = await base._filterFactory();
+				const filterFn = await base.hooks.filterFactory();
 
 				expect([
 					{value: 1},
@@ -471,7 +473,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				const filterFn = await base._filterFactory();
+				const filterFn = await base.hooks.filterFactory();
 
 				expect([
 					{value: 1, other: 'a'},
@@ -512,7 +514,7 @@ describe('src/services/hook.js', function(){
 					}
 				});
 
-				const filterFn = await base._filterFactory();
+				const filterFn = await base.hooks.filterFactory();
 
 				expect([
 					{value: 1, other: 'a'},
