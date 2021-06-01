@@ -178,7 +178,7 @@ describe('src/env/gateway.js', function(){
 			const mockery = new Config();
 
 			//--- guard ---
-			mockery.set('guard', [
+			mockery.set('guards', [
 				{
 					name: 'a-guard',
 					settings: {
@@ -193,7 +193,7 @@ describe('src/env/gateway.js', function(){
 			});
 
 			//--- action ---
-			mockery.set('action', [
+			mockery.set('actions', [
 				{
 					name: 'a-action',
 					settings: {
@@ -208,7 +208,7 @@ describe('src/env/gateway.js', function(){
 			});
 
 			//--- utility ---
-			mockery.set('utility', [
+			mockery.set('utilities', [
 				{
 					name: 'a-utility',
 					settings: {
@@ -223,7 +223,7 @@ describe('src/env/gateway.js', function(){
 			});
 
 			//--- synthetic ---
-			mockery.set('synthetic', [
+			mockery.set('synthetics', [
 				{
 					name: 'a-synthetic',
 					settings: {

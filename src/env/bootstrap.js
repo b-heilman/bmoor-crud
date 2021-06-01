@@ -1,26 +1,29 @@
 
 // used to install a nexus and forge from fs
-const {Config} = require('bmoor/src/lib/config.js');
 
 const {Bus} = require('../server/bus.js');
 const {Forge} = require('./forge.js');
-const {Nexus} = require('./nexus.js');
+const {Nexus, config: nexusConfig} = require('./nexus.js');
 const {Gateway} =  require('./gateway.js');
 
-const {Model} = require('../schema/model.js');
-const {Crud} = require('../services/crud.js');
-const {Composite} = require('../schema/composite.js');
-const {Document} = require('../services/document.js');
 const {Guard} = require('../controllers/guard.js');
 const {Action} = require('../controllers/action.js');
 const {Utility} = require('../controllers/utility.js');
 const {Synthetic} = require('../controllers/synthetic.js');
 const {Router} = require('../server/router.js');
 
-const config = new Config({
-	connectors: {},
-	stubs: {
-		model: null
+const constructors = nexusConfig.sub('constructors');
+constructors.set('guard', Guard);
+constructors.set('action', Action);
+constructors.set('utility', Utility);
+constructors.set('synthetic', Synthetic);
+
+const config = nexusConfig.extend({
+	constructors: {
+		'guard': Guard,
+		'action': Action,
+		'utility': Utility,
+		'synthetic': Synthetic
 	},
 	directories: {
 		model: '/models',
@@ -32,16 +35,6 @@ const config = new Config({
 		action: '/actions',
 		utility: '/utilities',
 		document: '/documents'
-	},
-	constructors: {
-		model: Model,
-		crud: Crud,
-		composite: Composite,
-		document: Document,
-		guard: Guard,
-		action: Action,
-		utility: Utility,
-		synthetic: Synthetic
 	},
 	routes: {
 		root: '/bmoor',
@@ -85,33 +78,26 @@ class Bootstrap {
 	constructor(cfg = config){
 		this.bus = new Bus();
 		this.config = cfg;
-		this.nexus = new Nexus(cfg.sub('constructors'));
+		this.nexus = new Nexus(cfg.sub('constructors'), cfg.sub('connectors'));
 		this.forge = new Forge(this.nexus, this.bus);
 		this.gateway = new Gateway(this.nexus);
 	}
 
-	async installCrud(){
-		return this.forge.install(
-			this.config.sub('connectors'), 
-			this.config.sub('directories'),
-			this.config.sub('stubs')
-		);
+	async installCrud(preload){
+		return this.forge.install(this.config.sub('directories'), preload);
 	}
 
-	async installControllers(){
-		return this.gateway.install(
-			this.config.sub('directories'),
-			this.config.sub('stubs')
-		);
+	async installControllers(preload){
+		return this.gateway.install(this.config.sub('directories'), preload);
 	}
 
-	async install(){
-		const routes = this.config.sub('routes');
-
-		this.crud = await this.installCrud();
-		this.controllers = await this.installControllers();
+	async install(preload){
+		this.crud = await this.installCrud(preload);
+		this.controllers = await this.installControllers(preload);
 
 		const {guards, actions, utilities, synthetics} = this.controllers;
+
+		const routes = this.config.sub('routes');
 		const root = new Router(routes.get('root'));
 
 		const guard = assignControllers(new Router(routes.get('guard')), guards);

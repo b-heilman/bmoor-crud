@@ -17,6 +17,11 @@ const config = new Config({
 		crud: Crud,
 		composite: Composite,
 		document: Document
+	},
+	connectors: {
+		knex: require('../connectors/knex.js').factory,
+		mysql: require('../connectors/knex.js').factory,
+		http: require('../connectors/http.js').factory
 	}
 });
 
@@ -87,11 +92,12 @@ async function loadTarget(nexus, type, ref){
 }
 
 class Nexus {
-	constructor(constructors){
+	constructor(constructors, connectors){
 		this.constructors = constructors || config.sub('constructors');
 
 		this.ether = new Config({});
 		this.mapper = new Mapper();
+		this.connectors = connectors || config.sub('connectors');
 	}
 
 	getDefined(type, ref){
@@ -139,10 +145,13 @@ class Nexus {
 		return getDefined(this, 'crud', this.constructors, ref, [this.getModel(ref)]);
 	}
 
-	async configureCrud(ref, connector, settings = {}){
-		await this.loadModel(ref);
+	async configureCrud(ref, settings = {}){
+		const model = await this.loadModel(ref);
 
 		const service = this.getCrud(ref);
+
+		const factory = this.connectors.get(model.connector);
+		const connector = factory(settings.connectorSettings);
 
 		await service.configure(connector, settings);
 

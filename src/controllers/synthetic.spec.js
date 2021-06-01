@@ -1,6 +1,7 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
+const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -16,14 +17,19 @@ describe('src/controller/synthetic.js', function(){
 	let doc = null;
 
 	beforeEach(async function(){
+		stubs = {};
 		permissions = {};
 
-		stubs = {};
+		const interfaces = new Config({
+			stub: function(){
+				return {};
+			}
+		});
+		
+		nexus = new Nexus(null, interfaces);
 
-		nexus = new Nexus();
-
-		//-----------------
-		await nexus.configureModel('test-user', {
+		nexus.configureModel('test-user', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,

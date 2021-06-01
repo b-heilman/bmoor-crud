@@ -96,6 +96,7 @@ class Model extends Structure {
 
 		this.settings = null;
 		this.schema = settings.schema || this.name;
+		this.connector = settings.connector;
 
 		const fields = settings.fields;
 

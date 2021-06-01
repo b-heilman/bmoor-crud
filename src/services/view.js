@@ -12,7 +12,7 @@ async function runStatement(view, base, ctx){
 		throw new Error('no connector defined: '+view.structure.name);
 	}
 	
-	return await view.connector.execute(base, ctx);
+	return view.connector.execute(base, ctx);
 }
 
 async function runMap(arr, view, ctx){

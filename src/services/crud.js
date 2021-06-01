@@ -59,7 +59,7 @@ class Crud extends View {
 				ctx
 			)
 		)[0];
-
+		
 		if (hooks.afterCreate){
 			await hooks.afterCreate(datum, ctx, this);
 		}

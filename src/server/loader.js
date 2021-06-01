@@ -56,8 +56,10 @@ const loader = {
 };
 
 async function loadFiles(dir){
+	const files = await loader.getFiles(dir);
+
 	return Promise.all(
-		(await loader.getFiles(dir)).map(
+		files.map(
 			async (file) => {
 				file.settings = await loader.getSettings(file.path);
 

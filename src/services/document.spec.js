@@ -1,6 +1,7 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
+const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus, config} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -17,7 +18,17 @@ describe('src/services/document.js', function(){
 	let permissions = null;
 	let connectorExecute = null;
 
-	beforeEach(function(){
+	beforeEach(function(){stubs = {};
+		connector = {
+			execute: stubs.execute
+		};
+
+		const connectors = new Config({
+			stub: function(){
+				return connector;
+			}
+		});
+
 		permissions = {};
 
 		context = new Context({method: 'get'});
@@ -30,13 +41,9 @@ describe('src/services/document.js', function(){
 				})
 		};
 
-		connector = {
-			execute: stubs.execute
-		};
-
 		config.set('timeout', 500);
-
-		nexus = new Nexus();
+		
+		nexus = new Nexus(null, connectors);
 	});
 
 	afterEach(function(){
@@ -50,6 +57,7 @@ describe('src/services/document.js', function(){
 
 	beforeEach(async function(){
 		await nexus.configureModel('test-user', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,
@@ -61,6 +69,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-user', {});
 
 		await nexus.configureModel('test-item', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,
@@ -91,6 +100,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-item', {});
 
 		await nexus.configureModel('test-material', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,
@@ -110,6 +120,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-material', {});
 
 		await nexus.configureModel('test-item-material', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,
@@ -148,6 +159,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-item-material', {});
 
 		await nexus.configureModel('test-person', {
+			connector: 'stub',
 			fields: {
 				id: true,
 				name: true,
@@ -168,6 +180,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-person', {});
 
 		await nexus.configureModel('test-family', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,
@@ -179,6 +192,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-family', {});
 
 		await nexus.configureModel('test-category', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,
@@ -210,6 +224,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-category', {});
 
 		await nexus.configureModel('test-tag', {
+			connector: 'stub',
 			fields: {
 				id: {
 					read: true,

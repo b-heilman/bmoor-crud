@@ -1,62 +1,100 @@
 
 const loader = require('../server/loader.js');
 
-const {Config} = require('bmoor/src/lib/config.js');
-
 // this is our building object, it produces all the things exposing in the system
-async function load(type, directories, stubs = null){
-	if (stubs){
-		const stub = stubs.get(type);
-
-		if (stub){
-			return stub;
-		}
-	}
-
-	return loader.loadFiles(directories.get(type));
-}
-
 class Gateway {
 	constructor(nexus){
 		this.nexus = nexus;
-
-		this.installations = new Config({});
 	}
 
-	async installGuards(directories, stubs){
+	async load(type, directories){
+		const path = directories.get(type);
+
+		if (path){
+			return loader.loadFiles(path);
+		} else {
+			return [];
+		}
+	}
+
+	async loadGuards(directories){
+		return this.load('guard', directories);
+	}
+
+	async installGuards(instructions){
 		return Promise.all(
-			(await load('guard', directories, stubs))
-			.map(file => this.nexus.configureGuard(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				return this.nexus.configureGuard(ref, settings);
+			})
 		);
 	}
 
-	async installActions(directories, stubs){
+	async loadActions(directories){
+		return this.load('action', directories);
+	}
+
+	async installActions(instructions){
 		return Promise.all(
-			(await load('action', directories, stubs))
-			.map(file => this.nexus.configureAction(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				return this.nexus.configureAction(ref, settings);
+			})
 		);
 	}
 
-	async installUtilities(directories, stubs){
+	async loadUtilities(directories){
+		return this.load('utility', directories);
+	}
+
+	async installUtilities(instructions){
 		return Promise.all(
-			(await load('utility', directories, stubs))
-			.map(file => this.nexus.configureUtility(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				return this.nexus.configureUtility(ref, settings);
+			})
 		);
 	}
 
-	async installSynthetics(directories, stubs){
+	async loadSynthetics(directories){
+		return this.load('synthetic', directories);
+	}
+
+	async installSynthetics(instructions){
 		return Promise.all(
-			(await load('synthetic', directories, stubs))
-			.map(file => this.nexus.configureSynthetic(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				return this.nexus.configureSynthetic(ref, settings);
+			})
 		);
 	}
 
-	async install(directories, stubs){
+	async install(directories, preload=null){
 		const [guards, actions, utilities, synthetics] = await Promise.all([
-			this.installGuards(directories, stubs),
-			this.installActions(directories, stubs),
-			this.installUtilities(directories, stubs),
-			this.installSynthetics(directories, stubs)
+			this.installGuards(
+				(preload&&preload.get('guards')||[])
+				.concat(await this.loadGuards(directories))
+			),
+			this.installActions(
+				(preload&&preload.get('actions')||[])
+				.concat(await this.loadActions(directories))
+			),
+			this.installUtilities(
+				(preload&&preload.get('utilities')||[])
+				.concat(await this.loadUtilities(directories))
+			),
+			this.installSynthetics(
+				(preload&&preload.get('synthetics')||[])
+				.concat(await this.loadSynthetics(directories))
+			)
 		]);
 
 		this.guards = guards;

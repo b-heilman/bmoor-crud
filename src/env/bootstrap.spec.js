@@ -1,6 +1,7 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
+const {Config} = require('bmoor/src/lib/config.js');
 
 const sut = require('./bootstrap.js');
 
@@ -8,8 +9,7 @@ describe('src/env/bootstrap.js', function(){
 	let stubs = null;
 
 	beforeEach(function(){
-		stubs = {
-		};
+		stubs = {};
 	});
 
 	afterEach(function(){
@@ -51,142 +51,123 @@ describe('src/env/bootstrap.js', function(){
 					document: '/documents'
 				}
 			});
-
-			const mockery = cfg.sub('stubs');
-
-			mockery.set('model', [{
-				name: 'service-1',
-				path: 'model-path-1',
-				settings: {
-					connector: 'http',
-					fields: {
-						id: {
-							create: false,
-							read: true,
-							update: false,
-							delete: true,
-							key: true
-						},
-						name: true
-					},
-					security: {
-						filter: 'can-read'
-					}
-				}
-			},{
-				name: 'service-2',
-				path: 'model-path-2',
-				settings: {
-					connector: 'http',
-					fields: {
-						id: {
-							create: false,
-							read: true,
-							update: false,
-							delete: true,
-							key: true
-						},
-						name: true,
-						link: {
-							name: 'service-1',
-							field: 'id'
-						}
-					}
-				}
-			}]);
-
-			// composites
-			mockery.set('composite', [{
-				name: 'composite-1',
-				settings: {
-					base: 'service-1',
-					key: 'id',
-					connector: 'http',
-					fields: {
-						'id': '.id',
-						'name': '.name',
-						'other': '> $service-2.name'
-					}
-				}
-			}]);
-
-			// decorators
-			mockery.set('decorator', [{
-				name: 'service-1',
-				path: 'decorator-path-1',
-				settings: {
-					hello: function(){
-						expect(this.create)
-						.to.not.equal(undefined);
-
-						return 'world';
-					}
-				}
-			}]);
-
-			const trace = [];
-			// hooks
-			mockery.set('hook', [{
-				name: 'service-1',
-				path: 'hook-path-1',
-				settings: {
-					afterCreate: async function(){
-						trace.push(1);
-					}
-				}
-			}]);
-
-			// actions
-			stubs.action = sinon.stub();
-			mockery.set('effect', [{
-				name: 'service-1',
-				path: 'action-path-1',
-				settings: [{
-					model: 'service-2',
-					action: 'update',
-					callback: stubs.action
-				}]
-			}]);
-
-			mockery.set('guard', [{
-				name: 'service-1',
-				settings: {
-					read: true,
-					query: true,
-					create: true,
-					update: true,
-					delete: true
-				}
-			}]);
-
-			mockery.set('action', [{
-				name: 'service-1',
-				settings: {
-					hello: {
-						method: 'get'
-					}
-				}
-			}]);
-
-			mockery.set('utility', [{
-				name: 'service-1',
-				settings: {
-					hello: {
-						method: 'get'
-					}
-				}
-			}]);
-
-			mockery.set('synthetic', [{
-				name: 'composite-1',
-				settings: {
-					read: 'can-read'
-				}
-			}]);
-
+			
 			bootstrap = new sut.Bootstrap(cfg);
 
-			await bootstrap.install();
+			stubs.action = sinon.stub();
+
+			const trace = [];
+
+			const mockery = new Config({
+				cruds: [{
+					name: 'service-1',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true
+						}
+					}
+				}, {
+					name: 'service-2',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true,
+							link: {
+								name: 'service-1',
+								field: 'id'
+							}
+						}
+					}
+				}],
+				documents: [{
+					name: 'composite-1',
+					settings: {
+						base: 'service-1',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name',
+							'other': '> $service-2.name'
+						}
+					}
+				}],
+				decorators: [{
+					name: 'service-1',
+					settings: {
+						hello: function(){
+							expect(this.create)
+							.to.not.equal(undefined);
+
+							return 'world';
+						}
+					}
+				}],
+				hooks: [{
+					name: 'service-1',
+					settings: {
+						afterCreate: async function(){
+							trace.push(1);
+						}
+					}
+				}],
+				effects: [{
+					name: 'service-1',
+					settings: [{
+						model: 'service-2',
+						action: 'update',
+						callback: stubs.action
+					}]
+				}],
+				guards: [{
+					name: 'service-1',
+					settings: {
+						read: true,
+						query: true,
+						create: true,
+						update: true,
+						delete: true
+					}
+				}],
+				actions: [{
+					name: 'service-1',
+					settings:{
+						hello: {
+							method: 'get'
+						}
+					}
+				}],
+				utilities: [{
+					name: 'service-1',
+					settings: {
+						hello: {
+							method: 'get'
+						}
+					}
+				}],
+				synthetics: [{
+					name: 'composite-1',
+					settings: {
+						read: 'can-read'
+					}
+				}]
+			});
+
+			await bootstrap.install(mockery);
 		});
 
 		it('should install correctly', async function(){

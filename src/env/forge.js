@@ -2,23 +2,21 @@
 const {hook} = require('../services/hook.js');
 const loader = require('../server/loader.js');
 
-async function load(type, directories, stubs = null){
-	if (stubs){
-		const stub = stubs.get(type);
-
-		if (stub){
-			return stub;
-		}
-	}
-
-	return loader.loadFiles(directories.get(type));
-}
-
 // this is our building object, it produces all the little things running in the system
 class Forge {
 	constructor(nexus, messageBus){
 		this.nexus = nexus;
 		this.messageBus = messageBus;
+	}
+
+	async load(type, directories){
+		const path = directories.get(type);
+
+		if (path){
+			return loader.loadFiles(path);
+		} else {
+			return [];
+		}
 	}
 
 	async subscribe(ref, subscriptions){
@@ -35,20 +33,19 @@ class Forge {
 		);
 	}
 
-	async configureCruds(connectors, directories, stubs){
+	async loadCruds(directories){
+		return this.load('model', directories);
+	}
+
+	async installCruds(instructions){
 		return Promise.all(
-			(await load('model', directories, stubs))
-			.map(async (file) => {
-				const ref = file.name;
-				const settings = file.settings;
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
 
 				await this.nexus.configureModel(ref, settings);
 
-				const service = await this.nexus.configureCrud(
-					file.name,
-					connectors.get(settings.connector)(settings.connectorSettings),
-					settings
-				);
+				const service = await this.nexus.configureCrud(ref, settings);
 
 				hook(service, {
 					afterCreate: (datum, ctx) => {
@@ -67,74 +64,116 @@ class Forge {
 		);
 	}
 
-	async configureDocuments(connectors, directories, stubs){
+	async loadDocuments(directories){
+		return this.load('composite', directories);
+	}
+
+	async installDocuments(instructions){
 		return Promise.all(
-			(await load('composite', directories, stubs))
-			.map(async (file) => {
-				const settings = file.settings;
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
 
-				await this.nexus.configureComposite(
-					file.name,
-					settings
-				);
+				await this.nexus.configureComposite(ref, settings);
 
-				const doc = await this.nexus.configureDocument(
-					file.name,
-					connectors.get(settings.connector)(settings.connectorSettings),
-					settings
-				);
+				const doc = await this.nexus.configureDocument(ref, settings);
 
 				return doc;
 			})
 		);
 	}
 
-	async configureDecorators(directories, stubs){
+	async loadDecorators(directories){
+		return this.load('decorator', directories);
+	}
+
+	async installDecorators(instructions){
 		return Promise.all(
-			(await load('decorator', directories, stubs))
-			.map(async (file) => this.nexus.configureDecorator(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				await this.nexus.configureDecorator(ref, settings);
+			})
 		);
 	}
 
-	async configureHooks(directories, stubs){
+	async loadHooks(directories){
+		return this.load('hook', directories);
+	}
+
+	async installHooks(instructions){
 		return Promise.all(
-			(await load('hook', directories, stubs))
-			.map(async (file) => this.nexus.configureHook(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				await this.nexus.configureHook(ref, settings);
+			})
 		);
 	}
 
-	async configureSecurity(directories, stubs){
+	async loadSecurity(directories){
+		return this.load('security', directories);
+	}
+
+	async installSecurity(instructions){
 		return Promise.all(
-			(await load('security', directories, stubs))
-			.map(async (file) => this.nexus.configureSecurity(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				await this.nexus.configureSecurity(ref, settings);
+			})
 		);
 	}
 
-	async configureEffects(directories, stubs){
+	async loadEffects(directories){
+		return this.load('security', directories);
+	}
+
+	async installEffects(instructions){
 		return Promise.all(
-			(await load('effect', directories, stubs))
-			.map(async (file) => this.subscribe(file.name, file.settings))
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				await this.subscribe(ref, settings);
+			})
 		);
 	}
 
-	async install(connectors, directories, stubs){
-		if (!connectors){
-			throw new Error('no connectors supplied');
-		}
-
+	async install(directories, preload){
 		if (!directories){
 			throw new Error('no directories supplied');
 		}
 
 		const [services, docs] = 
 		await Promise.all([
-			// TODO: documents should inherit their connectors
-			this.configureCruds(connectors, directories, stubs),
-			this.configureDocuments(connectors, directories, stubs),
-			this.configureDecorators(directories, stubs),
-			this.configureHooks(directories, stubs),
-			this.configureSecurity(directories, stubs),
-			this.configureEffects(directories, stubs)
+			this.installCruds(
+				(preload&&preload.get('cruds')||[])
+				.concat(await this.loadCruds(directories))
+			),
+			this.installDocuments(
+				(preload&&preload.get('documents')||[])
+				.concat(await this.loadDocuments(directories))
+			),
+			this.installDecorators(
+				(preload&&preload.get('decorators')||[])
+				.concat(await this.loadDecorators(directories))
+			),
+			this.installHooks(
+				(preload&&preload.get('hooks')||[])
+				.concat(await this.loadHooks(directories))
+			),
+			this.installSecurity(
+				(preload&&preload.get('security')||[])
+				.concat(await this.loadSecurity(directories))
+			),
+			this.installEffects(
+				(preload&&preload.get('effects')||[])
+				.concat(await this.loadEffects(directories))
+			)
 		]);
 
 		// install the services, they should be fully hydrated at this point

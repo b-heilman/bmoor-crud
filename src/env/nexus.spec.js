@@ -2,6 +2,8 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
+const {Config} = require('bmoor/src/lib/config.js');
+
 const {Context} = require('../server/context.js');
 
 describe('src/env/nexus.js', function(){
@@ -11,11 +13,18 @@ describe('src/env/nexus.js', function(){
 	let stubs = null;
 	let ctx = null;
 
+	let connector1 = null;
+
 	beforeEach(function(){
 		stubs = {};
 
 		ctx = new Context();
-		nexus = new Nexus();
+		nexus = new Nexus(
+			null, 
+			new Config({
+				stub: () => connector1
+			})
+		);
 	});
 
 	afterEach(function(){
@@ -30,6 +39,7 @@ describe('src/env/nexus.js', function(){
 	describe('::configureModel', function(){
 		it('should properly define a model', async function(){
 			const model = await nexus.configureModel('test-10', {
+				connector: 'stub',
 				fields: {
 					eins: {
 						create: false,
@@ -64,6 +74,7 @@ describe('src/env/nexus.js', function(){
 
 		it('should assist in defining links', async function(){
 			await nexus.configureModel('test-l-1', {
+				connector: 'stub',
 				fields: {
 					eins: {
 						create: false,
@@ -83,6 +94,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-l-2', {
+				connector: 'stub',
 				fields: {
 					id: {
 						create: false,
@@ -109,6 +121,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-l-3', {
+				connector: 'stub',
 				fields: {
 					id: {
 						create: false,
@@ -121,6 +134,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-l-4', {
+				connector: 'stub',
 				fields: {
 					id: {
 						create: false,
@@ -172,6 +186,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			nexus.configureModel('test-11', {
+				connector: 'stub',
 				fields: {
 					eins: {
 						create: false,
@@ -207,6 +222,7 @@ describe('src/env/nexus.js', function(){
 
 		it('should resolve if the model was already defined', async function(){
 			nexus.configureModel('test-12', {
+				connector: 'stub',
 				fields: {
 					eins: {
 						create: false,
@@ -245,23 +261,26 @@ describe('src/env/nexus.js', function(){
 	describe('::configureCrud', function(){
 		let service = null;
 
-		const connector = {
-			execute: () => Promise.resolve([{
-				id: 'something-1',
-				value: 'v-1'
-			}])
-		};
+		beforeEach(function(){
+			connector1 = {
+				execute: () => Promise.resolve([{
+					id: 'something-1',
+					value: 'v-1'
+				}])
+			};
+		});
 
 		describe('model defined first', function(){
 			beforeEach(async function(){
 				nexus.configureModel('test-13', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						value: true
 					}
 				});
 
-				service = await nexus.configureCrud('test-13', connector);
+				service = await nexus.configureCrud('test-13');
 			});
 
 			it('should define the service', async function(){
@@ -281,12 +300,13 @@ describe('src/env/nexus.js', function(){
 
 		describe('model described second', function(){
 			beforeEach(async function(){
-				nexus.configureCrud('test-13.5', connector)
+				nexus.configureCrud('test-13.5')
 				.then(s => {
 					service = s;
 				});
 
 				await nexus.configureModel('test-13.5', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						value: true
@@ -314,16 +334,19 @@ describe('src/env/nexus.js', function(){
 	describe('::loadCrud', function(){
 		let service = null;
 
-		const connector = {
-			execute: () => Promise.resolve([{
-				id: 'something-1',
-				value: 'v-1'
-			}])
-		};
-
+		beforeEach(function(){
+			connector1 = {
+				execute: () => Promise.resolve([{
+					id: 'something-1',
+					value: 'v-1'
+				}])
+			};
+		});
+		
 		describe('if loaded before installed', function(){
 			beforeEach(async function(){
 				nexus.configureModel('test-14', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						value: true
@@ -332,7 +355,7 @@ describe('src/env/nexus.js', function(){
 
 				const prom = nexus.loadCrud('test-14');
 
-				await nexus.configureCrud('test-14', connector);
+				await nexus.configureCrud('test-14');
 
 				service = await prom;
 			});
@@ -356,13 +379,14 @@ describe('src/env/nexus.js', function(){
 		describe('if loaded after installed', function(){
 			beforeEach(async function(){
 				nexus.configureModel('test-15', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						value: true
 					}
 				});
 
-				await nexus.configureCrud('test-15', connector);
+				await nexus.configureCrud('test-15');
 
 				service = await nexus.loadCrud('test-15');
 			});
@@ -387,15 +411,18 @@ describe('src/env/nexus.js', function(){
 	describe('::configureDecorator', function(){
 		let service = null;
 
-		const connector = {
-			execute: () => Promise.resolve([{
-				id: 'something-1',
-				value: 'v-1'
-			}])
-		};
+		beforeEach(function(){
+			connector1 = {
+				execute: () => Promise.resolve([{
+					id: 'something-1',
+					value: 'v-1'
+				}])
+			};
+		});
 
 		beforeEach(async function(){
 			nexus.configureModel('test-16', {
+				connector: 'stub',
 				fields: {
 					id: true,
 					value: true
@@ -404,7 +431,7 @@ describe('src/env/nexus.js', function(){
 
 			const prom = nexus.loadCrud('test-16');
 
-			await nexus.configureCrud('test-16', connector);
+			await nexus.configureCrud('test-16');
 
 			service = await prom;
 		});
@@ -441,15 +468,18 @@ describe('src/env/nexus.js', function(){
 	describe('::configureHook', function(){
 		let service = null;
 
-		const connector = {
-			execute: () => Promise.resolve([{
-				id: 'something-1',
-				value: 'v-1'
-			}])
-		};
+		beforeEach(function(){
+			connector1 = {
+				execute: () => Promise.resolve([{
+					id: 'something-1',
+					value: 'v-1'
+				}])
+			};
+		});
 
 		beforeEach(async function(){
 			nexus.configureModel('test-17', {
+				connector: 'stub',
 				fields: {
 					id: true,
 					value: true
@@ -458,7 +488,7 @@ describe('src/env/nexus.js', function(){
 
 			const prom = nexus.loadCrud('test-17');
 
-			await nexus.configureCrud('test-17', connector);
+			await nexus.configureCrud('test-17');
 
 			service = await prom;
 		});
@@ -496,15 +526,18 @@ describe('src/env/nexus.js', function(){
 
 		let service = null;
 
-		const connector = {
-			execute: () => Promise.resolve([{
-				eins: 'something-1',
-				zwei: 'v-1'
-			}])
-		};
+		beforeEach(function(){
+			connector1 = {
+				execute: () => Promise.resolve([{
+					eins: 'something-1',
+					zwei: 'v-1'
+				}])
+			};
+		});
 
 		beforeEach(async function(){
 			nexus.configureModel('test-17', {
+				connector: 'stub',
 				fields: {
 					eins: {
 						create: false,
@@ -519,7 +552,7 @@ describe('src/env/nexus.js', function(){
 
 			const prom = nexus.loadCrud('test-17');
 
-			await nexus.configureCrud('test-17', connector);
+			await nexus.configureCrud('test-17');
 
 			service = await prom;
 		});
@@ -1089,14 +1122,12 @@ describe('src/env/nexus.js', function(){
 
 	describe('::configureDocument', function(){
 	
-		let connector = null;
-	
 		beforeEach(function(){
 			stubs = {
 				execute: sinon.stub()
 			};
 
-			connector = {
+			connector1 = {
 				execute: stubs.execute
 			};
 		});
@@ -1110,6 +1141,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-person', {
+				connector: 'stub',
 				fields: {
 					id: true,
 					name: true,
@@ -1125,6 +1157,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-category', {
+				connector: 'stub',
 				fields: {
 					id: true,
 					name: true,
@@ -1156,7 +1189,7 @@ describe('src/env/nexus.js', function(){
 				}
 			});
 
-			const doc = await nexus.configureDocument('comp-1', connector);
+			const doc = await nexus.configureDocument('comp-1');
 
 			const res = await doc.read(1, {});
 
@@ -1230,6 +1263,7 @@ describe('src/env/nexus.js', function(){
 		describe('multi-tiered definitions', function(){
 			beforeEach(async function(){
 				await nexus.configureModel('test-item', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true
@@ -1237,6 +1271,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-person', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true,
@@ -1252,6 +1287,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-category', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true,
@@ -1275,6 +1311,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-2-foo', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true
@@ -1282,6 +1319,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-2-bar', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true,
@@ -1297,6 +1335,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-3-hello', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true,
@@ -1312,6 +1351,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-3-world', {
+					connector: 'stub',
 					fields: {
 						id: true,
 						name: true,
@@ -1334,10 +1374,9 @@ describe('src/env/nexus.js', function(){
 						'world.name': '> $test-3-world.name'
 					}
 				});
-				const doc1 = await nexus.configureDocument('comp-1', connector);
+				const doc1 = await nexus.configureDocument('comp-1');
 
 				stubs.doc1 = sinon.spy(doc1, 'query');
-
 
 				await nexus.configureComposite('comp-2', {
 					base: 'test-2-foo',
@@ -1348,7 +1387,7 @@ describe('src/env/nexus.js', function(){
 						'barName':  '> $test-2-bar.name'
 					}
 				});
-				const doc2 = await nexus.configureDocument('comp-2', connector);
+				const doc2 = await nexus.configureDocument('comp-2');
 
 				stubs.doc2 = sinon.spy(doc2, 'query');
 			});
@@ -1364,7 +1403,7 @@ describe('src/env/nexus.js', function(){
 						'link': '> $test-category.fooId > #comp-2'
 					}
 				});
-				const doc3 = await nexus.configureDocument('comp-3', connector);
+				const doc3 = await nexus.configureDocument('comp-3');
 				
 				// comp-3
 				stubs.execute.onCall(0)
@@ -1596,7 +1635,7 @@ describe('src/env/nexus.js', function(){
 					}
 				});
 
-				const doc3 = await nexus.configureDocument('comp-3', connector);
+				const doc3 = await nexus.configureDocument('comp-3');
 
 				// comp-3
 				stubs.execute.onCall(0)
