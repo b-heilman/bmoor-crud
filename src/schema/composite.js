@@ -192,6 +192,21 @@ class Composite extends Structure {
 			});
 		}
 
+		if (this.connector){
+			if (this.connector !== model.connector){
+				throw create(`Mixing connector types: ${this.connector} => ${modelName}.${model.connector}`, {
+					code: 'BMOOR_CRUD_COMPLEX_CONNECTOR',
+					context: {
+						current: this.connector,
+						model: modelName,
+						newConnector: model.connector
+					}
+				});
+			}
+		} else {
+			this.connector = model.connector;
+		}
+
 		settings.extends = field;
 
 		return super.addField(path, settings);

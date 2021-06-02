@@ -213,9 +213,14 @@ describe('src/services/secure.js', function(){
 		let service = null;
 
 		beforeEach(async function(){
-			model = new Model('model-1');
+			stubs.execute = sinon.stub();
+
+			model = new Model('model-1', {
+				execute: (...args) => stubs.execute(...args)
+			});
 
 			await model.configure({
+				connector: 'stub',
 				fields: {
 					id: {
 						key: true,
@@ -241,9 +246,7 @@ describe('src/services/secure.js', function(){
 
 			service = new Crud(model);
 
-			stubs.execute = sinon.stub();
-
-			await service.configure({execute: stubs.execute});
+			await service.configure();
 		});
 
 		describe('::canCreate', function(){

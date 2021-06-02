@@ -146,14 +146,11 @@ class Nexus {
 	}
 
 	async configureCrud(ref, settings = {}){
-		const model = await this.loadModel(ref);
+		await this.loadModel(ref);
 
 		const service = this.getCrud(ref);
 
-		const factory = this.connectors.get(model.connector);
-		const connector = factory(settings.connectorSettings);
-
-		await service.configure(connector, settings);
+		await service.configure(settings);
 
 		await this.setConfigured('service', ref, service);
 
@@ -204,12 +201,12 @@ class Nexus {
 		return getDefined(this, 'document', this.constructors, ref, [this.getComposite(ref)]);
 	}
 
-	async configureDocument(ref, connector, settings = {}){
+	async configureDocument(ref, settings = {}){
 		await this.loadComposite(ref);
 
 		const doc = this.getDocument(ref);
 		
-		await doc.configure(connector, settings);
+		await doc.configure(settings);
 
 		await this.setConfigured('document', ref, doc);
 		
@@ -251,6 +248,13 @@ class Nexus {
 
 	async configureSynthetic(ref, settings){
 		return setSettings(this, 'synthetic', this.getSynthetic(ref), settings, ref);
+	}
+
+	async execute(connector, settings, stmt){
+		const factory = this.connectors.get(connector);
+		const executor = factory(settings);
+		
+		return executor.execute(stmt);
 	}
 
 	toJSON(){

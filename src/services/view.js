@@ -1,19 +1,5 @@
 
 const {del} = require('bmoor/src/core.js');
-const {create} = require('bmoor/src/lib/error.js');
-
-async function runStatement(view, base, ctx){
-	if (!(view.connector && view.connector.execute)){
-		console.log(
-			'refusing to execute ->', view.structure.name, 
-			JSON.stringify(ctx, null, 2)
-		);
-		
-		throw new Error('no connector defined: '+view.structure.name);
-	}
-	
-	return view.connector.execute(base, ctx);
-}
 
 async function runMap(arr, view, ctx){
 	const mapFn = view.buildMap(ctx);
@@ -105,8 +91,7 @@ class View {
 		this.security = {};
 	}
 
-	async configure(connector, settings={}){
-		this.connector = connector;
+	async configure(settings={}){
 		this.incomingSettings = settings;
 	}
 
@@ -162,12 +147,6 @@ class View {
 	}
 
 	async create(datum, stmt, ctx){
-		if (!this.connector){
-			throw create(`missing create connector for ${this.structure.name}`, {
-				code: 'BMOOR_CRUD_VIEW_CREATE_CONNECTOR'
-			});
-		}
-
 		const cleaned = await this.clean('create', datum, ctx);
 		const payload = this.structure.actions.create ?
 			this.structure.actions.create(cleaned, cleaned, ctx) : cleaned;
@@ -181,24 +160,18 @@ class View {
 		}
 
 		return runMap(
-			await runStatement(this, stmt, ctx), 
+			await this.structure.execute(stmt, ctx), 
 			this, 
 			ctx
 		);
 	}
 
 	async read(stmt, ctx){
-		if (!this.connector){
-			throw create(`missing read connector for ${this.structure.name}`, {
-				code: 'BMOOR_CRUD_VIEW_READ_CONNECTOR'
-			});
-		}
-
 		stmt.method = 'read';
 		
 		return runFilter(
 			await runMap( // converts from internal => external
-				await runStatement(this, stmt, ctx), 
+				await this.structure.execute(stmt, ctx), 
 				this, 
 				ctx
 			), 
@@ -208,12 +181,6 @@ class View {
 	}
 
 	async update(delta, tgt, stmt, ctx){
-		if (!this.connector){
-			throw create(`missing update connector for ${this.structure.name}`, {
-				code: 'BMOOR_CRUD_VIEW_UPDATE_CONNECTOR'
-			});
-		}
-
 		const cleaned = await this.clean('update', delta, ctx);
 
 		const payload = this.structure.actions.update ?
@@ -224,22 +191,16 @@ class View {
 			this.structure.actions.deflate(payload, ctx) : payload;
 
 		return runMap(
-			await runStatement(this, stmt, ctx), 
+			await this.structure.execute(stmt, ctx), 
 			this,
 			ctx
 		);
 	}
 
 	async delete(stmt, ctx){
-		if (!this.connector){
-			throw create(`missing readMany connector for ${this.structure.name}`, {
-				code: 'BMOOR_CRUD_VIEW_DELETE_CONNECTOR'
-			});
-		}
-
 		stmt.method = 'delete';
 
-		return runStatement(this, stmt, ctx);
+		return this.structure.execute(stmt, ctx);
 	}
 
 	toJSON(){

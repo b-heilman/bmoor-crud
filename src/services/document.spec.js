@@ -20,7 +20,7 @@ describe('src/services/document.js', function(){
 
 	beforeEach(function(){stubs = {};
 		connector = {
-			execute: stubs.execute
+			execute: (...args) => stubs.execute(...args)
 		};
 
 		const connectors = new Config({
@@ -36,9 +36,9 @@ describe('src/services/document.js', function(){
 
 		stubs = {
 			execute: sinon.stub()
-				.callsFake(async function(){
-					return connectorExecute;
-				})
+			.callsFake(async function(){
+				return connectorExecute;
+			})
 		};
 
 		config.set('timeout', 500);
@@ -314,7 +314,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 
-			await doc.configure(connector);
+			await doc.configure();
 
 			await doc.link();
 			

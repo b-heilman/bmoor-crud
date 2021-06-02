@@ -23,7 +23,7 @@ const normalization = require('./normalization.js');
  ***/
  class Document extends View {
 
-	async link(){
+ 	async link(){
 		if (this.subs){
 			return;
 		}

@@ -1,8 +1,7 @@
 
 const {Config} = require('bmoor/src/lib/config.js');
 const {makeGetter, makeSetter} = require('bmoor/src/core.js');
-const {apply} = require('bmoor/src/lib/error.js');
-const {create} = require('bmoor/src/lib/error.js');
+const {apply, create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
@@ -573,6 +572,34 @@ class Structure {
 		}
 
 		return query;
+	}
+
+	async execute(stmt/*, ctx*/){
+		if (!this.connector){
+			throw create(`missing connector for ${this.name}`, {
+				code: 'BMOOR_CRUD_STRUCTURE_CONNECTOR'
+			});
+		}
+
+		try {
+			return this.nexus.execute(
+				this.connector, 
+				this.incomingSettings.connectorSettings || {},
+				stmt
+			);
+		} catch(ex) {
+			apply(ex, {
+				code: 'BMOOR_CRUD_STRUCTURE_EXECUTE',
+				context: {
+					name: this.name
+				},
+				protected: {
+					stmt
+				}
+			});
+
+			throw ex;
+		}
 	}
 
 	toJSON(){
