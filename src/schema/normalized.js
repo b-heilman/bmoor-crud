@@ -123,10 +123,10 @@ class Series extends Map {
 }
 
 class Session extends Map {
-	constructor(normalized){
+	constructor(parent){
 		super();
 		
-		this.normalized = normalized;
+		this.parent = parent;
 	}
 
 	add(series, datum){
@@ -139,8 +139,26 @@ class Session extends Map {
 		return datum;
 	}
 
+	getDatum(series, ref, action){
+		return this.add(
+			series,
+			this.parent.getDatum(series, ref, action)
+		);
+	}
+
+	setDatum(series, ref, action, content){
+		const datum = this.add(
+			series,
+			this.parent.getDatum(series, ref, action)
+		);
+
+		datum.setContent(content);
+
+		return datum;
+	}
+
 	stub(series){
-		const datum = this.normalized.getDatum(
+		const datum = this.getDatum(
 			series,
 			new DatumRef(),
 			'create'
@@ -148,17 +166,11 @@ class Session extends Map {
 
 		datum.setContent({});
 
-		return this.add(
-			series,
-			datum
-		);
+		return datum;
 	}
 
-	getDatum(series, ref, action){
-		return this.add(
-			series,
-			this.normalized.getDatum(series, ref, action)
-		);
+	getSession(){
+		return new Session(this);
 	}
 }
 
@@ -167,10 +179,6 @@ class Normalized extends Map {
 		super();
 
 		this.nexus = nexus;
-	}
-
-	getSession(){
-		return new Session(this);
 	}
 
 	getDatum(series, ref, action){
@@ -185,6 +193,10 @@ class Normalized extends Map {
 
 			return datum;
 		}
+	}
+
+	getSession(){
+		return new Session(this);
 	}
 
 	import(content){

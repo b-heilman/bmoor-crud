@@ -349,7 +349,7 @@ const normalization = require('./normalization.js');
 				return Promise.all(content.map(
 					async (subDatum) => {
 						const {seriesSession: subSeries, changeType: subChange} = 
-							await sub.document.normalize(subDatum, instructions);
+							await sub.document.normalize(subDatum, seriesSession);
 
 						changeType = compareChanges(changeType, subChange);
 
