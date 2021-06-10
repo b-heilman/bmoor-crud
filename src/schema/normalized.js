@@ -127,8 +127,17 @@ class Session extends Map {
 		super();
 		
 		this.parent = parent;
+		this.state = Object.create(parent.state);
 	}
 
+	setVariable(key, value){
+		this.state[key] = value;
+	}
+
+	getVariable(key){
+		return this.state[key];
+	}
+	
 	add(series, datum){
 		if (this.has(series)){
 			this.get(series).push(datum);
@@ -178,7 +187,16 @@ class Normalized extends Map {
 	constructor(nexus){
 		super();
 
+		this.state = {};
 		this.nexus = nexus;
+	}
+
+	setVariable(key, value){
+		this.state[key] = value;
+	}
+
+	getVariable(key){
+		return this.state[key];
 	}
 
 	getDatum(series, ref, action){
