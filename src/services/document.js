@@ -177,7 +177,7 @@ const normalization = require('./normalization.js');
 		
 		//TODO: figure out how to cache this, because it's not efficient rebuilding every time...
 		return Promise.all(res.map(
-			async (datum) => {
+			async (queryDatum) => {
 				const clears = [];
 
 				// Loop through each result, and process the sub queries for each
@@ -189,7 +189,7 @@ const normalization = require('./normalization.js');
 									clears.push(join.clear);
 								}
 
-								agg[join.path] = get(datum, join.datumPath);
+								agg[join.path] = get(queryDatum, join.datumPath);
 
 								return agg;
 							}, 
@@ -203,7 +203,7 @@ const normalization = require('./normalization.js');
 						}, ctx);
 						
 						set(
-							datum,
+							queryDatum,
 							property.base,
 							property.isArray ? res : res[0]
 						);
@@ -211,12 +211,12 @@ const normalization = require('./normalization.js');
 				));
 
 				// delete after incase there's a collision between subs
-				clears.forEach(path => del(datum, path));
+				clears.forEach(path => del(queryDatum, path));
 
 				if (this.incomingSettings.encoding){
-					return this.incomingSettings.encoding(datum, ctx);
+					return this.incomingSettings.encoding(queryDatum, ctx);
 				} else {
-					return datum;
+					return queryDatum;
 				}
 			}
 		));
@@ -238,7 +238,7 @@ const normalization = require('./normalization.js');
 		)[0];
 	}
 
-	async normalize(datum, instructions = null){
+	async normalize(incomingDatum, instructions = null){
 		await this.link();
 
 		if (!instructions){
@@ -285,7 +285,7 @@ const normalization = require('./normalization.js');
 				const service = await this.structure.nexus.loadCrud(trans.model);
 
 				// I need to generate references for the second loop
-				const content = await transformer.go(datum, {});
+				const content = await transformer.go(incomingDatum, {});
 				
 				const key = service.structure.getKey(content);
 				let ref = null;
@@ -337,7 +337,7 @@ const normalization = require('./normalization.js');
 
 		await Promise.all(this.subs.map(
 			sub => {
-				let content = get(datum, sub.reference.property.base);
+				let content = get(incomingDatum, sub.reference.property.base);
 				
 				if (!sub.reference.property.isArray){
 					content = [content];
