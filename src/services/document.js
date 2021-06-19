@@ -6,7 +6,6 @@ const {Transformer} = require('bmoor-schema/src/Transformer.js');
 const {compareChanges} = require('../schema/model.js');
 
 const {View} = require('../services/view.js');
-const {Path} = require('../graph/path.js');
 
 const {Normalized, DatumRef} = require('../schema/normalized.js');
 const normalization = require('./normalization.js');
@@ -34,124 +33,17 @@ const normalization = require('./normalization.js');
 			this.structure.incomingSettings.base
 		);
 
-		// here's what I need to do.  Go through the mount path, figure out
-		// the last model / field in the path, and mark that.  The rest goes
-		// back into the query
-		const results = this.structure.references
-		.map(async (reference, i) => {
-			// allow sets of accessors to be added.  This would mean multiple properties are
-			// used to join into a sub-composite
-			const info = (reference.connections.map(async(access) => {
-				let root = null;
-				let prev = null;
-
-				access = access.slice(0);
-
-				// remove all accessors that are part the base schema, the
-				// last one becomes the root
-
-				access.reduce(
-					(prev, cur) => {
-						if (cur.target){
-							// the current pointer knows the target property, it gets priority
-							const relationship = this.structure.nexus.mapper.getRelationship(
-								cur.model, prev.model, cur.target
-							);
-
-							cur.target = relationship.local; // should match cur.target
-							prev.field = relationship.remote;
-							cur.relationship = relationship;
-						} else {
-							const relationship = this.structure.nexus.mapper.getRelationship(
-								prev.model, cur.model, prev.field
-							);
-
-							cur.target = relationship.remote;
-							prev.field = relationship.local;
-							cur.relationship = relationship;
-						}
-
-						return cur;
-					}
-				);
-
-				// TODO: this seems like an anti pattern, do I need to change where this
-				//   is being computed?
-				while(access.length && (
-					this.structure.hasStructure(access[0].model) || 
-					this.structure.incomingSettings.base === access[0].model
-				)){
-					prev = root;
-					root = access.shift();
-				}
-
-				//let's verify the link is ok...
-				const tail = access.length ? access[access.length-1] : root;
-
-				const relationship = this.structure.nexus.mapper.getRelationship(
-					tail.model, reference.composite.incomingSettings.base
-				);
-
-				let key = null;
-				if (relationship){
-					key = relationship.remote;
-					tail.field = relationship.local;
-				} else {
-					throw new Error(tail.model+
-						' can not connect to '+reference.composite.incomingSettings.base+
-						': '+reference.property.statement
-					);
-				}
-
-				// it can be assumed that everything at this point is already
-				// connected
-				const model = await this.structure.nexus.loadModel(root.model);
-				let field = model.getField(root.field);
-				let clear = null;
-
-				if (!this.structure.hasField(field)){
-					const ref = `sub_${i}`;
-					
-					field = await this.structure.addField(ref, {
-						model: root.model, 
-						extends: root.field,
-						series: root.series
-					});
-
-					clear = ref;
-				}
-				
-				access.push({
-					loader: 'access',
-					model: reference.composite.incomingSettings.base,
-					target: key,
-					relationship
-				});
+		this.subs = await Promise.all(this.structure.settings.subs.map(
+			async (sub) => {
+				const reference = sub.reference;
 
 				return {
-					root,
-					clear,
-					path: (new Path(access)).path,
-					accessor: access,
-					datumPath: field.path
+					document: await reference.composite.nexus.loadDocument(reference.name),
+					reference,
+					joins: sub.joins
 				};
-			}));
-
-			const [doc, joins] = await Promise.all([
-				reference.composite.nexus.loadDocument(reference.name),
-				Promise.all(info)
-			]);
-			
-			return {
-				document: doc,
-				reference,
-				joins
-			};
-		});
-
-		this.subs = (await Promise.all(results));
-
-		this.structure.build();
+			}
+		));
 	}
 
 	/**
@@ -323,18 +215,29 @@ const normalization = require('./normalization.js');
 							);
 						});	
 					}
+
+					// TODO: validation?
+					changeType = compareChanges(
+						changeType, 
+						service.structure.getChangeType(
+							newDatum.getContent()
+						)
+					);
 				};
 			})
 		);
 
 		await cbs.map(cb => cb());
 
+		/***
+		 * Think I can get ride of all this
+		 ***
 		// I don't like this, but for now I'm gonna put hooks in that allow.
 		// eventually I want this to be a function of getChangeType from model
 		if (this.structure.incomingSettings.getChangeType){
 			changeType = await this.structure.incomingSettings.getChangeType(seriesSession);
 		}
-
+		***/
 		await Promise.all(this.subs.map(
 			sub => {
 				let content = get(incomingDatum, sub.reference.property.base);
@@ -348,8 +251,10 @@ const normalization = require('./normalization.js');
 
 				return Promise.all(content.map(
 					async (subDatum) => {
-						const {seriesSession: subSeries, changeType: subChange} = 
-							await sub.document.normalize(subDatum, seriesSession);
+						const {
+							seriesSession: subSeries,
+							changeType: subChange
+						} = await sub.document.normalize(subDatum, seriesSession);
 
 						changeType = compareChanges(changeType, subChange);
 
@@ -423,9 +328,10 @@ const normalization = require('./normalization.js');
 		));
 
 		if (this.structure.incomingSettings.onChange && changeType){
+			console.log(this.structure.name, '=>', changeType);
 			await this.structure.incomingSettings.onChange(changeType, seriesSession);
 		}
-
+		
 		return {
 			seriesSession,
 			instructions,

@@ -4,7 +4,8 @@ const {create} = require('bmoor/src/lib/error.js');
 
 const {Structure} = require('./structure.js');
 const {Network} = require('../graph/Network.js');
-const {pathToAccessors} = require('../graph/path.js');
+
+const {Path, pathToAccessors} = require('../graph/path.js');
 const {Query, QueryJoin} = require('./query.js');
 
 function getOutgoingRelationship(nexus, baseModel, targetModel, local=null){
@@ -124,126 +125,109 @@ class CompositeProperties {
 	}
 }
 
-class Composite extends Structure {
-	/***
-	 * {
-	 *  nexus,
-	 *  fields,
-	 *  extends
-	 * }
-	 ***/
-	async configure(settings){
-		await super.configure(settings);
+async function buildJoins(composite, reference, i){
+	// allow sets of accessors to be added.  This would mean multiple properties are
+	// used to join into a sub-composite
+	return Promise.all(reference.connections.map(
+		async(access) => {
+			let root = null;
+			let prev = null;
 
-		this.context = null;
-		this.connections = {};
-		this.properties = new CompositeProperties(
-			settings.fields,
-			settings.base
-		);
+			access = access.slice(0);
 
-		// return this.build();
-	}
+			// remove all accessors that are part the base schema, the
+			// last one becomes the root
 
-	assignField(field, settings){
-		// I don't think I need this anymore?
-		// this.references[field.reference] = field;
+			access.reduce(
+				(prev, cur) => {
+					if (cur.target){
+						// the current pointer knows the target property, it gets priority
+						const relationship = composite.nexus.mapper.getRelationship(
+							cur.model, prev.model, cur.target
+						);
 
-		return super.assignField(field, settings);
-	}
+						cur.target = relationship.local; // should match cur.target
+						prev.field = relationship.remote;
+						cur.relationship = relationship;
+					} else {
+						const relationship = composite.nexus.mapper.getRelationship(
+							prev.model, cur.model, prev.field
+						);
 
-	defineField(path, settings={}){
-		if (!settings.extends){
-			console.log('complex: failed to define', path, settings);
-			throw new Error(`Attempting to define complex field without a base: ${path}`);
-		}
-
-		// let's overload the other field's settings
-		const fieldSettings = {
-			series: settings.series,
-			reference: settings.reference
-		};
-
-		return settings.extends.extend(path, fieldSettings);
-	}
-
-	async addField(path, settings={}){
-		if (!settings.series){
-			throw create(`Unable to link path without target series`, {
-				code: 'BMOOR_CRUD_COMPLEX_SERIES',
-				context: settings
-			});
-		}
-
-		const modelName = settings.model;
-		const reference = settings.extends;
-
-		const model = await this.nexus.loadModel(modelName);
-		const field = model.getField(reference);
-
-		if (!field){
-			throw create(`Complex, unknown field: ${modelName}.${reference}`, {
-				code: 'BMOOR_CRUD_COMPLEX_UNKNOWN',
-				context: {
-					path,
-					modelName,
-					reference
-				}
-			});
-		}
-
-		if (this.connector){
-			if (this.connector !== model.connector){
-				throw create(`Mixing connector types: ${this.connector} => ${modelName}.${model.connector}`, {
-					code: 'BMOOR_CRUD_COMPLEX_CONNECTOR',
-					context: {
-						current: this.connector,
-						model: modelName,
-						newConnector: model.connector
+						cur.target = relationship.remote;
+						prev.field = relationship.local;
+						cur.relationship = relationship;
 					}
-				});
+
+					return cur;
+				}
+			);
+
+			// TODO: this seems like an anti pattern, do I need to change where this
+			//   is being computed?
+			while(access.length && (
+				composite.hasStructure(access[0].model) || 
+				composite.incomingSettings.base === access[0].model
+			)){
+				prev = root;
+				root = access.shift();
 			}
-		} else {
-			this.connector = model.connector;
+
+			//let's verify the link is ok...
+			const tail = access.length ? access[access.length-1] : root;
+
+			const relationship = composite.nexus.mapper.getRelationship(
+				tail.model, reference.composite.incomingSettings.base
+			);
+
+			let key = null;
+			if (relationship){
+				key = relationship.remote;
+				tail.field = relationship.local;
+			} else {
+				throw new Error(tail.model+
+					' can not connect to '+reference.composite.incomingSettings.base+
+					': '+reference.property.statement
+				);
+			}
+
+			// it can be assumed that everything at this point is already
+			// connected
+			const model = await composite.nexus.loadModel(root.model);
+			let field = model.getField(root.field);
+			let clear = null;
+
+			if (!composite.hasField(field)){
+				const ref = `sub_${i}`;
+				
+				field = await composite.addField(ref, {
+					model: root.model, 
+					extends: root.field,
+					series: root.series
+				});
+
+				clear = ref;
+			}
+			
+			access.push({
+				loader: 'access',
+				model: reference.composite.incomingSettings.base,
+				target: key,
+				relationship
+			});
+
+			return {
+				root,
+				clear,
+				path: (new Path(access)).path,
+				accessor: access,
+				datumPath: field.path
+			};
 		}
+	));
+}
 
-		settings.extends = field;
-
-		return super.addField(path, settings);
-	}
-
-	async setConnection(baseModel, targetModel, local=null, settings={}){
-		let baseSeries = null;
-		let targetSeries = null;
-
-		let relationship = getOutgoingRelationship(
-			this.nexus, baseModel, targetModel, local
-		);
-
-		// I only want outgoing relationships
-		if (relationship.name === targetModel){
-			baseSeries = settings.baseSeries || baseModel;
-			targetSeries = settings.targetSeries || targetModel;
-		} else {
-			// so flip it
-			baseSeries = settings.targetSeries || targetModel;
-			targetSeries = settings.baseSeries || baseModel;
-		}
-
-		let hub = this.connections[baseSeries];
-		
-		if (!hub){
-			hub = [];
-			this.connections[baseSeries] = hub;
-		}
-
-		const connection = Object.create(relationship);
-		connection.name = targetSeries;
-		connection.optional = settings.optional || false;
-
-		hub.push(connection);
-	}
-
+class Composite extends Structure {
 	// connects all the models and all the fields
 	async link(){
 		if (this.references){
@@ -286,7 +270,9 @@ class Composite extends Structure {
 			this.properties.calculateRoots();
 
 			if (this.properties.content.length === 0){
-				reject(new Error('No properties found'));
+				reject(create('no properties found: '+this.name, {
+					code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES'
+				}));
 			}
 
 			// let's go through all the properties and figure out what is a field and 
@@ -388,12 +374,146 @@ class Composite extends Structure {
 			this.references = (await Promise.all(context.results))
 				.filter(info => info);
 
-			this.build();
-
 			resolve();
 		});
 		
 		return context.isLinking;
+	}
+
+	async build(){
+		await this.link();
+
+		// here's what I need to do.  Go through the mount path, figure out
+		// the last model / field in the path, and mark that.  The rest goes
+		// back into the query
+		this.settings = {
+			subs: await Promise.all(this.references.map(
+				async (reference, i) => ({
+					reference,
+					joins: await buildJoins(this, reference, i)
+				})
+			))
+		};
+
+		await super.build();
+	}
+	/***
+	 * {
+	 *  nexus,
+	 *  fields,
+	 *  extends
+	 * }
+	 ***/
+	async configure(settings){
+		await super.configure(settings);
+
+		this.context = null;
+		this.connections = {};
+		this.properties = new CompositeProperties(
+			settings.fields,
+			settings.base
+		);
+
+		return this.build();
+	}
+
+	assignField(field, settings){
+		// I don't think I need this anymore?
+		// this.references[field.reference] = field;
+
+		return super.assignField(field, settings);
+	}
+
+	defineField(path, settings={}){
+		if (!settings.extends){
+			console.log('complex: failed to define', path, settings);
+			throw new Error(`Attempting to define complex field without a base: ${path}`);
+		}
+
+		// let's overload the other field's settings
+		const fieldSettings = {
+			series: settings.series,
+			reference: settings.reference
+		};
+
+		return settings.extends.extend(path, fieldSettings);
+	}
+
+	async addField(path, settings={}){
+		if (!settings.series){
+			throw create(`Unable to link path without target series`, {
+				code: 'BMOOR_CRUD_COMPLEX_SERIES',
+				context: settings
+			});
+		}
+
+		const modelName = settings.model;
+		const reference = settings.extends;
+
+		const model = await this.nexus.loadModel(modelName);
+		const field = model.getField(reference);
+
+		if (!field){
+			throw create(`Complex, unknown field: ${modelName}.${reference}`, {
+				code: 'BMOOR_CRUD_COMPLEX_UNKNOWN',
+				context: {
+					path,
+					modelName,
+					reference
+				}
+			});
+		}
+
+		if (this.connector){
+			if (this.connector !== model.connector){
+				throw create(`Mixing connector types: ${this.connector} => ${modelName}.${model.connector}`, {
+					code: 'BMOOR_CRUD_COMPLEX_CONNECTOR',
+					context: {
+						current: this.connector,
+						model: modelName,
+						newConnector: model.connector
+					}
+				});
+			}
+		} else {
+			this.connector = model.connector;
+		}
+
+		settings.extends = field;
+
+		return super.addField(path, settings);
+	}
+
+	async setConnection(baseModel, targetModel, local=null, settings={}){
+		let baseSeries = null;
+		let targetSeries = null;
+
+		let relationship = getOutgoingRelationship(
+			this.nexus, baseModel, targetModel, local
+		);
+
+		// I only want outgoing relationships
+		if (relationship.name === targetModel){
+			baseSeries = settings.baseSeries || baseModel;
+			targetSeries = settings.targetSeries || targetModel;
+		} else {
+			// so flip it
+			baseSeries = settings.targetSeries || targetModel;
+			targetSeries = settings.baseSeries || baseModel;
+		}
+
+		let hub = this.connections[baseSeries];
+		
+		if (!hub){
+			hub = [];
+			this.connections[baseSeries] = hub;
+		}
+
+		const connection = Object.create(relationship);
+		connection.name = targetSeries;
+		connection.optional = settings.optional || false;
+
+		hub.push(connection);
 	}
 
 	// produces representation for interface layer

@@ -752,13 +752,13 @@ describe('src/schema/model.js', function(){
 				model.getChangeType({
 					eins: 1
 				})
-			).to.equal(null);
+			).to.equal(config.get('changeTypes.none'));
 
 			expect(
 				model.getChangeType({
 					foo: 'bar'
 				})
-			).to.equal(null);
+			).to.equal(config.get('changeTypes.none'));
 		});
 	});
 

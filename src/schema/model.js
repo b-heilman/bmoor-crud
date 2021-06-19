@@ -6,15 +6,18 @@ const {Config} = require('bmoor/src/lib/config.js');
 
 const major = Symbol('major');
 const minor = Symbol('minor');
+const none = Symbol('none');
 
 const config = new Config({
 	changeTypes: {
 		major,
-		minor
+		minor,
+		none
 	},
 	changeRankings: {
 		[major]: 2,
-		[minor]: 1
+		[minor]: 1,
+		[none]: 0
 	}
 });
 
@@ -173,7 +176,7 @@ class Model extends Structure {
 		return Object.keys(this.clean('update', delta))
 		.reduce(
 			(agg, property) => compareChanges(agg, this.settings.updateType[property]),
-			null
+			none
 		);
 	}
 
