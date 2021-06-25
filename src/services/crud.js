@@ -1,6 +1,6 @@
 
 const {create} = require('bmoor/src/lib/error.js');
-
+const {get} = require('bmoor/src/core.js');
 const {View} = require('./view.js');
 
 async function massAccess(service, arr, ctx){
@@ -77,6 +77,9 @@ class Crud extends View {
 		return datum;
 	}
 
+	// TODO: one thing I need to do is start cacheing gets, I can assume if I 
+	//   get by name or get by something else, I will reference it by id later,
+	//   I should bake that into this layer to improve performance
 	async read(id, ctx){
 		const hooks = this.hooks;
 		const security = this.security;
@@ -317,6 +320,34 @@ class Crud extends View {
 		}
 
 		return datum; // datum will have had onRead run against it
+	}
+
+	async getChangeType(datum, id = null, ctx){
+		let delta = datum;
+
+		if (id){
+			const target = await this.read(id, ctx);
+
+			if (target){
+				delta = this.structure.getFields()
+				.reduce(
+					(agg, field) => {
+						const incomingValue = field.externalGetter(datum);
+						const existingValue = field.externalGetter(target);
+
+						if (incomingValue !== existingValue && 
+							incomingValue !== undefined){
+							field.externalSetter(agg, incomingValue);
+						}
+
+						return agg;
+					},
+					{}
+				);
+			}
+		}
+
+		return this.structure.getChangeType(delta);
 	}
 }
 

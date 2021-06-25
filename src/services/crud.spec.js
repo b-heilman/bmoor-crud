@@ -2,7 +2,7 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Model} = require('../schema/model.js');
+const {Model, config: modelConfig} = require('../schema/model.js');
 const {Crud} = require('./crud.js');
 const {Context} = require('../server/context.js');
 
@@ -1539,6 +1539,191 @@ describe('src/services/crud.js', function(){
 				expect(stubs.read.getCall(0).args[0])
 				.to.equal('1');
 			});
+		});
+	});
+
+	describe('::getChangeType', function(){
+		it('should run when the id is null', async function(){
+			const model = new Model('model-1', {});
+
+			await model.configure({
+				connector: 'test',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						updateType: modelConfig.get('changeTypes.major')
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true,
+						updateType: modelConfig.get('changeTypes.minor')
+					},
+					someField: {
+						create: true,
+						read: true,
+						update: true
+					}
+				}
+			});
+
+			const service = new Crud(model);
+
+			let res = await service.getChangeType({junk: true});
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			res = await service.getChangeType({someField: true});
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true
+			});
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.minor'));
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true,
+				name: true
+			});
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.major'));
+		});
+
+		it('should run when the id is null', async function(){
+			const model = new Model('model-1', {});
+
+			await model.configure({
+				connector: 'test',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						updateType: modelConfig.get('changeTypes.major')
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true,
+						updateType: modelConfig.get('changeTypes.minor')
+					},
+					someField: {
+						create: true,
+						read: true,
+						update: true
+					}
+				}
+			});
+
+			const service = new Crud(model);
+
+			stubs.read = sinon.stub(service, 'read');
+
+			stubs.read.resolves({foo: 'bar'});
+
+			let res = await service.getChangeType({junk: true}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+			
+			//-------
+			stubs.read.resolves({someField: true});
+
+			res = await service.getChangeType({someField: true}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			stubs.read.resolves({someField: false});
+
+			res = await service.getChangeType({someField: true}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			//--------
+			stubs.read.resolves({someField: true, title:true});
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true
+			}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			stubs.read.resolves({someField: true, title:false});
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true
+			}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.minor'));
+
+			//--------
+			stubs.read.resolves({someField: true, title: true, name: true});
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true,
+				name: true
+			}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			stubs.read.resolves({someField: false, title: true, name: true});
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true,
+				name: true
+			}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.none'));
+
+			stubs.read.resolves({someField: true, title: false, name: true});
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true,
+				name: true
+			}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.minor'));
+
+			stubs.read.resolves({someField: true, title: false, name: false});
+
+			res = await service.getChangeType({
+				someField: true,
+				title: true,
+				name: true
+			}, 1);
+
+			expect(res)
+			.to.equal(modelConfig.get('changeTypes.major'));
 		});
 	});
 });

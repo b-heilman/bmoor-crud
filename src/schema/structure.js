@@ -1,6 +1,6 @@
 
 const {Config} = require('bmoor/src/lib/config.js');
-const {makeGetter, makeSetter} = require('bmoor/src/core.js');
+const {makeGetter} = require('bmoor/src/core.js');
 const {apply, create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
@@ -75,10 +75,7 @@ structure: {
 }
 **/
 
-function actionExtend(op, incoming, outgoing, old, cfg){
-	const getter = makeGetter(incoming);
-	const setter = makeSetter(outgoing);
-
+function actionExtend(op, getter, setter, old, cfg){
 	if (old){
 		return function(tgt, src, ctx){
 			op(old(tgt, src, ctx), src, setter, getter, cfg, ctx);
@@ -105,27 +102,53 @@ function buildActions(actions, field){
 
 	if (settings.cfg){
 		cfg = settings.cfg;
+		// this is to allow one field type to watch another field type
 		if (cfg.target){
 			cfg.getTarget = makeGetter(cfg.target);
 		}
 	}
 
+	// TODO: all this below should use the field's predefined getters and setters.
 	if (settings.onCreate){
-		actions.create = actionExtend(settings.onCreate, path, path, actions.create, cfg);
+		actions.create = actionExtend(
+			settings.onCreate,
+			field.externalGetter,
+			field.externalSetter, 
+			actions.create, 
+			cfg
+		);
 	}
 
 	if (settings.onUpdate){
-		actions.update = actionExtend(settings.onUpdate, path, path, actions.update, cfg);
+		actions.update = actionExtend(
+			settings.onUpdate,
+			field.externalGetter,
+			field.externalSetter, 
+			actions.update,
+			cfg
+		);
 	}
 
 	// inflate are changes out of the database
 	if (settings.onInflate){
-		actions.inflate = actionExtend(settings.onInflate, reference, path, actions.inflate, cfg);
+		actions.inflate = actionExtend(
+			settings.onInflate, 
+			field.internalGetter,
+			field.externalSetter,
+			actions.inflate,
+			cfg
+		);
 	}
 
 	// deflate are changes into the database
 	if (settings.onDeflate){
-		actions.deflate = actionExtend(settings.onDeflate, path, storagePath, actions.deflate, cfg);
+		actions.deflate = actionExtend(
+			settings.onDeflate, 
+			field.externalGetter, 
+			field.internalSetter, 
+			actions.deflate, 
+			cfg
+		);
 	}
 
 	if (path !== reference){
@@ -150,10 +173,11 @@ function buildInflate(baseInflate, fields, structureSettings={}){
 				return old;
 			} else {
 				// TODO: isFlat needs to come from the adapter? but how...
+				// TODO: should the below be internalGetter and the field always
+				//   knows its context based on reference?
 				const getter = structureSettings.isFlat ?
-					(datum) => datum[field.reference] :
-					makeGetter(field.reference);
-				const setter = makeSetter(field.path);
+					(datum) => datum[field.reference] : field.internalGetter;
+				const setter = field.externalSetter;
 
 				if (old){
 					return function(src){
@@ -206,10 +230,10 @@ function buildDeflate(baseDeflate, fields, structureSettings={}){
 			if (field.incomingSettings.onDeflate){
 				return old;
 			} else {
-				const getter = makeGetter(field.path);
+				const getter = field.externalGetter;
 				const setter = structureSettings.isFlat ?
 					function(datum, value) {datum[field.storagePath] = value;} :
-					makeSetter(field.storagePath) ;
+					field.internalSetter;
 
 				if (old){
 					return function(src){
@@ -382,8 +406,7 @@ class Structure {
 		return this.fields.reduce(
 			async (prom, field) => {
 				const agg = await prom;
-				const op = field.incomingSettings[type]; // I don't personally like this...
-				                                 // the model should handle this logic
+				const op = field.incomingSettings[type];
 
 				if (op){
 					if (typeof(op) === 'string'){

@@ -328,7 +328,6 @@ const normalization = require('./normalization.js');
 		));
 
 		if (this.structure.incomingSettings.onChange && changeType){
-			console.log(this.structure.name, '=>', changeType);
 			await this.structure.incomingSettings.onChange(changeType, seriesSession);
 		}
 		

@@ -1,5 +1,6 @@
 
 const {Config} = require('bmoor/src/lib/config.js');
+const {makeGetter, makeSetter} = require('bmoor/src/core.js');
 
 const config = new Config({
 });
@@ -14,7 +15,7 @@ class Field {
 		// using storage path can cause collisions on composites, path should
 		// still be unique.  By writing back to the path I can later optimize
 		// by just inflating the returned response or something else
-		this.reference = settings.reference || path;
+		this.reference = settings.reference || settings.storagePath || path;
 
 		this.structure = structure;
 		
@@ -28,6 +29,13 @@ class Field {
 	     * - key
 	     ***/
 		this.incomingSettings = settings;
+
+		// TODO: I think internalGetter should be reference and internalSetter should
+		//   be storagePath
+		this.externalGetter = makeGetter(this.path);
+		this.externalSetter = makeSetter(this.path);
+		this.internalGetter = makeGetter(this.reference);
+		this.internalSetter = makeSetter(this.storagePath);
 	}
 
 	extend(path, settings){

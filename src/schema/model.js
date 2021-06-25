@@ -37,6 +37,26 @@ function compareChanges(was, now){
 	return was;
 }
 
+function buildValidator(validation){
+
+}
+
+function buildChangeCompare(old, field, type){
+	if (old){
+		return function(delta){
+			return compareChanges(
+				old(delta),
+				field.externalGetter(delta) === undefined ? null : type
+			);
+		};
+	} else {
+		return function(delta){
+			return field.externalGetter(delta) === undefined ? 
+				config.get('changeTypes.none') : type;
+		};
+	}
+}
+
 function buildSettings(properties, field){
 	const path = field.path;
 
@@ -74,6 +94,18 @@ function buildSettings(properties, field){
 		properties.key = path;
 	}
 
+	if (settings.validation){
+		properties.validation[path] = buildValidator(settings.validation);
+	}
+
+	if (settings.updateType){
+		properties.calculateChangeType = buildChangeCompare(
+			properties.calculateChangeType,
+			field,
+			settings.updateType
+		);
+	}
+
 	return properties;
 }
 
@@ -89,7 +121,9 @@ class Model extends Structure {
 				updateType: {},
 				key: null,
 				index: [],
-				query: []
+				query: [],
+				validation: {},
+				calculateChangeType: null
 			});
 		}
 	}
@@ -173,11 +207,11 @@ class Model extends Structure {
 	}
 
 	getChangeType(delta){
-		return Object.keys(this.clean('update', delta))
-		.reduce(
-			(agg, property) => compareChanges(agg, this.settings.updateType[property]),
-			none
-		);
+		if (this.settings.calculateChangeType){
+			return this.settings.calculateChangeType(delta);
+		} else {
+			return config.get('changeTypes.none');
+		}
 	}
 
 	// produces representation for interface layer
