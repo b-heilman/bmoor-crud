@@ -762,5 +762,88 @@ describe('src/schema/model.js', function(){
 		});
 	});
 
+	describe('::validate', function(){
+		let model = true;
+
+		const createMode = config.get('writeModes.create');
+		const updateMode = config.get('writeModes.update');
+
+		beforeEach(async function(){
+			model = new Model('test-1');
+
+			await model.configure({
+				fields: {
+					eins: {
+						update: false
+					},
+					zwei: {
+						update: true,
+						validation: {
+							required: false
+						}
+					},
+					drei: {
+						update: true,
+						validation: {
+							required: true
+						}
+					},
+					fier: {
+						update: true,
+						validation: {
+							required: true
+						}
+					}
+				}
+			});
+		});
+
+		it('should work on create', async function(){
+			expect(
+				model.validate({eins: 1, drei: 3, fier: 4}, createMode)
+			).to.deep.equal([]);
+
+			expect(
+				model.validate({eins: 1, fier: 4}, createMode)
+			).to.deep.equal([
+				{path: 'drei', message: 'can not be empty'}
+			]);
+
+			expect(
+				model.validate({eins: 1}, createMode)
+			).to.deep.equal([
+				{path: 'drei', message: 'can not be empty'},
+				{path: 'fier', message: 'can not be empty'}
+			]);
+
+			expect(
+				model.validate({eins: 1, drei: null}, createMode)
+			).to.deep.equal([
+				{path: 'drei', message: 'can not be empty'},
+				{path: 'fier', message: 'can not be empty'}
+			]);
+		});
+
+		it('should work on update', async function(){
+			expect(
+				model.validate({eins: 1, drei: 3, fier: 4}, updateMode)
+			).to.deep.equal([]);
+
+			expect(
+				model.validate({eins: 1, fier: 4}, updateMode)
+			).to.deep.equal([]);
+
+			expect(
+				model.validate({eins: 1}, updateMode)
+			).to.deep.equal([]);
+
+			expect(
+				model.validate({eins: 1, drei: null}, updateMode)
+			).to.deep.equal([
+				{path: 'drei', message: 'can not be empty'}
+			]);
+		});
+	});
+
 	// TODO : test types
 });

@@ -8,6 +8,9 @@ const major = Symbol('major');
 const minor = Symbol('minor');
 const none = Symbol('none');
 
+const createMode = Symbol('create');
+const updateMode = Symbol('update');
+
 const config = new Config({
 	changeTypes: {
 		major,
@@ -18,6 +21,10 @@ const config = new Config({
 		[major]: 2,
 		[minor]: 1,
 		[none]: 0
+	},
+	writeModes: {
+		create: createMode,
+		update: updateMode
 	}
 });
 
@@ -37,8 +44,30 @@ function compareChanges(was, now){
 	return was;
 }
 
-function buildValidator(validation){
-	console.log(validation);
+function buildValidator(old, field, validation){
+	function validate(datum, mode=update){
+		const rtn = [];
+		const value = field.externalGetter(datum);
+
+		if (validation.required){
+			if (!value && (mode === createMode || value !== undefined)){
+				rtn.push({
+					path: field.path,
+					message: 'can not be empty'
+				});
+			}
+		}
+
+		return rtn;
+	}
+
+	if (old){
+		return function(datum, mode){
+			return old(datum, mode).concat(validate(datum, mode));
+		};
+	} else {
+		return validate;
+	}
 }
 
 function buildChangeCompare(old, field, type){
@@ -95,7 +124,11 @@ function buildSettings(properties, field){
 	}
 
 	if (settings.validation){
-		properties.validation[path] = buildValidator(settings.validation);
+		properties.validation = buildValidator(
+			properties.validation,
+			field,
+			settings.validation
+		);
 	}
 
 	if (settings.updateType){
@@ -122,7 +155,7 @@ class Model extends Structure {
 				key: null,
 				index: [],
 				query: [],
-				validation: {},
+				validation: null,
 				calculateChangeType: null
 			});
 		}
@@ -211,6 +244,14 @@ class Model extends Structure {
 			return this.settings.calculateChangeType(delta);
 		} else {
 			return config.get('changeTypes.none');
+		}
+	}
+
+	validate(delta, mode){
+		if (this.settings.validation){
+			return this.settings.validation(delta, mode);
+		} else {
+			return [];
 		}
 	}
 
