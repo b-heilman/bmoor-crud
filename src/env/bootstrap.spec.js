@@ -86,10 +86,14 @@ describe('src/env/bootstrap.js', function(){
 								delete: true,
 								key: true
 							},
-							name: true,
-							link: {
-								name: 'service-1',
-								field: 'id'
+							name: {
+								create: true,
+								read: true,
+								update: true,
+								link: {
+									name: 'service-1',
+									field: 'id'
+								}
 							}
 						}
 					}
@@ -168,6 +172,7 @@ describe('src/env/bootstrap.js', function(){
 			});
 
 			await bootstrap.install(mockery);
+			console.log('--installed--');
 		});
 
 		it('should install correctly', async function(){
@@ -216,26 +221,42 @@ describe('src/env/bootstrap.js', function(){
 								'path': 'name'
 							},
 							'usage': {}
-						}, {
-							'path': 'link',
-							'storage': {
-								'schema': 'service-2',
-								'path': 'link'
-							},
-							'usage': {}
 						}]
 					}
 				}],
-				'documents': [{
+				documents: [{
 					'$schema': 'bmoor-crud:view',
 					'structure': {
 						'$schema': 'bmoor-crud:structure',
 						'name': 'composite-1',
-						'fields': []
+						'fields': [{
+							'path': 'id',
+							'storage': {
+								'schema': 'service-1',
+								'path': 'id'
+							},
+							'usage': {}
+						},
+						{
+							'path': 'name',
+							'storage': {
+								'schema': 'service-1',
+								'path': 'name'
+							},
+							'usage': {}
+						}, {
+							'path': 'other',
+							'storage': {
+								'schema': 'service-2',
+								'path': 'name'
+							},
+							'usage': {}
+						}]
 					}
 				}]
 			});
 
+			console.log('cp-1');
 			expect(res.controllers)
 			.to.deep.equal({
 				'guards': [{

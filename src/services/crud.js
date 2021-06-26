@@ -1,6 +1,5 @@
 
 const {create} = require('bmoor/src/lib/error.js');
-const {get} = require('bmoor/src/core.js');
 const {View} = require('./view.js');
 
 async function massAccess(service, arr, ctx){
@@ -322,7 +321,7 @@ class Crud extends View {
 		return datum; // datum will have had onRead run against it
 	}
 
-	async getChangeType(datum, id = null, ctx){
+	async getChangeType(datum, id = null, ctx = null){
 		let delta = datum;
 
 		if (id){

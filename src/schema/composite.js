@@ -406,7 +406,7 @@ class Composite extends Structure {
 	 ***/
 	async configure(settings){
 		await super.configure(settings);
-
+		
 		this.context = null;
 		this.connections = {};
 		this.properties = new CompositeProperties(

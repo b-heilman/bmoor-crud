@@ -38,7 +38,7 @@ function compareChanges(was, now){
 }
 
 function buildValidator(validation){
-
+	console.log(validation);
 }
 
 function buildChangeCompare(old, field, type){

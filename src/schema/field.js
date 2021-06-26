@@ -15,7 +15,7 @@ class Field {
 		// using storage path can cause collisions on composites, path should
 		// still be unique.  By writing back to the path I can later optimize
 		// by just inflating the returned response or something else
-		this.reference = settings.reference || settings.storagePath || path;
+		this.reference = settings.reference || path;
 
 		this.structure = structure;
 		
