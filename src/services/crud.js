@@ -1,6 +1,8 @@
 
 const {create} = require('bmoor/src/lib/error.js');
-const {View} = require('./view.js');
+
+const {View, runMap} = require('./view.js');
+const {config} = require('../schema/model.js');
 
 async function massAccess(service, arr, ctx){
 	const security = service.security;
@@ -21,6 +23,42 @@ class Crud extends View {
 	
 	decorate(decoration){
 		Object.assign(this, decoration);
+	}
+
+	async _create(datum, stmt, ctx){
+		const cleaned = await this.clean('create', datum, ctx);
+		const payload = this.structure.actions.create ?
+			this.structure.actions.create(cleaned, cleaned, ctx) : cleaned;
+
+		const errors = await this.validate(
+			payload,
+			config.get('writeModes.create'), 
+			ctx
+		);
+
+		if (errors.length){
+			throw create(`create validation failed for ${this.structure.name}`, {
+				status: 400,
+				code: 'BMOOR_CRUD_SERVICE_VALIDATE_CREATE',
+				context: {
+					errors
+				}
+			});
+		}
+
+		stmt.method = 'create';
+		stmt.payload = this.structure.actions.deflate ?
+			this.structure.actions.deflate(payload, ctx) : payload;
+
+		if (this.incomingSettings.deflate){
+			stmt.payload = this.incomingSettings.deflate(stmt.payload);
+		}
+
+		return runMap(
+			await this.structure.execute(stmt, ctx), 
+			this, 
+			ctx
+		);
 	}
 
 	async create(proto, ctx){
@@ -50,7 +88,7 @@ class Crud extends View {
 		}
 
 		const datum = (
-			await super.create(
+			await this._create(
 				proto, 
 				{
 					model: this.structure.name
@@ -210,6 +248,39 @@ class Crud extends View {
 		);
 	}
 
+	async _update(delta, tgt, stmt, ctx){
+		const cleaned = await this.clean('update', delta, ctx);
+
+		const payload = this.structure.actions.update ?
+			this.structure.actions.update(cleaned, tgt, ctx) : cleaned;
+
+		const errors = await this.validate(
+			payload,
+			config.get('writeModes.update'),
+			ctx
+		);
+
+		if (errors.length){
+			throw create(`update validation failed for ${this.structure.name}`, {
+				status: 400,
+				code: 'BMOOR_CRUD_SERVICE_VALIDATE_UPDATE',
+				context: {
+					errors
+				}
+			});
+		}
+
+		stmt.method = 'update';
+		stmt.payload = this.structure.actions.deflate ?
+			this.structure.actions.deflate(payload, ctx) : payload;
+
+		return runMap(
+			await this.structure.execute(stmt, ctx), 
+			this,
+			ctx
+		);
+	}
+
 	async update(id, delta, ctx){
 		const hooks = this.hooks;
 		const security = this.security;
@@ -235,7 +306,7 @@ class Crud extends View {
 		}
 
 		const datum = (
-			await super.update(delta, tgt, {
+			await this._update(delta, tgt, {
 				query: await this.structure.getQuery(
 					{
 						params: {
@@ -262,6 +333,12 @@ class Crud extends View {
 		}
 
 		return datum;
+	}
+
+	async _delete(stmt, ctx){
+		stmt.method = 'delete';
+
+		return this.structure.execute(stmt, ctx);
 	}
 
 	/**
@@ -293,7 +370,7 @@ class Crud extends View {
 			}
 		}
 
-		await super.delete({
+		await this._delete({
 			query: await this.structure.getQuery(
 				{
 					params: {
@@ -347,6 +424,15 @@ class Crud extends View {
 		}
 
 		return this.structure.getChangeType(delta);
+	}
+
+	async validate(delta, mode, ctx){
+		const security = this.security;
+
+		const errors = this.structure.validate(delta, mode);
+
+		return security.validate ? 
+			errors.concat(await security.validate(delta, mode, ctx)) : errors;
 	}
 }
 

@@ -45,7 +45,7 @@ function compareChanges(was, now){
 }
 
 function buildValidator(old, field, validation){
-	function validate(datum, mode=update){
+	function validate(datum, mode=updateMode){
 		const rtn = [];
 		const value = field.externalGetter(datum);
 

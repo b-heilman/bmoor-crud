@@ -1726,4 +1726,139 @@ describe('src/services/crud.js', function(){
 			.to.equal(modelConfig.get('changeTypes.major'));
 		});
 	});
+
+	describe('::validate', function(){
+		let ctx = null;
+		let payload = null;
+		let service = null;
+
+		beforeEach(async function(){
+			ctx = new Context();
+
+			const model = new Model('model-1', {
+				execute: async (connector, settings, request) => {
+					expect(request.payload)
+					.to.deep.equal(payload);
+
+					return [{
+						id: 'something-1',
+						junk: 'v-1',
+						title: 't-2'
+					}];
+				}
+			});
+
+			await model.configure({
+				connector: 'test',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					junk: {
+						read: true,
+						create: true,
+						update: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						validation: {
+							required: true
+						}
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true,
+						validation: {
+							required: true
+						}
+					}
+				}
+			});
+
+			service = new Crud(model);
+
+			await service.configure();
+		});
+
+		it('should properly pass when called directly', async function(){
+			let res = null;
+
+			res = await service.validate(
+				{junk: 1, name: 2, title: 3}, 
+				modelConfig.get('writeModes.create')
+			);
+
+			expect(res)
+			.to.deep.equal([]);
+
+			res = await service.validate(
+				{junk: 1}, 
+				modelConfig.get('writeModes.create')
+			);
+
+			expect(res)
+			.to.deep.equal([
+				{path: 'name', message: 'can not be empty'},
+				{path: 'title', message: 'can not be empty'}
+			]);
+
+			res = await service.validate(
+				{junk: 1}, 
+				modelConfig.get('writeModes.update')
+			);
+
+			expect(res)
+			.to.deep.equal([]);
+
+			res = await service.validate(
+				{junk: 1, name: null, title: ''}, 
+				modelConfig.get('writeModes.update')
+			);
+
+			expect(res)
+			.to.deep.equal([
+				{path: 'name', message: 'can not be empty'},
+				{path: 'title', message: 'can not be empty'}
+			]);
+		});
+
+		it('should error on create', async function(){
+			let failed = false;
+
+			try {
+				await service.create({junk: true}, ctx);
+			} catch(ex){
+				expect(ex.code)
+				.to.equal('BMOOR_CRUD_SERVICE_VALIDATE_CREATE');
+
+				failed = true;
+			}
+
+			expect(failed)
+			.to.equal(true);
+		});
+
+		it('should error on update', async function(){
+			let failed = false;
+
+			stubs.read = sinon.stub(service, 'read')
+				.resolves({});
+
+			try {
+				await service.update(1, {junk: 1, name: null, title: ''}, ctx);
+			} catch(ex){
+				expect(ex.code)
+				.to.equal('BMOOR_CRUD_SERVICE_VALIDATE_UPDATE');
+
+				failed = true;
+			}
+
+			expect(failed)
+			.to.equal(true);
+		});
+	});
 });

@@ -146,26 +146,6 @@ class View {
 		}
 	}
 
-	async create(datum, stmt, ctx){
-		const cleaned = await this.clean('create', datum, ctx);
-		const payload = this.structure.actions.create ?
-			this.structure.actions.create(cleaned, cleaned, ctx) : cleaned;
-
-		stmt.method = 'create';
-		stmt.payload = this.structure.actions.deflate ?
-			this.structure.actions.deflate(payload, ctx) : payload;
-
-		if (this.incomingSettings.deflate){
-			stmt.payload = this.incomingSettings.deflate(stmt.payload);
-		}
-
-		return runMap(
-			await this.structure.execute(stmt, ctx), 
-			this, 
-			ctx
-		);
-	}
-
 	async read(stmt, ctx){
 		stmt.method = 'read';
 		
@@ -180,29 +160,6 @@ class View {
 		);
 	}
 
-	async update(delta, tgt, stmt, ctx){
-		const cleaned = await this.clean('update', delta, ctx);
-
-		const payload = this.structure.actions.update ?
-			this.structure.actions.update(cleaned, tgt, ctx) : cleaned;
-
-		stmt.method = 'update';
-		stmt.payload = this.structure.actions.deflate ?
-			this.structure.actions.deflate(payload, ctx) : payload;
-
-		return runMap(
-			await this.structure.execute(stmt, ctx), 
-			this,
-			ctx
-		);
-	}
-
-	async delete(stmt, ctx){
-		stmt.method = 'delete';
-
-		return this.structure.execute(stmt, ctx);
-	}
-
 	toJSON(){
 		return {
 			$schema: 'bmoor-crud:view',
@@ -212,5 +169,7 @@ class View {
 }
 	
 module.exports = {
+	runMap,
+	runFilter,
 	View
 };
