@@ -7,6 +7,30 @@ const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
 const {Query, QueryField, QueryParam, QueryJoin, QuerySort, QueryPosition} = require('./query.js');
 
+const major = Symbol('major');
+const minor = Symbol('minor');
+const none = Symbol('none');
+
+const createMode = Symbol('create');
+const updateMode = Symbol('update');
+
+const config = new Config({
+	changeTypes: {
+		major,
+		minor,
+		none
+	},
+	changeRankings: {
+		[major]: 2,
+		[minor]: 1,
+		[none]: 0
+	},
+	writeModes: {
+		create: createMode,
+		update: updateMode
+	}
+});
+
 const types = new Config({
 	json: {
 		onInflate: function(tgt, src, setter, getter){
@@ -294,6 +318,86 @@ function buildParam(field, v){
 	}
 }
 
+function buildValidator(old, field, validation){
+	function validate(datum, mode=updateMode){
+		const rtn = [];
+		const value = field.externalGetter(datum);
+
+		if (validation.required){
+			if (!value && (mode === createMode || value !== undefined)){
+				rtn.push({
+					path: field.path,
+					message: 'can not be empty'
+				});
+			}
+		}
+
+		return rtn;
+	}
+
+	if (old){
+		return function(datum, mode){
+			return old(datum, mode).concat(validate(datum, mode));
+		};
+	} else {
+		return validate;
+	}
+}
+
+function compareChanges(was, now){
+	if (now){
+		if (!was){
+			return now; 
+		} else {
+			const rankings = config.get('changeRankings');
+
+			if (rankings[now] > rankings[was]){
+				return now;
+			}
+		}
+	}
+
+	return was;
+}
+
+function buildChangeCompare(old, field, type){
+	if (old){
+		return function(delta){
+			return compareChanges(
+				old(delta),
+				field.externalGetter(delta) === undefined ? null : type
+			);
+		};
+	} else {
+		return function(delta){
+			return field.externalGetter(delta) === undefined ? 
+				config.get('changeTypes.none') : type;
+		};
+	}
+}
+
+function buildSettings(properties, field){
+	const settings = field.incomingSettings;
+
+	if (settings.validation){
+		properties.validation = buildValidator(
+			properties.validation,
+			field,
+			settings.validation
+		);
+	}
+
+	if (settings.updateType){
+		properties.calculateChangeType = buildChangeCompare(
+			properties.calculateChangeType,
+			field,
+			settings.updateType
+		);
+	}
+
+	return properties;
+}
+
 class Structure {
 	constructor(name, nexus){
 		this.name = name;
@@ -305,7 +409,6 @@ class Structure {
 		
 		this.fields = [];
 		this.index = {};
-		this.actions = null;
 	}
 
 	async build(){
@@ -326,11 +429,16 @@ class Structure {
 				this.incomingSettings
 			);
 		}
+
+		if (!this.settings){
+			this.settings = this.fields.reduce(buildSettings, {
+				validation: null,
+				calculateChangeType: null
+			});
+		}
 	}
 
 	assignField(field){
-		this.actions = null; // if we add a field, clear existing actions
-
 		const found = this.index[field.path];
 		if (found){
 			throw create(`Path collision`, {
@@ -625,6 +733,22 @@ class Structure {
 		}
 	}
 
+	getChangeType(delta){
+		if (this.settings.calculateChangeType){
+			return this.settings.calculateChangeType(delta);
+		} else {
+			return none;
+		}
+	}
+
+	validate(delta, mode){
+		if (this.settings.validation){
+			return this.settings.validation(delta, mode);
+		} else {
+			return [];
+		}
+	}
+
 	toJSON(){
 		return {
 			$schema: 'bmoor-crud:structure',
@@ -638,9 +762,11 @@ class Structure {
 
 module.exports = {
 	types,
+	config,
 	actionExtend,
 	buildActions,
 	buildInflate,
 	buildDeflate,
+	compareChanges,
 	Structure
 };

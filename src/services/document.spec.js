@@ -18,7 +18,7 @@ describe('src/services/document.js', function(){
 	let permissions = null;
 	let connectorExecute = null;
 
-	const changeTypes = require('../schema/model.js').config.get('changeTypes');
+	const changeTypes = require('../schema/structure.js').config.get('changeTypes');
 
 	beforeEach(function(){stubs = {};
 		connector = {
@@ -2254,7 +2254,7 @@ describe('src/services/document.js', function(){
 	describe('multi tiered', function(){
 		let doc = null;
 
-		const changeTypes = require('../schema/model.js').config.get('changeTypes');
+		const changeTypes = require('../schema/structure.js').config.get('changeTypes');
 
 		beforeEach(async function(){
 			await nexus.configureComposite('test-material', {

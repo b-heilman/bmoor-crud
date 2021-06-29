@@ -3,7 +3,7 @@ const {get, set, del} =  require('bmoor/src/core.js');
 
 const {Transformer} = require('bmoor-schema/src/Transformer.js');
 
-const {compareChanges} = require('../schema/model.js');
+const {compareChanges} = require('../schema/structure.js');
 
 const {View} = require('../services/view.js');
 

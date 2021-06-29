@@ -2,90 +2,6 @@
 const {Structure} = require('./structure.js');
 const {Query} = require('./query.js');
 
-const {Config} = require('bmoor/src/lib/config.js');
-
-const major = Symbol('major');
-const minor = Symbol('minor');
-const none = Symbol('none');
-
-const createMode = Symbol('create');
-const updateMode = Symbol('update');
-
-const config = new Config({
-	changeTypes: {
-		major,
-		minor,
-		none
-	},
-	changeRankings: {
-		[major]: 2,
-		[minor]: 1,
-		[none]: 0
-	},
-	writeModes: {
-		create: createMode,
-		update: updateMode
-	}
-});
-
-function compareChanges(was, now){
-	if (now){
-		if (!was){
-			return now; 
-		} else {
-			const rankings = config.get('changeRankings');
-
-			if (rankings[now] > rankings[was]){
-				return now;
-			}
-		}
-	}
-
-	return was;
-}
-
-function buildValidator(old, field, validation){
-	function validate(datum, mode=updateMode){
-		const rtn = [];
-		const value = field.externalGetter(datum);
-
-		if (validation.required){
-			if (!value && (mode === createMode || value !== undefined)){
-				rtn.push({
-					path: field.path,
-					message: 'can not be empty'
-				});
-			}
-		}
-
-		return rtn;
-	}
-
-	if (old){
-		return function(datum, mode){
-			return old(datum, mode).concat(validate(datum, mode));
-		};
-	} else {
-		return validate;
-	}
-}
-
-function buildChangeCompare(old, field, type){
-	if (old){
-		return function(delta){
-			return compareChanges(
-				old(delta),
-				field.externalGetter(delta) === undefined ? null : type
-			);
-		};
-	} else {
-		return function(delta){
-			return field.externalGetter(delta) === undefined ? 
-				config.get('changeTypes.none') : type;
-		};
-	}
-}
-
 function buildSettings(properties, field){
 	const path = field.path;
 
@@ -123,41 +39,25 @@ function buildSettings(properties, field){
 		properties.key = path;
 	}
 
-	if (settings.validation){
-		properties.validation = buildValidator(
-			properties.validation,
-			field,
-			settings.validation
-		);
-	}
-
-	if (settings.updateType){
-		properties.calculateChangeType = buildChangeCompare(
-			properties.calculateChangeType,
-			field,
-			settings.updateType
-		);
-	}
-
 	return properties;
 }
 
 class Model extends Structure {
 	async build(){
-		await super.build();
-
 		if (!this.settings){
-			this.settings = this.fields.reduce(buildSettings, {
+			await super.build();
+
+			Object.assign(this.settings, {
 				create: [],
 				read: [],
 				update: [],
 				updateType: {},
 				key: null,
 				index: [],
-				query: [],
-				validation: null,
-				calculateChangeType: null
+				query: []
 			});
+
+			this.fields.reduce(buildSettings, this.settings);
 		}
 	}
 
@@ -239,22 +139,6 @@ class Model extends Structure {
 		);
 	}
 
-	getChangeType(delta){
-		if (this.settings.calculateChangeType){
-			return this.settings.calculateChangeType(delta);
-		} else {
-			return config.get('changeTypes.none');
-		}
-	}
-
-	validate(delta, mode){
-		if (this.settings.validation){
-			return this.settings.validation(delta, mode);
-		} else {
-			return [];
-		}
-	}
-
 	// produces representation for interface layer
 	// similar to lookup, which is a combination of models
 	// TODO: sort-by, limit
@@ -276,8 +160,6 @@ class Model extends Structure {
 }
 
 module.exports = {
-	config,
 	buildSettings,
-	compareChanges,
 	Model
 };

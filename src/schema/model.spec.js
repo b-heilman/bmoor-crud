@@ -3,8 +3,8 @@ const sinon = require('sinon');
 const {expect} = require('chai');
 
 describe('src/schema/model.js', function(){
-	
-	const {Model, config} = require('./model.js');
+	const {config} = require('./structure.js');
+	const {Model} = require('./model.js');
 
 	let now = Date.now();
 	let clock = null;

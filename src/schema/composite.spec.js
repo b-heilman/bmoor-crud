@@ -2,6 +2,7 @@
 const expect = require('chai').expect;
 
 const {Nexus} = require('../env/nexus.js');
+const {config} = require('./structure.js');
 const {Composite} = require('./composite.js');
 
 describe('src/schema/composite.js', function(){
@@ -146,6 +147,251 @@ describe('src/schema/composite.js', function(){
 					}
 				}
 			}
+		});
+	});
+
+	describe('::getChangeType', function(){
+		let sut = null;
+
+		beforeEach(async function(){
+			await nexus.configureModel('test-10', {
+				fields: {
+					eins: {
+						update: false
+					},
+					zwei: {
+						update: true,
+						updateType: config.get('changeTypes.major')
+					},
+					drei: {
+						update: true,
+						updateType: config.get('changeTypes.minor')
+					},
+					fier: {
+						update: true,
+						updateType: config.get('changeTypes.major')
+					}
+				}
+			});
+
+			await nexus.configureModel('test-11', {
+				fields: {
+					eins: {
+						update: false
+					},
+					zwei: {
+						update: true,
+						updateType: config.get('changeTypes.major')
+					},
+					drei: {
+						update: true,
+						updateType: config.get('changeTypes.minor')
+					},
+					link: {
+						read: true,
+						link: {
+							name: 'test-10',
+							field: 'eins'
+						}
+					}
+				}
+			});
+
+			sut = new Composite('foo-bar-1', nexus);
+			await sut.configure({
+				base: 'test-10',
+				fields: {
+					eins: '.eins',
+					zwei: '.zwei',
+					drei: '.drei',
+					fier: '.fier',
+					eins2: '> $test-11.eins',
+					other: {
+						zwei: '> $test-11.zwei'
+					},
+					drei2: '> $test-11.drei'
+				}
+			});
+		});
+
+		it('pull in a singlar value', async function(){
+			expect(
+				sut.getChangeType({
+					zwei: 2,
+					drei: 3
+				})
+			).to.equal(config.get('changeTypes.major'));
+
+			expect(
+				sut.getChangeType({
+					other: {
+						zwei: 2
+					},
+					drei2: 3
+				})
+			).to.equal(config.get('changeTypes.major'));
+
+			expect(
+				sut.getChangeType({
+					eins: 1,
+					drei: 3
+				})
+			).to.equal(config.get('changeTypes.minor'));
+
+			expect(
+				sut.getChangeType({
+					eins2: 1,
+					drei2: 3
+				})
+			).to.equal(config.get('changeTypes.minor'));
+
+			expect(
+				sut.getChangeType({
+					zwei: 2
+				})
+			).to.equal(config.get('changeTypes.major'));
+
+			expect(
+				sut.getChangeType({
+					other: {
+						zwei: 2
+					}
+				})
+			).to.equal(config.get('changeTypes.major'));
+
+			expect(
+				sut.getChangeType({
+					eins: 1,
+					eins2: 1
+				})
+			).to.equal(config.get('changeTypes.none'));
+
+			expect(
+				sut.getChangeType({
+					foo: 'bar'
+				})
+			).to.equal(config.get('changeTypes.none'));
+		});
+	});
+
+	describe('::validate', function(){
+		let sut = true;
+
+		const createMode = config.get('writeModes.create');
+		const updateMode = config.get('writeModes.update');
+
+		beforeEach(async function(){
+			await nexus.configureModel('test-10', {
+				fields: {
+					eins: {
+						update: false
+					},
+					zwei: {
+						update: true,
+						validation: {
+							required: true
+						}
+					}
+				}
+			});
+
+			await nexus.configureModel('test-11', {
+				fields: {
+					eins: {
+						update: false
+					},
+					zwei: {
+						update: true,
+						validation: {
+							required: true
+						}
+					},
+					link: {
+						read: true,
+						link: {
+							name: 'test-10',
+							field: 'eins'
+						}
+					}
+				}
+			});
+
+			sut = new Composite('foo-bar-1', nexus);
+			await sut.configure({
+				base: 'test-10',
+				fields: {
+					eins: '.eins',
+					zwei: '.zwei',
+					eins2: '> $test-11.eins',
+					other: {
+						zwei: '> $test-11.zwei'
+					}
+				}
+			});
+		});
+
+		it('should work on create', async function(){
+			expect(
+				sut.validate({
+					eins: 1,
+					zwei: 2,
+					eins2: 1,
+					other: {
+						zwei: 3
+					}
+				}, createMode)
+			).to.deep.equal([]);
+
+			expect(
+				sut.validate({
+					eins: 1,
+					fier: 4
+				}, createMode)
+			).to.deep.equal([
+				{path: 'zwei', message: 'can not be empty'},
+				{path: 'other.zwei', message: 'can not be empty'}
+			]);
+
+			expect(
+				sut.validate({
+					eins: 1,
+					zwei: 2
+				}, createMode)
+			).to.deep.equal([
+				{path: 'other.zwei', message: 'can not be empty'}
+			]);
+		});
+
+		it('should work on update', async function(){
+			expect(
+				sut.validate({
+					eins: 1, 
+					zwei: 2, 
+					other: {
+						zwei: 2
+					}
+				}, updateMode)
+			).to.deep.equal([]);
+
+			expect(
+				sut.validate({
+					eins: 1, 
+					eins2: 1
+				}, updateMode)
+			).to.deep.equal([]);
+
+			expect(
+				sut.validate({
+					eins: 1, 
+					zwei: null, 
+					other: {
+						zwei: null
+					}
+				}, updateMode)
+			).to.deep.equal([
+				{path: 'zwei', message: 'can not be empty'},
+				{path: 'other.zwei', message: 'can not be empty'}
+			]);
 		});
 	});
 

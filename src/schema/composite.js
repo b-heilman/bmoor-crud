@@ -383,19 +383,23 @@ class Composite extends Structure {
 	async build(){
 		await this.link();
 
+		// this needs to happen before build because it might add a field
+		// if needed for a join.
+		//----
 		// here's what I need to do.  Go through the mount path, figure out
 		// the last model / field in the path, and mark that.  The rest goes
 		// back into the query
-		this.settings = {
-			subs: await Promise.all(this.references.map(
-				async (reference, i) => ({
-					reference,
-					joins: await buildJoins(this, reference, i)
-				})
-			))
-		};
+		const subs = await Promise.all(this.references.map(
+			async (reference, i) => ({
+				reference,
+				joins: await buildJoins(this, reference, i)
+			})
+		));
 
 		await super.build();
+
+		// add subs to the settings object defined in parent build
+		Object.assign(this.settings, {subs});
 	}
 	/***
 	 * {

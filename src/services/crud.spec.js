@@ -2,7 +2,8 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Model, config: modelConfig} = require('../schema/model.js');
+const {config} = require('../schema/structure.js');
+const {Model} = require('../schema/model.js');
 const {Crud} = require('./crud.js');
 const {Context} = require('../server/context.js');
 
@@ -1557,13 +1558,13 @@ describe('src/services/crud.js', function(){
 						create: true,
 						read: true,
 						update: true,
-						updateType: modelConfig.get('changeTypes.major')
+						updateType: config.get('changeTypes.major')
 					},
 					title: {
 						create: true,
 						read: true,
 						update: true,
-						updateType: modelConfig.get('changeTypes.minor')
+						updateType: config.get('changeTypes.minor')
 					},
 					someField: {
 						create: true,
@@ -1578,12 +1579,12 @@ describe('src/services/crud.js', function(){
 			let res = await service.getChangeType({junk: true});
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			res = await service.getChangeType({someField: true});
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			res = await service.getChangeType({
 				someField: true,
@@ -1591,7 +1592,7 @@ describe('src/services/crud.js', function(){
 			});
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.minor'));
+			.to.equal(config.get('changeTypes.minor'));
 
 			res = await service.getChangeType({
 				someField: true,
@@ -1600,7 +1601,7 @@ describe('src/services/crud.js', function(){
 			});
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.major'));
+			.to.equal(config.get('changeTypes.major'));
 		});
 
 		it('should run when the id is null', async function(){
@@ -1617,13 +1618,13 @@ describe('src/services/crud.js', function(){
 						create: true,
 						read: true,
 						update: true,
-						updateType: modelConfig.get('changeTypes.major')
+						updateType: config.get('changeTypes.major')
 					},
 					title: {
 						create: true,
 						read: true,
 						update: true,
-						updateType: modelConfig.get('changeTypes.minor')
+						updateType: config.get('changeTypes.minor')
 					},
 					someField: {
 						create: true,
@@ -1642,7 +1643,7 @@ describe('src/services/crud.js', function(){
 			let res = await service.getChangeType({junk: true}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 			
 			//-------
 			stubs.read.resolves({someField: true});
@@ -1650,14 +1651,14 @@ describe('src/services/crud.js', function(){
 			res = await service.getChangeType({someField: true}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			stubs.read.resolves({someField: false});
 
 			res = await service.getChangeType({someField: true}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			//--------
 			stubs.read.resolves({someField: true, title:true});
@@ -1668,7 +1669,7 @@ describe('src/services/crud.js', function(){
 			}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			stubs.read.resolves({someField: true, title:false});
 
@@ -1678,7 +1679,7 @@ describe('src/services/crud.js', function(){
 			}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.minor'));
+			.to.equal(config.get('changeTypes.minor'));
 
 			//--------
 			stubs.read.resolves({someField: true, title: true, name: true});
@@ -1690,7 +1691,7 @@ describe('src/services/crud.js', function(){
 			}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			stubs.read.resolves({someField: false, title: true, name: true});
 
@@ -1701,7 +1702,7 @@ describe('src/services/crud.js', function(){
 			}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.none'));
+			.to.equal(config.get('changeTypes.none'));
 
 			stubs.read.resolves({someField: true, title: false, name: true});
 
@@ -1712,7 +1713,7 @@ describe('src/services/crud.js', function(){
 			}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.minor'));
+			.to.equal(config.get('changeTypes.minor'));
 
 			stubs.read.resolves({someField: true, title: false, name: false});
 
@@ -1723,7 +1724,7 @@ describe('src/services/crud.js', function(){
 			}, 1);
 
 			expect(res)
-			.to.equal(modelConfig.get('changeTypes.major'));
+			.to.equal(config.get('changeTypes.major'));
 		});
 	});
 
@@ -1789,7 +1790,7 @@ describe('src/services/crud.js', function(){
 
 			res = await service.validate(
 				{junk: 1, name: 2, title: 3}, 
-				modelConfig.get('writeModes.create')
+				config.get('writeModes.create')
 			);
 
 			expect(res)
@@ -1797,7 +1798,7 @@ describe('src/services/crud.js', function(){
 
 			res = await service.validate(
 				{junk: 1}, 
-				modelConfig.get('writeModes.create')
+				config.get('writeModes.create')
 			);
 
 			expect(res)
@@ -1808,7 +1809,7 @@ describe('src/services/crud.js', function(){
 
 			res = await service.validate(
 				{junk: 1}, 
-				modelConfig.get('writeModes.update')
+				config.get('writeModes.update')
 			);
 
 			expect(res)
@@ -1816,7 +1817,7 @@ describe('src/services/crud.js', function(){
 
 			res = await service.validate(
 				{junk: 1, name: null, title: ''}, 
-				modelConfig.get('writeModes.update')
+				config.get('writeModes.update')
 			);
 
 			expect(res)

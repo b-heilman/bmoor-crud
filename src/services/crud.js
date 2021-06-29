@@ -2,7 +2,7 @@
 const {create} = require('bmoor/src/lib/error.js');
 
 const {View, runMap} = require('./view.js');
-const {config} = require('../schema/model.js');
+const {config} = require('../schema/structure.js');
 
 async function massAccess(service, arr, ctx){
 	const security = service.security;
@@ -396,43 +396,6 @@ class Crud extends View {
 		}
 
 		return datum; // datum will have had onRead run against it
-	}
-
-	async getChangeType(datum, id = null, ctx = null){
-		let delta = datum;
-
-		if (id){
-			const target = await this.read(id, ctx);
-
-			if (target){
-				delta = this.structure.getFields()
-				.reduce(
-					(agg, field) => {
-						const incomingValue = field.externalGetter(datum);
-						const existingValue = field.externalGetter(target);
-
-						if (incomingValue !== existingValue && 
-							incomingValue !== undefined){
-							field.externalSetter(agg, incomingValue);
-						}
-
-						return agg;
-					},
-					{}
-				);
-			}
-		}
-
-		return this.structure.getChangeType(delta);
-	}
-
-	async validate(delta, mode, ctx){
-		const security = this.security;
-
-		const errors = this.structure.validate(delta, mode);
-
-		return security.validate ? 
-			errors.concat(await security.validate(delta, mode, ctx)) : errors;
 	}
 }
 
