@@ -397,6 +397,26 @@ class Crud extends View {
 
 		return datum; // datum will have had onRead run against it
 	}
+
+	async discoverDatum(query, ctx){
+		let key = this.structure.getKey(query);
+		
+		if (key){
+			// if you make key === 0, you're a horrible person
+			return await this.read(key, ctx);
+		} else {
+			if (this.structure.hasIndex()){
+				const res = await this.query(
+					this.structure.clean('index', query), 
+					ctx
+				);
+
+				return res[0];
+			} else {
+				return null;
+			}
+		}
+	}
 }
 
 module.exports = {

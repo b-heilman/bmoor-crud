@@ -172,7 +172,6 @@ describe('src/env/bootstrap.js', function(){
 			});
 
 			await bootstrap.install(mockery);
-			console.log('--installed--');
 		});
 
 		it('should install correctly', async function(){
@@ -256,7 +255,6 @@ describe('src/env/bootstrap.js', function(){
 				}]
 			});
 
-			console.log('cp-1');
 			expect(res.controllers)
 			.to.deep.equal({
 				'guards': [{

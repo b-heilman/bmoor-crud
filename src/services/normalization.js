@@ -5,31 +5,7 @@ const {Normalized} = require('../schema/normalized.js');
 const {Network} = require('../graph/network.js');
 
 async function getDatum(service, query, ctx){
-	let key = service.structure.getKey(query);
-
-	// on update, a user might send a query object as the key if they are updating the name
-	// in the body but not referencing by the id
-	if (typeof(key) === 'object'){
-		query = key;
-
-		key = service.structure.getKey(query);
-	}
-
-	if (key){
-		// if you make key === 0, you're a horrible person
-		return await service.read(key, ctx);
-	} else {
-		if (service.structure.hasIndex()){
-			const res = await service.query(
-				service.structure.clean('index',query), 
-				ctx
-			);
-
-			return res[0];
-		} else {
-			return null;
-		}
-	}
+	return service.discoverDatum(query, ctx);
 }
 
 async function ensure(mapper, modelName, payload, ctx){
@@ -499,6 +475,7 @@ async function clear(master, nexus, ctx){
 }
 
 module.exports = {
+	getDatum,
 	inflate,
 	deflate,
 	diagram,

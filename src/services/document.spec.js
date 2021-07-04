@@ -119,8 +119,18 @@ describe('src/services/document.js', function(){
 					read: true,
 					key: true
 				},
-				name: true,
-				title: true,
+				name: {
+					create: true,
+					read: true,
+					update: true,
+					updateType: changeTypes.major
+				},
+				title: {
+					create: true,
+					read: true,
+					update: true,
+					updateType: changeTypes.minor
+				},
 				creatorId: {
 					read: true,
 					link: {
@@ -986,12 +996,32 @@ describe('src/services/document.js', function(){
 			await doc.configure(connector);
 			await doc.link();
 
-			const res = await doc.normalize({
-				item: 'item-1',
-				categoryName: 'category-1'
-			});
+			const instructions = doc.buildNormalizedSchema();
+			const res = await doc.normalize(
+				{
+					item: 'item-1',
+					categoryName: 'category-1'
+				},
+				instructions,
+				context
+			);
 
 			expect(res.instructions.toJSON())
+			.to.deep.equal({
+				'test-item': [{
+					$ref: 'test-item:1',
+					$type: 'create',
+					name: 'item-1'
+				}],
+				'test-category': [{
+					$ref: 'test-category:1',
+					$type: 'create',
+					name: 'category-1',
+					itemId: 'test-item:1'
+				}]
+			});
+
+			expect(instructions.toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 'test-item:1',
@@ -1026,12 +1056,16 @@ describe('src/services/document.js', function(){
 			await doc.configure(connector);
 			await doc.link();
 
-			const res = await doc.normalize({
-				id: 123,
-				item: 'item-1',
-				categoryId: 456,
-				categoryName: 'category-1'
-			});
+			const res = await doc.normalize(
+				{
+					id: 123,
+					item: 'item-1',
+					categoryId: 456,
+					categoryName: 'category-1'
+				},
+				doc.buildNormalizedSchema(),
+				context
+			);
 
 			expect(res.instructions.toJSON())
 			.to.deep.equal({
@@ -1084,10 +1118,13 @@ describe('src/services/document.js', function(){
 			await doc.configure(connector);
 			await doc.link();
 
-			const res = await doc.push({
-				item: 'item-1',
-				categoryName: 'category-1'
-			}, context);
+			const res = await doc.push(
+				{
+					item: 'item-1',
+					categoryName: 'category-1'
+				}, 
+				context
+			);
 
 			expect(res)
 			.to.deep.equal([
@@ -1273,14 +1310,14 @@ describe('src/services/document.js', function(){
 				id: 12,
 				name: 'family-1',
 				items: [{
+					id: 78,
+					item: 'item-2',
+					categoryName: 'category-2'
+				}, {
 					id: 34,
 					item: 'item-1',
 					categoryId: 56, 
 					categoryName: 'category-1'
-				}, {
-					id: 78,
-					item: 'item-2',
-					categoryName: 'category-2'
 				}]
 			}, context);
 
@@ -1293,29 +1330,29 @@ describe('src/services/document.js', function(){
 					name: 'family-1'
 				}],
 				'test-item': [{
-					$ref: 34,
-					$type: 'update',
-					id: 34,
-					name: 'item-1'
-				},{
 					$ref: 78,
 					$type: 'update',
 					id: 78,
 					name: 'item-2'
+				}, {
+					$ref: 34,
+					$type: 'update',
+					id: 34,
+					name: 'item-1'
 				}],
 				'test-category': [{
+					$ref: 'test-category:1',
+					$type: 'create',
+					id: undefined,
+					name: 'category-2',
+					itemId: 78,
+					familyId: 12
+				}, {
 					$ref: 56,
 					$type: 'update',
 					id: 56,
 					name: 'category-1',
 					itemId: 34,
-					familyId: 12
-				},{
-					$ref: 'test-category:2',
-					$type: 'create',
-					id: undefined,
-					name: 'category-2',
-					itemId: 78,
 					familyId: 12
 				}]
 			});
@@ -1333,19 +1370,19 @@ describe('src/services/document.js', function(){
 					id: 'item-2',
 					name: 'item-updated'
 				}, {
-					id: 'cat-1',
-					name: 'category-update'
-				}, {
 					id: 'cat-2',
 					name: 'category-created'
-				} 
+				}, {
+					id: 'cat-1',
+					name: 'category-update'
+				}
 			]);
 
 			expect(stubs.itemRead.getCall(0).args[0])
-			.to.equal(34);
+			.to.equal(78);
 
 			expect(stubs.itemRead.getCall(1).args[0])
-			.to.equal(78);
+			.to.equal(34);
 
 			expect(stubs.categoryRead.getCall(0).args[0])
 			.to.deep.equal(56);
@@ -1919,7 +1956,6 @@ describe('src/services/document.js', function(){
 		});
 
 		describe('assign getChangeType directly', async function(){
-			let typeCb = null;
 			let changeCb = null;
 
 			beforeEach(async function(){
@@ -1939,9 +1975,6 @@ describe('src/services/document.js', function(){
 					extends: 'test-material',
 					fields: {
 						'pivot': '.id'
-					},
-					getChangeType: async function(doc){
-						return typeCb(doc);
 					}
 				});
 				await nexus.configureDocument('test-composite-material', connector);
@@ -1961,14 +1994,10 @@ describe('src/services/document.js', function(){
 				doc = await nexus.configureDocument('test-composite-ut', connector);
 			});
 
-			xit('should work with a null type change', async function(){
-				typeCb = function(){
-					return null;
-				};
-
+			it('should work with a null type change', async function(){
 				changeCb = function(type){
 					expect(type)
-					.to.equal(changeTypes.none);
+					.to.equal(changeTypes.major);
 				};
 
 				await doc.push({
@@ -1983,10 +2012,6 @@ describe('src/services/document.js', function(){
 			});
 
 			xit('should work with a major type change', async function(){
-				typeCb = function(){
-					return changeTypes.major;
-				};
-
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.major);
@@ -2004,10 +2029,6 @@ describe('src/services/document.js', function(){
 			});
 
 			xit('should work with a minor type change', async function(){
-				typeCb = function(){
-					return changeTypes.minor;
-				};
-
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.minor);
@@ -2026,18 +2047,6 @@ describe('src/services/document.js', function(){
 
 			xit('should allow major to override with minor first', async function(){
 				let count = 0;
-
-				typeCb = function(){
-					if (count){
-						count++;
-
-						return changeTypes.major;
-					} else {
-						count++;
-
-						return changeTypes.minor;
-					}
-				};
 
 				changeCb = function(type){
 					expect(type)
@@ -2065,18 +2074,6 @@ describe('src/services/document.js', function(){
 			xit('should allow major to override with major first', async function(){
 				let count = 0;
 
-				typeCb = function(){
-					if (count){
-						count++;
-
-						return changeTypes.minor;
-					} else {
-						count++;
-
-						return changeTypes.major;
-					}
-				};
-
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.major);
@@ -2102,18 +2099,6 @@ describe('src/services/document.js', function(){
 
 			xit('should allow major to override with major in the middle', async function(){
 				let count = 0;
-
-				typeCb = function(){
-					if (count === 1){
-						count++;
-
-						return changeTypes.major;
-					} else {
-						count++;
-
-						return changeTypes.minor;
-					}
-				};
 
 				changeCb = function(type){
 					expect(type)
@@ -2144,7 +2129,6 @@ describe('src/services/document.js', function(){
 		});
 
 		xdescribe('assign getChangeType via extends', async function(){
-			let typeCb = null;
 			let changeCb = null;
 
 			beforeEach(async function(){
@@ -2154,9 +2138,6 @@ describe('src/services/document.js', function(){
 					fields: {
 						'id': '.id',
 						'name': '.name'
-					},
-					getChangeType: async function(doc){
-						return typeCb(doc);
 					}
 				});
 				await nexus.configureDocument('test-material', connector);
@@ -2209,18 +2190,6 @@ describe('src/services/document.js', function(){
 
 			it('should work with a null type change', async function(){
 				let count = 0;
-
-				typeCb = function(){
-					if (count === 1){
-						count++;
-
-						return changeTypes.major;
-					} else {
-						count++;
-
-						return changeTypes.minor;
-					}
-				};
 
 				changeCb = function(type){
 					expect(type)
@@ -2647,42 +2616,42 @@ describe('src/services/document.js', function(){
 				}],
 				'test-item': [{
 					'$ref': '$item-id-1',
-					'$type': 'update-create',
+					'$type': 'update',
 					'id': '$item-id-1',
 					'name': 'item-name-10',
 					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$item-id-2',
-					'$type': 'update-create',
+					'$type': 'update',
 					'id': '$item-id-2',
 					'name': 'item-name-20',
 					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$item-id-3',
-					'$type': 'update-create',
+					'$type': 'update',
 					'id': '$item-id-3',
 					'name': 'item-name-30',
 					'creatorId': 'user-id'
 				}],
 				'test-material': [{
 					'$ref': '$material-id-1',
-					'$type': 'update-create',
+					'$type': 'update',
 					'id': '$material-id-1',
 					'name': 'material-name-10',
 					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$material-id-2',
-					'$type': 'update-create',
+					'$type': 'update',
 					'id': '$material-id-2',
 					'name': 'material-name-20',
 					'creatorId': 'user-id'
 				},
 				{
 					'$ref': '$material-id-3',
-					'$type': 'update-create',
+					'$type': 'update',
 					'id': '$material-id-3',
 					'name': 'material-name-30',
 					'creatorId': 'user-id'

@@ -3,7 +3,7 @@ const {get, set, del} =  require('bmoor/src/core.js');
 
 const {Transformer} = require('bmoor-schema/src/Transformer.js');
 
-const {compareChanges} = require('../schema/structure.js');
+const {compareChanges, config} = require('../schema/structure.js');
 
 const {View} = require('../services/view.js');
 
@@ -130,12 +130,12 @@ const normalization = require('./normalization.js');
 		)[0];
 	}
 
-	async normalize(incomingDatum, instructions = null){
-		await this.link();
-
-		if (!instructions){
-			instructions = new Normalized(this.structure.nexus);
+	async normalize(incomingDatum, instructions, ctx){
+		if (!ctx){
+			throw new Error('no ctx');
 		}
+
+		await this.link();
 
 		const transitions = this.structure.fields
 		.reduce(
@@ -163,7 +163,16 @@ const normalization = require('./normalization.js');
 
 		const references = {};
 
-		let changeType = null;
+		/** TODO: So I want to do this, but I don't know the key, or change type?
+		let validation = 
+
+		let changeType = await this.structure.getChangeType(
+			incomingDatum,
+			get(this.structure.incomingSettings.key, incomingDatum),
+			ctx
+		);
+		*/
+		let changeType = config.get('changeTypes.none');
 
 		const seriesSession = instructions.getSession();
 
@@ -179,19 +188,24 @@ const normalization = require('./normalization.js');
 				// I need to generate references for the second loop
 				const content = await transformer.go(incomingDatum, {});
 				
-				const key = service.structure.getKey(content);
 				let ref = null;
 				let action = null;
+				
+				const existing = await service.discoverDatum(content, ctx);
+				if (existing){
+					const key = service.structure.getKey(content);
 
-				if (key){
-					if (typeof(key) === 'string' && key.charAt(0) === '$'){
-						action = 'update-create';
-					} else {
-						action = 'update';
-					}
+					action = 'update';
+
+					changeType = compareChanges(
+						changeType,
+						await service.getChangeType(content, key, ctx)
+					);
 
 					ref = new DatumRef(key);
 				} else {
+					changeType = config.get('changeTypes.major');
+
 					ref = new DatumRef();
 					action = 'create';
 				}
@@ -215,14 +229,6 @@ const normalization = require('./normalization.js');
 							);
 						});	
 					}
-
-					// TODO: validation?
-					changeType = compareChanges(
-						changeType, 
-						service.structure.getChangeType(
-							newDatum.getContent()
-						)
-					);
 				};
 			})
 		);
@@ -254,7 +260,7 @@ const normalization = require('./normalization.js');
 						const {
 							seriesSession: subSeries,
 							changeType: subChange
-						} = await sub.document.normalize(subDatum, seriesSession);
+						} = await sub.document.normalize(subDatum, seriesSession, ctx);
 
 						changeType = compareChanges(changeType, subChange);
 
@@ -328,7 +334,7 @@ const normalization = require('./normalization.js');
 		));
 
 		if (this.structure.incomingSettings.onChange && changeType){
-			await this.structure.incomingSettings.onChange(changeType, seriesSession);
+			await this.structure.incomingSettings.onChange(changeType, seriesSession, ctx);
 		}
 		
 		return {
@@ -338,9 +344,17 @@ const normalization = require('./normalization.js');
 		};
 	}
 
+	buildNormalizedSchema(){
+		return new Normalized(this.structure.nexus);
+	}
+
 	async push(datum, ctx){
+		const instructions = this.buildNormalizedSchema();
+
+		await this.normalize(datum, instructions, ctx);
+
 		return normalization.deflate(
-			(await this.normalize(datum)).instructions,
+			instructions,
 			this.structure.nexus,
 			ctx
 		);

@@ -291,7 +291,7 @@ describe('src/service/normalization', function(){
 		});
 
 		it('should properly process an update (via query) with a set of models', function(done){
-			stubs.class1Read = sinon.stub(class1, 'query')
+			stubs.class1Query = sinon.stub(class1, 'query')
 			.resolves([{id:123}]);
 
 			stubs.class1Update = sinon.stub(class1, 'update')
@@ -310,9 +310,7 @@ describe('src/service/normalization', function(){
 				'class-1': [{
 					$type: 'update',
 					$ref: 'foo-1',
-					id: {
-						info: 'one'
-					}
+					info: 'one'
 				}],
 				'class-2': [{
 					$ref: 'bar-2',
@@ -323,7 +321,7 @@ describe('src/service/normalization', function(){
 				}]
 			}, nexus, ctx)
 			.then(() => {
-				expect(stubs.class1Read.getCall(0).args[0])
+				expect(stubs.class1Query.getCall(0).args[0])
 				.to.deep.equal({info:'one'});
 
 				expect(stubs.class1Update.getCall(0).args[0])
@@ -331,9 +329,7 @@ describe('src/service/normalization', function(){
 
 				expect(stubs.class1Update.getCall(0).args[1])
 				.to.deep.equal({
-					id: {
-						info: 'one'
-					}
+					info: 'one'
 				});
 
 				expect(stubs.class2.getCall(0).args[0])
@@ -380,9 +376,7 @@ describe('src/service/normalization', function(){
 				'class-1': [{
 					$type: 'update',
 					$ref: 'foo-1',
-					id: {
-						info: 'one'
-					}
+					info: 'one'
 				}]
 			}, nexus, ctx);
 
@@ -396,9 +390,7 @@ describe('src/service/normalization', function(){
 
 			expect(stubs.class1Update.getCall(0).args[1])
 			.to.deep.equal({
-				id: {
-					info: 'one'
-				}
+				info: 'one'
 			});
 
 			expect(stubs.class2.getCall(0).args[0])
