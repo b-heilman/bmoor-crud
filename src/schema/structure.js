@@ -345,19 +345,21 @@ function buildValidator(old, field, validation){
 }
 
 function compareChanges(was, now){
+	let rtn = was;
+
 	if (now){
 		if (!was){
-			return now; 
+			rtn = now; 
 		} else {
 			const rankings = config.get('changeRankings');
 
 			if (rankings[now] > rankings[was]){
-				return now;
+				rtn = now;
 			}
 		}
 	}
-
-	return was;
+	
+	return rtn;
 }
 
 function buildChangeCompare(old, field, type){

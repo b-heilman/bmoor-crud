@@ -165,10 +165,23 @@ describe('src/services/document.js', function(){
 						field: 'id'
 					}
 				},
+				tag: {
+					read: true,
+					write: true,
+					update: true,
+					updateType: changeTypes.major
+				},
 				mask: {
 					read: true,
 					write: true,
-					update: true
+					update: true,
+					updateType: changeTypes.minor
+				},
+				note: {
+					read: true,
+					write: true,
+					update: true,
+					updateType: changeTypes.none
 				},
 				creatorId: {
 					read: true,
@@ -1974,7 +1987,10 @@ describe('src/services/document.js', function(){
 					key: 'id',
 					extends: 'test-material',
 					fields: {
-						'pivot': '.id'
+						'pivot': '.id',
+						'tag': '.tag',
+						'mask': '.mask',
+						'note': '.note'
 					}
 				});
 				await nexus.configureDocument('test-composite-material', connector);
@@ -1994,7 +2010,7 @@ describe('src/services/document.js', function(){
 				doc = await nexus.configureDocument('test-composite-ut', connector);
 			});
 
-			it('should work with a null type change', async function(){
+			it('should work with a major type change', async function(){
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.major);
@@ -2002,33 +2018,16 @@ describe('src/services/document.js', function(){
 
 				await doc.push({
 					id: 'item-id-1',
-					name: 'item-name-10',
+					//name: 'item-name-10',
 					materials: [{
-						pivot: 'join-1',
 						id: 'material-1',
-						name: 'material-name-10'
+						pivot: 'join-1',
+						tag: 'material-name-10'
 					}]
 				}, context);
 			});
 
-			xit('should work with a major type change', async function(){
-				changeCb = function(type){
-					expect(type)
-					.to.equal(changeTypes.major);
-				};
-
-				await doc.push({
-					id: 'item-id-1',
-					name: 'item-name-10',
-					materials: [{
-						pivot: 'join-1',
-						id: 'material-1',
-						name: 'material-name-10'
-					}]
-				}, context);
-			});
-
-			xit('should work with a minor type change', async function(){
+			it('should work with a minor type change', async function(){
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.minor);
@@ -2036,18 +2035,33 @@ describe('src/services/document.js', function(){
 
 				await doc.push({
 					id: 'item-id-1',
-					name: 'item-name-10',
+					//name: 'item-name-10',
 					materials: [{
-						pivot: 'join-1',
 						id: 'material-1',
-						name: 'material-name-10'
+						pivot: 'join-1',
+						mask: 'material-name-10'
 					}]
 				}, context);
 			});
 
-			xit('should allow major to override with minor first', async function(){
-				let count = 0;
+			it('should work with a none type change', async function(){
+				changeCb = function(type){
+					expect(type)
+					.to.equal(changeTypes.none);
+				};
 
+				await doc.push({
+					id: 'item-id-1',
+					//name: 'item-name-10',
+					materials: [{
+						id: 'material-1',
+						pivot: 'join-1',
+						note: 'material-name-10'
+					}]
+				}, context);
+			});
+
+			it('should allow major to override with minor first', async function(){
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.major);
@@ -2059,21 +2073,16 @@ describe('src/services/document.js', function(){
 					materials: [{
 						pivot: 'join-1',
 						id: 'material-1',
-						name: 'material-name-10'
+						tag: 'material-name-10'
 					}, {
 						pivot: 'join-2',
 						id: 'material-2',
-						name: 'material-name-20'
+						tag: 'material-name-20'
 					}]
 				}, context);
-
-				expect(count)
-				.to.equal(2);
 			});
 
-			xit('should allow major to override with major first', async function(){
-				let count = 0;
-
+			it('should allow major to override with major first', async function(){
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.major);
@@ -2085,21 +2094,16 @@ describe('src/services/document.js', function(){
 					materials: [{
 						pivot: 'join-1',
 						id: 'material-1',
-						name: 'material-name-10'
+						mask: 'material-name-20'
 					}, {
 						pivot: 'join-2',
 						id: 'material-2',
-						name: 'material-name-20'
+						mask: 'material-name-20'
 					}]
 				}, context);
-
-				expect(count)
-				.to.equal(2);
 			});
 
-			xit('should allow major to override with major in the middle', async function(){
-				let count = 0;
-
+			it('should allow major to override with major in the middle', async function(){
 				changeCb = function(type){
 					expect(type)
 					.to.equal(changeTypes.major);
@@ -2107,28 +2111,24 @@ describe('src/services/document.js', function(){
 
 				await doc.push({
 					id: 'item-id-1',
-					name: 'item-name-10',
 					materials: [{
 						pivot: 'join-1',
 						id: 'material-1',
-						name: 'material-name-10'
+						mask: 'material-name-10'
 					}, {
 						pivot: 'join-2',
 						id: 'material-2',
-						name: 'material-name-20'
+						tag: 'material-name-20'
 					}, {
 						pivot: 'join-3',
 						id: 'material-3',
-						name: 'material-name-30'
+						mask: 'material-name-30'
 					}]
 				}, context);
-
-				expect(count)
-				.to.equal(3);
 			});
 		});
 
-		xdescribe('assign getChangeType via extends', async function(){
+		describe('assign getChangeType via extends', async function(){
 			let changeCb = null;
 
 			beforeEach(async function(){
@@ -2187,36 +2187,6 @@ describe('src/services/document.js', function(){
 
 				doc = await nexus.configureDocument('test-composite-ut', connector);
 			});
-
-			it('should work with a null type change', async function(){
-				let count = 0;
-
-				changeCb = function(type){
-					expect(type)
-					.to.equal(changeTypes.major);
-				};
-
-				await doc.push({
-					id: 'item-id-1',
-					name: 'item-name-10',
-					materials: [{
-						pivot: 'join-1',
-						id: 'material-1',
-						name: 'material-name-10'
-					}, {
-						pivot: 'join-2',
-						id: 'material-2',
-						name: 'material-name-20'
-					}, {
-						pivot: 'join-3',
-						id: 'material-3',
-						name: 'material-name-30'
-					}]
-				}, context);
-
-				expect(count)
-				.to.equal(3);
-			});
 		});
 	});
 
@@ -2256,15 +2226,13 @@ describe('src/services/document.js', function(){
 			});
 			await nexus.configureDocument('test-mappings', connector);
 
-			stubs.getChangeType = sinon.stub();
 			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
 				key: 'id',
 				extends: 'test-material',
 				fields: {
 					'pivot': '.id'
-				},
-				getChangeType: stubs.getChangeType
+				}
 			});
 			await nexus.configureDocument('test-composite-material', connector);
 
@@ -2313,7 +2281,7 @@ describe('src/services/document.js', function(){
 			});
 		});
 
-		xit('should only call once', async function(){
+		it('should only call once', async function(){
 			doc = await nexus.configureDocument('test-ownership', connector);
 
 			const users = await nexus.loadCrud('test-user');
@@ -2339,6 +2307,9 @@ describe('src/services/document.js', function(){
 				name: 'item-updated'
 			});
 
+			stubs.itemChange = sinon.stub(items, 'getChangeType')
+			.resolves(changeTypes.minor);
+
 			stubs.itemCreate = sinon.stub(items, 'update')
 			.resolves({
 				id: 'item-1',
@@ -2350,6 +2321,9 @@ describe('src/services/document.js', function(){
 				id: 'material-1',
 				name: 'material-updated'
 			});
+
+			stubs.materialChange = sinon.stub(materials, 'getChangeType')
+			.resolves(changeTypes.minor);
 
 			stubs.materialCreate = sinon.stub(materials, 'update')
 			.resolves({
@@ -2364,6 +2338,9 @@ describe('src/services/document.js', function(){
 				materialId: 'material-1-1'
 			});
 
+			stubs.imChange = sinon.stub(itemMaterials, 'getChangeType')
+			.resolves(changeTypes.major);
+
 			stubs.imCreate = sinon.stub(itemMaterials, 'update')
 			.resolves({
 				id: 'im-1',
@@ -2372,15 +2349,6 @@ describe('src/services/document.js', function(){
 			});
 
 			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
-
-			stubs.getChangeType.onCall(0)
-			.resolves(changeTypes.major);
-
-			stubs.getChangeType.onCall(1)
-			.resolves(changeTypes.minor);
-
-			stubs.getChangeType.onCall(2)
-			.resolves(changeTypes.major);
 
 			await doc.push({
 				id: 'user-id-1',
@@ -2494,7 +2462,7 @@ describe('src/services/document.js', function(){
 
 			//-------------
 			expect(stubs.onChange.getCall(1).args[0])
-			.to.equal(changeTypes.minor);
+			.to.equal(changeTypes.major);
 
 			series = stubs.onChange.getCall(1).args[1];
 

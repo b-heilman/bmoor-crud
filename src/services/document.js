@@ -197,10 +197,9 @@ const normalization = require('./normalization.js');
 
 					action = 'update';
 
-					changeType = compareChanges(
-						changeType,
-						await service.getChangeType(content, key, ctx)
-					);
+					// If I put this inline below, I get null as an input
+					const res = await service.getChangeType(content, key, ctx);
+					changeType = compareChanges(changeType, res);
 
 					ref = new DatumRef(key);
 				} else {
@@ -233,7 +232,7 @@ const normalization = require('./normalization.js');
 			})
 		);
 
-		await cbs.map(cb => cb());
+		await Promise.all(cbs.map(cb => cb()));
 
 		/***
 		 * Think I can get ride of all this
@@ -263,7 +262,7 @@ const normalization = require('./normalization.js');
 						} = await sub.document.normalize(subDatum, seriesSession, ctx);
 
 						changeType = compareChanges(changeType, subChange);
-
+						
 						let found = false;
 						
 						const access = accessor.filter(d => {
