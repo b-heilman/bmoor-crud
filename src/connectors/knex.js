@@ -6,10 +6,6 @@ const config = new Config({
 	knex: null
 });
 
-// TODO: a lot
-// add sort-by and possibly limit if doing pagination...
-// filter needs to be decoded and passed down to here, join is just a 
-// glorified filter
 /*****
  * --- stms ----
  * models: [

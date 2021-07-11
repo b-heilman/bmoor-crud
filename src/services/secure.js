@@ -34,8 +34,6 @@ function secure(crud, settings){
 	const accessCfg = {};
 	const adminPermission = settings.adminPermission;
 
-	// TODO: do I want to do an 'isAdmin' here?
-
 	// filters on data read out of the db
 	if (settings.readPermission){
 		accessCfg.beforeRead = function(params, ctx, service){

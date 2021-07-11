@@ -5,7 +5,6 @@ const {makeGetter, makeSetter} = require('bmoor/src/core.js');
 const config = new Config({
 });
 
-// TODO: 2/20 - cleaners / property checks should have an api, no?
 class Field {
 	constructor(path, structure, settings) {
 		// path should always be considered an unique identifier
@@ -30,8 +29,6 @@ class Field {
 	     ***/
 		this.incomingSettings = settings;
 
-		// TODO: I think internalGetter should be reference and internalSetter should
-		//   be storagePath
 		this.externalGetter = makeGetter(this.path);
 		this.externalSetter = makeSetter(this.path);
 		this.internalGetter = makeGetter(this.reference);

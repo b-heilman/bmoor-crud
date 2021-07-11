@@ -85,7 +85,6 @@ fieldDef: {
 
 	-- structure
 	link: <tableLink> // if a foreign key
-	internal: ''  TODO : internal structure
 }
 
 fields: {
@@ -132,7 +131,6 @@ function buildActions(actions, field){
 		}
 	}
 
-	// TODO: all this below should use the field's predefined getters and setters.
 	if (settings.onCreate){
 		actions.create = actionExtend(
 			settings.onCreate,
@@ -484,22 +482,6 @@ class Structure {
 		return this.fields;
 	}
 
-	// TODO: I don't like this... structure is the model
-	// this feels wrong being here... seems like it's only needed by composite?
-	hasStructure(structureName){
-		let found = null;
-
-		for (let i = 0, c = this.fields.length; i < c && !found; i++){
-			const field = this.fields[i];
-
-			if (field.structure.name === structureName){
-				found = field;
-			}
-		}
-
-		return found;
-	}
-
 	hasField(searchField){
 		let found = false;
 
@@ -610,7 +592,6 @@ class Structure {
 					const access = (new Path(path)).access;
 
 					// links in are [model].value > [existingModel]
-					// TODO: I think I want to flip that?
 					const mountAccessor = access[access.length-1];
 					const mountSeries = mountAccessor.series;
 

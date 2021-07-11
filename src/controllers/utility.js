@@ -1,18 +1,8 @@
 
 const error = require('bmoor/src/lib/error.js');
+const {skewerToCamel} = require('bmoor/src/string.js');
 
 const {Controller} = require('../server/controller.js');
-
-// TODO: move this to bmoor string
-function camelize(str){
-	const arr = str.split('-');
-	const capital = arr.map(
-		(item, index) => index ? 
-			item.charAt(0).toUpperCase() + item.slice(1).toLowerCase() : item
-	);
-	
-	return capital.join('');
-}
 
 // actions performed against a class, but a particular instance
 class Utility extends Controller {
@@ -52,7 +42,7 @@ class Utility extends Controller {
 			});
 		}
 
-		const fn = camelize(utility);
+		const fn = skewerToCamel(utility);
 
 		if (!this.view[fn]){
 			throw error.create('method was not found with service', {
@@ -83,7 +73,7 @@ class Utility extends Controller {
 
 					return this.route(ctx);
 				},
-				structure: this.view.structure // TODO
+				structure: this.view.structure
 			};
 		});
 	}

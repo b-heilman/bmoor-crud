@@ -426,6 +426,20 @@ class Composite extends Structure {
 		return this.build();
 	}
 
+	hasStructure(structureName){
+		let found = null;
+
+		for (let i = 0, c = this.fields.length; i < c && !found; i++){
+			const field = this.fields[i];
+
+			if (field.structure.name === structureName){
+				found = field;
+			}
+		}
+
+		return found;
+	}
+
 	assignField(field, settings){
 		// I don't think I need this anymore?
 		// this.references[field.reference] = field;

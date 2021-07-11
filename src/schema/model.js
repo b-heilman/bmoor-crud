@@ -141,8 +141,6 @@ class Model extends Structure {
 
 	// produces representation for interface layer
 	// similar to lookup, which is a combination of models
-	// TODO: sort-by, limit
-	// TODO: where to add ability to join from another model?
 	async getQuery(settings, ctx){
 		const query = settings.baseQuery || new Query(this.name);
 

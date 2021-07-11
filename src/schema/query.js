@@ -144,8 +144,6 @@ class Query {
 	}
 
 	getInOrder(){
-		// TODO: need to abstract this function to a common directed graph sort
-		// TODO: cache?
 		const ordered = [];
 
 		let toProcess = Object.keys(this.models)

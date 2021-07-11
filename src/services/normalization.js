@@ -268,7 +268,7 @@ async function inflate(service, query, nexus, ctx){
 		datum.$type = type;
 
 		let rtn = s[key];
-		// TODO : if I do this, I should check the ref and replace that?
+		
 		if (rtn){
 			return {
 				current: rtn,

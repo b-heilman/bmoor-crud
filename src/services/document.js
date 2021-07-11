@@ -163,15 +163,6 @@ const normalization = require('./normalization.js');
 
 		const references = {};
 
-		/** TODO: So I want to do this, but I don't know the key, or change type?
-		let validation = 
-
-		let changeType = await this.structure.getChangeType(
-			incomingDatum,
-			get(this.structure.incomingSettings.key, incomingDatum),
-			ctx
-		);
-		*/
 		let changeType = config.get('changeTypes.none');
 
 		const seriesSession = instructions.getSession();
@@ -209,6 +200,7 @@ const normalization = require('./normalization.js');
 					action = 'create';
 				}
 
+				// TODO: validation
 				references[series] = ref;
 
 				const newDatum = seriesSession.getDatum(series, ref, action);
