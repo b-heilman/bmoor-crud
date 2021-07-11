@@ -76,8 +76,9 @@ function getDefined(nexus, type, constructors, ref, args){
 
 async function setSettings(nexus, type, target, settings, ref){
 	await target.configure(settings);
+	
 	await nexus.setConfigured(type, ref, target);
-
+	
 	return target;
 }
 

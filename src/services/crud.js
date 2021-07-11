@@ -2,7 +2,7 @@
 const {create} = require('bmoor/src/lib/error.js');
 
 const {View, runMap} = require('./view.js');
-const {config} = require('../schema/structure.js');
+const {config: structureConfig} = require('../schema/structure.js');
 
 async function massAccess(service, arr, ctx){
 	const security = service.security;
@@ -32,7 +32,7 @@ class Crud extends View {
 
 		const errors = await this.validate(
 			payload,
-			config.get('writeModes.create'), 
+			structureConfig.get('writeModes.create'), 
 			ctx
 		);
 
@@ -55,18 +55,19 @@ class Crud extends View {
 		}
 
 		return runMap(
-			await this.structure.execute(stmt, ctx), 
+			await this.structure.execute(stmt, ctx),
 			this, 
 			ctx
 		);
 	}
 
 	async create(proto, ctx){
+		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
 		if (!ctx){
-			throw create(`missing ctx in create of ${this.structure.name}`, {
+			throw create(`missing ctx in create of ${name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_CREATE_CTX',
 				context: {}
@@ -79,7 +80,7 @@ class Crud extends View {
 
 		if (security.canCreate){
 			if (!(await security.canCreate(proto, ctx))){
-				throw create(`now allowed to create instance of ${this.structure.name}`, {
+				throw create(`now allowed to create instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_CREATE',
 					context: {}
@@ -91,7 +92,7 @@ class Crud extends View {
 			await this._create(
 				proto, 
 				{
-					model: this.structure.name
+					model: name
 				}, 
 				ctx
 			)
@@ -101,11 +102,16 @@ class Crud extends View {
 			await hooks.afterCreate(datum, ctx, this);
 		}
 
-		if (ctx){
+		const key = this.structure.getKey(datum);
+		if (ctx.cache){
+			ctx.cache.set(name, key, datum);
+		}
+
+		if (ctx.addChange){
 			ctx.addChange(
-				this.structure.name, 
+				name,
 				'create', 
-				this.structure.getKey(datum), 
+				key, 
 				null, 
 				datum
 			);
@@ -114,10 +120,8 @@ class Crud extends View {
 		return datum;
 	}
 
-	// TODO: one thing I need to do is start cacheing gets, I can assume if I 
-	//   get by name or get by something else, I will reference it by id later,
-	//   I should bake that into this layer to improve performance
 	async read(id, ctx){
+		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
@@ -128,7 +132,7 @@ class Crud extends View {
 		}
 
 		if (!ctx){
-			throw create(`missing ctx in read of ${this.structure.name}`, {
+			throw create(`missing ctx in read of ${name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_READ_CTX',
 				context: {
@@ -137,22 +141,37 @@ class Crud extends View {
 			});
 		}
 
-		const [datum] = await super.read(
-			{
-				query: await this.structure.getQuery(
-					{
-						params: {
-							[this.structure.settings.key]: id
-						}
-					},
-					ctx
-				)
-			},
-			ctx
-		);
+		let datum = null;
+
+		// If the current context has a cache, check it.  I am doing it this way
+		// because the context can dictate the cache, which allows you to do per
+		// call caches and system wide caches.
+		if (ctx.cache && await ctx.cache.has(name, id)){
+			datum = await ctx.cache.get(name, id);
+		} else {
+			const res = await super.read(
+				{
+					query: await this.structure.getQuery(
+						{
+							params: {
+								[this.structure.settings.key]: id
+							}
+						},
+						ctx
+					)
+				},
+				ctx
+			);
+
+			datum = res[0];
+
+			if (ctx.cache){
+				ctx.cache.set(name, id, datum);
+			}
+		}
 		
 		if (!datum){
-			throw create(`unable to view ${id} of ${this.structure.name}`, {
+			throw create(`unable to view ${id} of ${name}`, {
 				status: 404,
 				code: 'BMOOR_CRUD_SERVICE_READ_FILTER',
 				context: {
@@ -161,7 +180,7 @@ class Crud extends View {
 			});
 		} else if (security.canRead){
 			if (!(await security.canRead(datum, ctx))){
-				throw create(`now allowed to read instance of ${this.structure.name}`, {
+				throw create(`now allowed to read instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
 					context: {}
@@ -233,7 +252,7 @@ class Crud extends View {
 			await hooks.beforeRead(null, ctx, this);
 		}
 
-		return massAccess(
+		const rtn = await massAccess(
 			this, 
 			await super.read(
 				{
@@ -246,6 +265,18 @@ class Crud extends View {
 			), 
 			ctx
 		);
+
+		if (ctx.cache){
+			rtn.map(
+				datum => ctx.cache.set(
+					this.structure.name,
+					this.structure.getKey(datum), 
+					datum
+				)
+			);
+		}
+
+		return rtn;
 	}
 
 	async _update(delta, tgt, stmt, ctx){
@@ -256,7 +287,7 @@ class Crud extends View {
 
 		const errors = await this.validate(
 			payload,
-			config.get('writeModes.update'),
+			structureConfig.get('writeModes.update'),
 			ctx
 		);
 
@@ -282,6 +313,7 @@ class Crud extends View {
 	}
 
 	async update(id, delta, ctx){
+		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
@@ -295,7 +327,7 @@ class Crud extends View {
 
 		if (security.canUpdate){
 			if (!(await security.canUpdate(tgt, ctx))){
-				throw create(`now allowed to update instance of ${this.structure.name}`, {
+				throw create(`now allowed to update instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_UPDATE',
 					context: {
@@ -322,9 +354,13 @@ class Crud extends View {
 			await hooks.afterUpdate(datum, ctx, this);
 		}
 
-		if (ctx){
+		if (ctx.cache){
+			ctx.cache.set(name, id, datum);
+		}
+
+		if (ctx.addChange){
 			ctx.addChange(
-				this.structure.name, 
+				name, 
 				'update', 
 				id, 
 				tgt, 
@@ -347,6 +383,7 @@ class Crud extends View {
 	 * issue.  I'm ok with that for now.
 	 **/
 	async delete(id, ctx){
+		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
@@ -360,7 +397,7 @@ class Crud extends View {
 
 		if (security.canDelete){
 			if (!(await security.canDelete(datum, ctx))){
-				throw create(`now allowed to update instance of ${this.structure.name}`, {
+				throw create(`now allowed to update instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_DELETE',
 					context: {
@@ -387,7 +424,7 @@ class Crud extends View {
 
 		if (ctx){
 			ctx.addChange(
-				this.structure.name, 
+				name, 
 				'delete', 
 				id, 
 				datum, 

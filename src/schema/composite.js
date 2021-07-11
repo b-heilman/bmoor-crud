@@ -248,133 +248,138 @@ class Composite extends Structure {
 		// doing this is protect from collisions if multiple links are called
 		// in parallel of the same type
 		context.isLinking = new Promise(async (resolve, reject) => {
-			const settings = this.incomingSettings;
-		
-			let ext = settings.extends;
-			if (ext){
-				const parent = await this.nexus.loadComposite(ext);
-
-				await parent.link();
-				
-				this.properties.extend(parent.properties);
-
-				if (!settings.getChangeType){
-					settings.getChangeType = parent.incomingSettings.getChangeType;
-				}
-
-				if (!settings.onChange){
-					settings.onChange = parent.incomingSettings.onChange;
-				}
-			}
-
-			this.properties.calculateRoots();
-
-			if (this.properties.content.length === 0){
-				reject(create('no properties found: '+this.name, {
-					code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES'
-				}));
-			}
-
-			// let's go through all the properties and figure out what is a field and 
-			// a foreign reference
-			context.results = this.properties.content
-			.map(async (property) => {
-				const path = property.mountPoint;
-				const accessors = property.accessors.slice(0);
-
-				if (property.type === 'access'){
-					accessors.reduce(
-						(prev, curr) => {
-							// TODO: just send the accessors
-							this.setConnection(prev.model, curr.model, prev.field, {
-								baseSeries: prev.series,
-								targetSeries: curr.series,
-								optional: curr.optional
-							});
-
-							return curr;
-						}
-					);
-
-					const accessor = accessors.pop();
-					const series = accessor.series;
-
-					if (!accessor.field){
-						reject(
-							create('model references need a field: '+path, {
-								code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID'
-							})
-						);
-					} else if (property.isArray){
-						reject(
-							create('dynamic subschemas not yet supported: '+path, {
-								code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_MAGIC'
-							})
-						);
-					}
-
-					// this needs to be get variables, and get variables guarentees where to find
-					// the variable
-					const field = await this.addField(path, {
-						model: accessor.model,
-						extends: accessor.field,
-						series
-					});
-
-					const tables = context.tables;
-					if (!tables[series]){
-						const refs = context.refs;
-
-						// create two indexes, one to reduce duplicates, one to use later
-						const table = {
-							name: field.structure.name,
-							series: series,
-							schema: field.structure.schema,
-							fields: [],
-							query: null
-						};
-
-						tables[series] = table;
-
-						if (!refs[table.name]){
-							refs[table.name] = [];
-						}
-
-						refs[table.name].push(table);
-					}
-				} else if (property.type === 'include'){
-					// I'm going to make sure all previous files are imported
-					const include = accessors.pop();
-
-					if (include.field){
-						reject(
-							create('can not pull fields from composites: '+path, {
-								code: 'BMOOR_CRUD_COMPOSITE_SCHEMA_ACCESS'
-							})
-						);
-					}
-
-					// I don't like this, it limits me to a single, but I'll fix it down
-					// the road.
-					return {
-						name: include.model,
-						property,
-						connections: [accessors],
-						composite: await this.nexus.loadComposite(include.model)
-					};
-				} else {
-					reject(
-						create('unknown line type: '+property.type, {
-							code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN'
-						})
-					);
-				}
-			});
+			try {
+				const settings = this.incomingSettings;
 			
-			this.references = (await Promise.all(context.results))
-				.filter(info => info);
+				let ext = settings.extends;
+				if (ext){
+					const parent = await this.nexus.loadComposite(ext);
 
-			resolve();
+					await parent.link();
+					
+					this.properties.extend(parent.properties);
+
+					if (!settings.getChangeType){
+						settings.getChangeType = parent.incomingSettings.getChangeType;
+					}
+
+					if (!settings.onChange){
+						settings.onChange = parent.incomingSettings.onChange;
+					}
+				}
+
+				this.properties.calculateRoots();
+
+				if (this.properties.content.length === 0){
+					reject(create('no properties found: '+this.name, {
+						code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES'
+					}));
+				}
+
+				// let's go through all the properties and figure out what is a field and 
+				// a foreign reference
+				context.results = this.properties.content
+				.map(async (property) => {
+					const path = property.mountPoint;
+					const accessors = property.accessors.slice(0);
+
+					if (property.type === 'access'){
+						await accessors.reduce(
+							async (prom, curr) => {
+								const prev = await prom;
+								// TODO: just send the accessors
+								await this.setConnection(prev.model, curr.model, prev.field, {
+									baseSeries: prev.series,
+									targetSeries: curr.series,
+									optional: curr.optional
+								});
+								
+								return curr;
+							}
+						);
+
+						const accessor = accessors.pop();
+						const series = accessor.series;
+
+						if (!accessor.field){
+							reject(
+								create('model references need a field: '+path, {
+									code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID'
+								})
+							);
+						} else if (property.isArray){
+							reject(
+								create('dynamic subschemas not yet supported: '+path, {
+									code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_MAGIC'
+								})
+							);
+						}
+
+						// this needs to be get variables, and get variables guarentees where to find
+						// the variable
+						const field = await this.addField(path, {
+							model: accessor.model,
+							extends: accessor.field,
+							series
+						});
+
+						const tables = context.tables;
+						if (!tables[series]){
+							const refs = context.refs;
+
+							// create two indexes, one to reduce duplicates, one to use later
+							const table = {
+								name: field.structure.name,
+								series: series,
+								schema: field.structure.schema,
+								fields: [],
+								query: null
+							};
+
+							tables[series] = table;
+
+							if (!refs[table.name]){
+								refs[table.name] = [];
+							}
+
+							refs[table.name].push(table);
+						}
+					} else if (property.type === 'include'){
+						// I'm going to make sure all previous files are imported
+						const include = accessors.pop();
+
+						if (include.field){
+							reject(
+								create('can not pull fields from composites: '+path, {
+									code: 'BMOOR_CRUD_COMPOSITE_SCHEMA_ACCESS'
+								})
+							);
+						}
+
+						// I don't like this, it limits me to a single, but I'll fix it down
+						// the road.
+						return {
+							name: include.model,
+							property,
+							connections: [accessors],
+							composite: await this.nexus.loadComposite(include.model)
+						};
+					} else {
+						reject(
+							create('unknown line type: '+property.type, {
+								code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN'
+							})
+						);
+					}
+				});
+				
+				const res = await Promise.all(context.results);
+				this.references = res.filter(info => info);
+
+				resolve();
+			} catch(ex){
+				reject(ex);
+			}
 		});
 		
 		return context.isLinking;

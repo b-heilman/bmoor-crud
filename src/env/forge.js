@@ -83,6 +83,9 @@ class Forge {
 		);
 	}
 
+	// TODO: I want decorators, effects, and security 
+	//   to be able to be installed against a crud or document.
+	//   I also stand alone decorators which will become services 
 	async loadDecorators(directories){
 		return this.load('decorator', directories);
 	}
@@ -175,7 +178,7 @@ class Forge {
 				.concat(await this.loadEffects(directories))
 			)
 		]);
-
+		
 		// install the services, they should be fully hydrated at this point
 		return {
 			services,

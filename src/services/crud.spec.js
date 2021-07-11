@@ -23,7 +23,11 @@ describe('src/services/crud.js', function(){
 
 	afterEach(function(){
 		Object.values(stubs)
-		.forEach(stub => stub.restore());
+		.forEach(stub => {
+			if (stub.restore){
+				stub.restore();
+			}
+		});
 	});
 
 	describe('::clean', function(){
@@ -983,7 +987,7 @@ describe('src/services/crud.js', function(){
 				params: {
 					name: 'test-1'
 				}
-			}).then(res => {
+			}, {}).then(res => {
 				expect(res).to.deep.equal([{
 					id: 'something-1',
 					name: 'v-1',
@@ -1088,7 +1092,7 @@ describe('src/services/crud.js', function(){
 					},
 					title: 'title-1'
 				}
-			}).then(res => {
+			}, {}).then(res => {
 				expect(res).to.deep.equal([{
 					id: 'something-1',
 					name: 'v-1',
@@ -1231,7 +1235,8 @@ describe('src/services/crud.js', function(){
 				id: 1,
 				name: 'test-1',
 				title: 'title-1'
-			}).then(res => {
+			}, {})
+			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
 					name: 'v-1',
@@ -1339,7 +1344,8 @@ describe('src/services/crud.js', function(){
 				json: {
 					hello: 'world'
 				}
-			}).then(res => {
+			}, {})
+			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
 					name: 'v-1',
@@ -1860,6 +1866,259 @@ describe('src/services/crud.js', function(){
 
 			expect(failed)
 			.to.equal(true);
+		});
+	});
+
+	describe('with a cache', function(){
+		let ctx = null;
+		let service = null;
+
+		beforeEach(async function(){
+			ctx = new Context();
+
+			stubs.execute = sinon.stub();
+
+			const model = new Model('model-1', {
+				execute: async () => {
+					return stubs.execute();
+				}
+			});
+
+			await model.configure({
+				connector: 'test',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						read: true,
+						create: true,
+						update: true
+					}
+				}
+			});
+
+			service = new Crud(model);
+
+			await service.configure();
+		});
+
+		describe('::create', function(){
+			it('should cache the results of the create', async function(){
+				stubs.execute.onCall(0)
+				.resolves([{
+					id: 123,
+					name: 'foo-1'
+				}]);
+
+				ctx.cache = {
+					set: function(name, key, datum){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(123);
+
+						expect(datum)
+						.to.deep.equal({
+							id: 123,
+							name: 'foo-1'
+						});
+					}
+				};
+
+				let res = await service.create({foo: 'bar'}, ctx);
+
+				expect(res)
+				.to.deep.equal({
+					id: 123,
+					name: 'foo-1'
+				});
+			});
+		});
+
+		describe('::read', function(){
+			it('should cache the results of the read', async function(){
+				stubs.execute.onCall(0)
+				.resolves([{
+					id: 123,
+					name: 'foo-1'
+				}]);
+
+				ctx.cache = {
+					has: function(name, key){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+					},
+					set: function(name, key, datum){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+
+						expect(datum)
+						.to.deep.equal({
+							id: 123,
+							name: 'foo-1'
+						});
+					}
+				};
+
+				let res = await service.read(234, ctx);
+
+				expect(res)
+				.to.deep.equal({
+					id: 123,
+					name: 'foo-1'
+				});
+			});
+
+			it('should respect a cache hit', async function(){
+				ctx.cache = {
+					has: function(name, key){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+
+						return true;
+					},
+					get: function(name, key){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+
+						return {
+							id: 123,
+							name: 'foo-1'
+						};
+					}
+				};
+
+				let res = await service.read(234, ctx);
+
+				expect(res)
+				.to.deep.equal({
+					id: 123,
+					name: 'foo-1'
+				});
+			});
+		});
+
+		describe('::query', function(){
+			it('should cache the results of the read', async function(){
+				stubs.execute.onCall(0)
+				.resolves([{
+					id: 123,
+					name: 'foo-1'
+				}, {
+					id: 234,
+					name: 'foo-2'
+				}]);
+
+				stubs.set = sinon.stub()
+					.returns(null);
+
+				ctx.cache = {
+					set: stubs.set
+				};
+
+				let res = await service.query({}, ctx);
+
+				expect(stubs.set.getCall(0).args)
+				.to.deep.equal([
+					'model-1',
+					123,
+					{
+						id: 123,
+						name: 'foo-1'
+					}
+				]);
+
+				expect(stubs.set.getCall(1).args)
+				.to.deep.equal([
+					'model-1',
+					234,
+					{
+						id: 234,
+						name: 'foo-2'
+					}
+				]);
+
+				expect(res)
+				.to.deep.equal([{
+					id: 123,
+					name: 'foo-1'
+				}, {
+					id: 234,
+					name: 'foo-2'
+				}]);
+			});
+		});
+
+		describe('::update', function(){
+			it('should update the cache on update', async function(){
+				stubs.execute.onCall(0)
+				.resolves([{
+					id: 345,
+					name: 'foo-3'
+				}]);
+
+				ctx.cache = {
+					// these are for the read
+					has: function(name, key){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+
+						return true;
+					},
+					get: function(name, key){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+
+						return {
+							id: 123,
+							name: 'foo-1'
+						};
+					},
+					// this is the actual update
+					set: function(name, key, datum){
+						expect(name)
+						.to.equal('model-1');
+
+						expect(key)
+						.to.equal(234);
+
+						expect(datum)
+						.to.deep.equal({
+							id: 345,
+							name: 'foo-3'
+						});
+					}
+				};
+
+				let res = await service.update(234, {}, ctx);
+
+				expect(res)
+				.to.deep.equal({
+					id: 345,
+					name: 'foo-3'
+				});
+			});
 		});
 	});
 });

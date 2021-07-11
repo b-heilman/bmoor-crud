@@ -3,7 +3,7 @@ const {get} = require('bmoor/src/core.js');
 const {Waitlist} = require('./waitlist.js');
 
 class Context {
-	constructor(systemContext = {}, cfg={}){
+	constructor(systemContext = {}, cfg={}, cache=null){
 		cfg = Object.assign({
 			query: 'query', 
 			params: 'params',
@@ -25,6 +25,7 @@ class Context {
 
 		// controller specific properties
 		this.info = {};
+		this.cache = cache;
 	}
 
 	setInfo(info){
