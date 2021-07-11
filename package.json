@@ -1,6 +1,6 @@
 {
   "name": "bmoor-crud",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "author": "Brian Heilman <das.ist.junk@gmail.com>",
   "description": "A way of managing models and routes",
   "license": "MIT",
