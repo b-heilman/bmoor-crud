@@ -266,7 +266,19 @@ describe('src/services/document.js', function(){
 					read: true,
 					key: true
 				},
-				name: true,
+				name: {
+					read: true,
+					write: true,
+					update: true
+				},
+				required: {
+					read: true,
+					write: true,
+					update: true,
+					validation: {
+						required: true
+					}
+				},
 				categoryId: {
 					read: true,
 					write: true,
@@ -296,7 +308,8 @@ describe('src/services/document.js', function(){
 			base: 'test-tag',
 			key: 'id',
 			fields: {
-				'name': '.name'
+				'name': '.name',
+				'required': '.required'
 			}
 		});
 
@@ -1241,6 +1254,85 @@ describe('src/services/document.js', function(){
 			expect(stubs.category.getCall(0).args[0])
 			.to.deep.equal(987);
 		});
+
+		it('should work with a required field', async function(){
+			const tags = await nexus.loadCrud('test-tag');
+
+			const comp = await nexus.configureComposite('test-comp', {
+				base: 'test-tag',
+				key: 'id',
+				fields: {
+					'name': '.name',
+					'required':  '.required'
+				}
+			});
+
+			stubs.tagTag = sinon.stub(tags, 'create')
+			.resolves({
+				id: 1,
+				name: 'tag-created'
+			});
+
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			let failed = false;
+			try {
+				await doc.push(
+					{
+						name: 'tag-1',
+						required: 'ok'
+					}, 
+					context
+				);
+			} catch(ex){
+				failed = true;
+			}
+
+			expect(failed)
+			.to.equal(false);
+		});
+
+		it('should fail without a required field', async function(){
+			const tags = await nexus.loadCrud('test-tag');
+
+			const comp = await nexus.configureComposite('test-comp', {
+				base: 'test-tag',
+				key: 'id',
+				fields: {
+					'name': '.name',
+					'required':  '.required'
+				}
+			});
+
+			stubs.tagTag = sinon.stub(tags, 'create')
+			.resolves({
+				id: 1,
+				name: 'tag-created'
+			});
+
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+			await doc.link();
+
+			let failed = false;
+			try {
+				await doc.push(
+					{
+						name: 'tag-1'
+					}, 
+					context
+				);
+			} catch(ex){
+				failed = true;
+			}
+
+			expect(failed)
+			.to.equal(true);
+		});
 	});
 
 	describe('sub-composites', function(){
@@ -1462,9 +1554,11 @@ describe('src/services/document.js', function(){
 				name: 'family-name-1',
 				categoryName: 'category-name-1',
 				tags: [{
-					name: 'tag-name-1'
+					name: 'tag-name-1',
+					required: 'ok'
 				}, {
-					name: 'tag-name-2'
+					name: 'tag-name-2',
+					required: 'yeah'
 				}]
 			}, context);
 
@@ -1487,12 +1581,14 @@ describe('src/services/document.js', function(){
 					$ref: 'test-tag:1',
 					$type: 'create',
 					name: 'tag-name-1',
-					categoryId: 'test-category:1'
+					categoryId: 'test-category:1',
+					required: 'ok'
 				},{
 					$ref: 'test-tag:2',
 					$type: 'create',
 					name: 'tag-name-2',
-					categoryId: 'test-category:1'
+					categoryId: 'test-category:1',
+					required: 'yeah'
 				}]
 			});
 
@@ -1553,11 +1649,13 @@ describe('src/services/document.js', function(){
 			stubs.tagCreate = sinon.stub(tags, 'create');
 			stubs.tagCreate.onCall(0).resolves({
 				id: 'tag-1',
-				name: 'tag-created'
+				name: 'tag-created',
+				required: 'req-1'
 			});
 			stubs.tagCreate.onCall(1).resolves({
 				id: 'tag-2',
-				name: 'tag-created'
+				name: 'tag-created',
+				required: 'req-2'
 			});
 
 			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
@@ -1574,9 +1672,11 @@ describe('src/services/document.js', function(){
 				id: 12,
 				name: 'family-name-1',
 				tags: [{
-					name: 'tag-name-1'
+					name: 'tag-name-1',
+					required: 'req-1'
 				}, {
-					name: 'tag-name-2'
+					name: 'tag-name-2',
+					required: 'req-2'
 				}]
 			}, context);
 
@@ -1601,12 +1701,14 @@ describe('src/services/document.js', function(){
 					$ref: 'test-tag:1',
 					$type: 'create',
 					name: 'tag-name-1',
-					categoryId: 'test-category:1'
+					categoryId: 'test-category:1',
+					required: 'req-1'
 				},{
 					$ref: 'test-tag:2',
 					$type: 'create',
 					name: 'tag-name-2',
-					categoryId: 'test-category:2'
+					categoryId: 'test-category:2',
+					required: 'req-2'
 				}]
 			});
 
@@ -1623,15 +1725,93 @@ describe('src/services/document.js', function(){
 					name: 'category-created'
 				}, {
 					id: 'tag-1',
-					name: 'tag-created'
+					name: 'tag-created',
+					required: 'req-1'
 				}, {
 					id: 'tag-2',
-					name: 'tag-created'
+					name: 'tag-created',
+					required: 'req-2'
 				}
 			]);
 
 			expect(stubs.familyRead.getCall(0).args[0])
 			.to.deep.equal(12);
+		});
+
+		it('should fail if the attached schema fails', async function(){
+			tags = await nexus.loadCrud('test-tag');
+			families = await nexus.loadCrud('test-family');
+			categories = await nexus.loadCrud('test-category');
+
+			const comp = await nexus.configureComposite('test-composite-ut', {
+				base: 'test-family',
+				key: 'id',
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'tags': ['> $test-category > #test-composite-tag']
+				}
+			});
+
+			stubs.familyRead = sinon.stub(families, 'read')
+			.resolves({
+				id: 12,
+				name: 'family-read'
+			});
+
+			stubs.familyCreate = sinon.stub(families, 'update')
+			.resolves({
+				id: 'family-1',
+				name: 'family-updated'
+			});
+
+			stubs.categoryCreate = sinon.stub(categories, 'create')
+			.resolves({
+				id: 'cat-1',
+				name: 'category-created'
+			});
+
+			stubs.tagCreate = sinon.stub(tags, 'create');
+			stubs.tagCreate.onCall(0).resolves({
+				id: 'tag-1',
+				name: 'tag-created',
+				required: 'req-1'
+			});
+			stubs.tagCreate.onCall(1).resolves({
+				id: 'tag-2',
+				name: 'tag-created',
+				required: 'req-2'
+			});
+
+			stubs.deflateSpy = sinon.spy(normalization, 'deflate');
+
+			permissions = {
+				admin: true
+			};
+
+			const doc = new sut.Document(comp);
+			
+			await doc.configure(connector);
+
+			let failed = false;
+
+			try {
+				await doc.push({
+					id: 12,
+					name: 'family-name-1',
+					tags: [{
+						name: 'tag-name-1',
+						required: 'req-1'
+					}, {
+						name: 'tag-name-2'
+					}]
+				}, context);
+			} catch(ex) {
+				failed = true;
+			}
+
+			expect(failed)
+			.to.equal(true);
 		});
 	});
 

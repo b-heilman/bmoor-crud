@@ -1,5 +1,6 @@
 
 const {get, set, del} =  require('bmoor/src/core.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {Transformer} = require('bmoor-schema/src/Transformer.js');
 
@@ -181,6 +182,7 @@ const normalization = require('./normalization.js');
 				
 				let ref = null;
 				let action = null;
+				let writeType = null;
 				
 				const existing = await service.discoverDatum(content, ctx);
 				if (existing){
@@ -191,16 +193,30 @@ const normalization = require('./normalization.js');
 					// If I put this inline below, I get null as an input
 					const res = await service.getChangeType(content, key, ctx);
 					changeType = compareChanges(changeType, res);
+					writeType = config.get('writeModes.update');
 
 					ref = new DatumRef(key);
 				} else {
 					changeType = config.get('changeTypes.major');
+					writeType = config.get('writeModes.create');
 
 					ref = new DatumRef();
 					action = 'create';
 				}
 
-				// TODO: validation
+				const errors = await service.validate(content, writeType, ctx);
+
+				if (errors.length){
+					throw create(`validation failed for ${this.structure.name}`, {
+						status: 400,
+						code: 'BMOOR_CRUD_DOCUMENT_VALIDATE_CREATE',
+						context: {
+							model: service.structure.name,
+							errors
+						}
+					});
+				}
+
 				references[series] = ref;
 
 				const newDatum = seriesSession.getDatum(series, ref, action);
