@@ -1,24 +1,8 @@
 
-const loader = require('../server/loader.js');
-
 // this is our building object, it produces all the things exposing in the system
 class Gateway {
 	constructor(nexus){
 		this.nexus = nexus;
-	}
-
-	async load(type, directories){
-		const path = directories.get(type);
-
-		if (path){
-			return loader.loadFiles(path);
-		} else {
-			return [];
-		}
-	}
-
-	async loadGuards(directories){
-		return this.load('guard', directories);
 	}
 
 	async installGuards(instructions){
@@ -32,10 +16,6 @@ class Gateway {
 		);
 	}
 
-	async loadActions(directories){
-		return this.load('action', directories);
-	}
-
 	async installActions(instructions){
 		return Promise.all(
 			instructions.map(async (rule) => {
@@ -45,10 +25,6 @@ class Gateway {
 				return this.nexus.configureAction(ref, settings);
 			})
 		);
-	}
-
-	async loadUtilities(directories){
-		return this.load('utility', directories);
 	}
 
 	async installUtilities(instructions){
@@ -62,10 +38,6 @@ class Gateway {
 		);
 	}
 
-	async loadSynthetics(directories){
-		return this.load('synthetic', directories);
-	}
-
 	async installSynthetics(instructions){
 		return Promise.all(
 			instructions.map(async (rule) => {
@@ -77,24 +49,12 @@ class Gateway {
 		);
 	}
 
-	async install(directories, preload=null){
+	async install(cfg){
 		const [guards, actions, utilities, synthetics] = await Promise.all([
-			this.installGuards(
-				(preload&&preload.get('guards')||[])
-				.concat(await this.loadGuards(directories))
-			),
-			this.installActions(
-				(preload&&preload.get('actions')||[])
-				.concat(await this.loadActions(directories))
-			),
-			this.installUtilities(
-				(preload&&preload.get('utilities')||[])
-				.concat(await this.loadUtilities(directories))
-			),
-			this.installSynthetics(
-				(preload&&preload.get('synthetics')||[])
-				.concat(await this.loadSynthetics(directories))
-			)
+			this.installGuards(cfg.get('guards')||[]),
+			this.installActions(cfg.get('actions')||[]),
+			this.installUtilities(cfg.get('utilities')||[]),
+			this.installSynthetics(cfg.get('synthetics')||[])
 		]);
 
 		this.guards = guards;

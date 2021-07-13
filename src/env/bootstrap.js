@@ -1,5 +1,6 @@
 
 // used to install a nexus and forge from fs
+const {Config} = require('bmoor/src/lib/config.js');
 
 const {Bus} = require('../server/bus.js');
 const {Forge} = require('./forge.js');
@@ -11,6 +12,8 @@ const {Action} = require('../controllers/action.js');
 const {Utility} = require('../controllers/utility.js');
 const {Synthetic} = require('../controllers/synthetic.js');
 const {Router} = require('../server/router.js');
+
+const loader = require('../server/loader.js');
 
 const constructors = nexusConfig.sub('constructors');
 constructors.set('guard', Guard);
@@ -83,12 +86,108 @@ class Bootstrap {
 		this.gateway = new Gateway(this.nexus);
 	}
 
+	async load(type, directories){
+		const path = directories.get(type);
+
+		if (path){
+			return loader.loadFiles(path);
+		} else {
+			return [];
+		}
+	}
+
+	async loadCrud(directories, preload){
+		const [models, composites, decorators, hooks, security, effects] = await Promise.all([
+			this.load('models', directories),
+			this.load('composites', directories),
+			this.load('decorators', directories),
+			this.load('hooks', directories),
+			this.load('security', directories),
+			this.load('effects', directories)
+		]);
+
+		if (!preload){
+			preload = new Config();
+		}
+
+		preload.set(
+			'cruds', 
+			(preload.get('cruds')||[]).concat(models)
+		);
+
+		preload.set(
+			'documents', 
+			(preload.get('documents')||[]).concat(composites)
+		);
+
+		preload.set(
+			'decorators', 
+			(preload.get('decorators')||[]).concat(decorators)
+		);
+
+		preload.set(
+			'hooks', 
+			(preload.get('hooks')||[]).concat(hooks)
+		);
+
+		preload.set(
+			'security', 
+			(preload.get('security')||[]).concat(security)
+		);
+
+		preload.set(
+			'effects', 
+			(preload.get('effects')||[]).concat(effects)
+		);
+
+		return preload;
+	}
+
 	async installCrud(preload){
-		return this.forge.install(this.config.sub('directories'), preload);
+		return this.forge.install(
+			await this.loadCrud(this.config.sub('directories'), preload)
+		);
+	}
+
+	async loadControllers(directories, preload){
+		const [guards, synthetics, actions, utilities] = await Promise.all([
+			this.load('guards', directories),
+			this.load('synthetics', directories),
+			this.load('actions', directories),
+			this.load('utilities', directories)
+		]);
+
+		if (!preload){
+			preload = new Config();
+		}
+
+		preload.set(
+			'guards', 
+			(preload.get('guards')||[]).concat(guards)
+		);
+
+		preload.set(
+			'synthetics', 
+			(preload.get('synthetics')||[]).concat(synthetics)
+		);
+
+		preload.set(
+			'actions', 
+			(preload.get('actions')||[]).concat(actions)
+		);
+
+		preload.set(
+			'utilities', 
+			(preload.get('utilities')||[]).concat(utilities)
+		);
+
+		return preload;
 	}
 
 	async installControllers(preload){
-		return this.gateway.install(this.config.sub('directories'), preload);
+		return this.gateway.install(
+			await this.loadControllers(this.config.sub('directories'), preload)
+		);
 	}
 
 	async install(preload){

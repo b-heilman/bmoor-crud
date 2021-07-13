@@ -1,22 +1,11 @@
 
 const {hook} = require('../services/hook.js');
-const loader = require('../server/loader.js');
 
 // this is our building object, it produces all the little things running in the system
 class Forge {
 	constructor(nexus, messageBus){
 		this.nexus = nexus;
 		this.messageBus = messageBus;
-	}
-
-	async load(type, directories){
-		const path = directories.get(type);
-
-		if (path){
-			return loader.loadFiles(path);
-		} else {
-			return [];
-		}
 	}
 
 	async subscribe(ref, subscriptions){
@@ -31,10 +20,6 @@ class Forge {
 				);
 			})
 		);
-	}
-
-	async loadCruds(directories){
-		return this.load('model', directories);
 	}
 
 	async installCruds(instructions){
@@ -64,10 +49,6 @@ class Forge {
 		);
 	}
 
-	async loadDocuments(directories){
-		return this.load('composite', directories);
-	}
-
 	async installDocuments(instructions){
 		return Promise.all(
 			instructions.map(async (rule) => {
@@ -83,13 +64,6 @@ class Forge {
 		);
 	}
 
-	// TODO: I want decorators, effects, and security 
-	//   to be able to be installed against a crud or document.
-	//   I also stand alone decorators which will become services 
-	async loadDecorators(directories){
-		return this.load('decorator', directories);
-	}
-
 	async installDecorators(instructions){
 		return Promise.all(
 			instructions.map(async (rule) => {
@@ -99,10 +73,6 @@ class Forge {
 				await this.nexus.configureDecorator(ref, settings);
 			})
 		);
-	}
-
-	async loadHooks(directories){
-		return this.load('hook', directories);
 	}
 
 	async installHooks(instructions){
@@ -116,10 +86,6 @@ class Forge {
 		);
 	}
 
-	async loadSecurity(directories){
-		return this.load('security', directories);
-	}
-
 	async installSecurity(instructions){
 		return Promise.all(
 			instructions.map(async (rule) => {
@@ -129,10 +95,6 @@ class Forge {
 				await this.nexus.configureSecurity(ref, settings);
 			})
 		);
-	}
-
-	async loadEffects(directories){
-		return this.load('security', directories);
 	}
 
 	async installEffects(instructions){
@@ -146,37 +108,14 @@ class Forge {
 		);
 	}
 
-	async install(directories, preload){
-		if (!directories){
-			throw new Error('no directories supplied');
-		}
-
-		const [services, docs] = 
-		await Promise.all([
-			this.installCruds(
-				(preload&&preload.get('cruds')||[])
-				.concat(await this.loadCruds(directories))
-			),
-			this.installDocuments(
-				(preload&&preload.get('documents')||[])
-				.concat(await this.loadDocuments(directories))
-			),
-			this.installDecorators(
-				(preload&&preload.get('decorators')||[])
-				.concat(await this.loadDecorators(directories))
-			),
-			this.installHooks(
-				(preload&&preload.get('hooks')||[])
-				.concat(await this.loadHooks(directories))
-			),
-			this.installSecurity(
-				(preload&&preload.get('security')||[])
-				.concat(await this.loadSecurity(directories))
-			),
-			this.installEffects(
-				(preload&&preload.get('effects')||[])
-				.concat(await this.loadEffects(directories))
-			)
+	async install(cfg){
+		const [services, docs] = await Promise.all([
+			this.installCruds(cfg.get('cruds')||[]),
+			this.installDocuments(cfg.get('documents')||[]),
+			this.installDecorators(cfg.get('decorators')||[]),
+			this.installHooks(cfg.get('hooks')||[]),
+			this.installSecurity(cfg.get('security')||[]),
+			this.installEffects(cfg.get('effects')||[])
 		]);
 		
 		// install the services, they should be fully hydrated at this point

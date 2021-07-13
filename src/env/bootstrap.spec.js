@@ -465,3 +465,47 @@ describe('src/env/bootstrap.js', function(){
 		});
 	});
 });
+
+/**
+// models
+stubs.getFile.onCall(0)
+.resolves([{
+	name: 'service-1',
+	path: 'model-path-1'
+},{
+	name: 'service-2',
+	path: 'model-path-2'
+}]);
+
+// composites
+stubs.getFile.onCall(1)
+.resolves([]);
+
+// decorators
+stubs.getFile.onCall(2)
+.resolves([{
+	name: 'service-1',
+	path: 'decorator-path-1'
+}]);
+
+// hooks
+stubs.getFile.onCall(3)
+.resolves([{
+	name: 'service-1',
+	path: 'hook-path-1'
+}]);
+
+// security
+stubs.getFile.onCall(4)
+.resolves([{
+	name: 'service-1',
+	path: 'security-path-1'
+}]);
+
+// effects
+stubs.getFile.onCall(5)
+.resolves([{
+	name: 'service-1',
+	path: 'effect-path-1'
+}]);
+**/

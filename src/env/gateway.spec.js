@@ -2,7 +2,6 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const loader = require('../server/loader.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
 const sut = require('./gateway.js');
@@ -37,26 +36,34 @@ describe('src/env/gateway.js', function(){
 	});
 
 	it('should load everything correctly', async function(){
-		const directories = new Config();
-
-		stubs.getFiles = sinon.stub(loader, 'getFiles');
-		stubs.getSettings = sinon.stub(loader, 'getSettings');
+		const cfg = new Config({
+			guards: [{
+				name: 'guard-file',
+				settings: {
+					option: 1
+				}
+			}],
+			actions: [{
+				name: 'action-file',
+				settings: {
+					option: 2
+				}
+			}],
+			utilities: [{
+				name: 'utility-file',
+				settings: {
+					option: 3
+				}
+			}],
+			synthetics: [{
+				name: 'synthetic-file',
+				settings: {
+					option: 4
+				}
+			}]
+		});
 
 		//--- guard ---
-		directories.set('guard', 'guard/file');
-
-		stubs.getFiles.withArgs('guard/file')
-		.resolves([
-			{
-				name: 'guard-file',
-				path: '/junk/guard/file'
-			}
-		]);
-
-		stubs.getSettings.withArgs('/junk/guard/file')
-		.resolves({
-			option: 1
-		});
 
 		stubs.configureGuard
 		.resolves({
@@ -64,20 +71,6 @@ describe('src/env/gateway.js', function(){
 		});
 
 		//--- action ---
-		directories.set('action', 'action/file');
-
-		stubs.getFiles.withArgs('action/file')
-		.resolves([
-			{
-				name: 'action-file',
-				path: '/junk/action/file'
-			}
-		]);
-
-		stubs.getSettings.withArgs('/junk/action/file')
-		.resolves({
-			option: 2
-		});
 
 		stubs.configureAction
 		.resolves({
@@ -85,42 +78,12 @@ describe('src/env/gateway.js', function(){
 		});
 
 		//--- utility ---
-		directories.set('utility', 'utility/file');
-
-		stubs.getFiles.withArgs('utility/file')
-		.resolves([
-			{
-				name: 'utility-file',
-				path: '/junk/utility/file'
-			}
-		]);
-
-		stubs.getSettings.withArgs('/junk/utility/file')
-		.resolves({
-			option: 3
-		});
-
 		stubs.configureUtility
 		.resolves({
 			iAm: 'a utility'
 		});
 
 		//--- synthetic ---
-		directories.set('synthetic', 'synthetic/file');
-
-		stubs.getFiles.withArgs('synthetic/file')
-		.resolves([
-			{
-				name: 'synthetic-file',
-				path: '/junk/synthetic/file'
-			}
-		]);
-
-		stubs.getSettings.withArgs('/junk/synthetic/file')
-		.resolves({
-			option: 4
-		});
-
 		stubs.configureSynthetic
 		.resolves({
 			iAm: 'a synthetic'
@@ -128,7 +91,7 @@ describe('src/env/gateway.js', function(){
 
 		const gateway = new sut.Gateway(stubbedNexus);
 
-		const res = await gateway.install(directories);
+		const res = await gateway.install(cfg);
 
 		//--- results ---
 		expect(stubs.configureGuard.getCall(0).args)
@@ -174,7 +137,6 @@ describe('src/env/gateway.js', function(){
 
 	describe('stubbed', function(){
 		it('should load everything correctly', async function(){
-			const directories = new Config();
 			const mockery = new Config();
 
 			//--- guard ---
@@ -239,7 +201,7 @@ describe('src/env/gateway.js', function(){
 
 			const gateway = new sut.Gateway(stubbedNexus);
 
-			const res = await gateway.install(directories, mockery);
+			const res = await gateway.install(mockery);
 
 			//--- results ---
 			expect(stubs.configureGuard.getCall(0).args)

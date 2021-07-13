@@ -26,6 +26,7 @@
   },
   "scripts": {
     "lint": "node ./node_modules/jshint/bin/jshint ./src",
-    "test": "npm run lint && mocha --recursive \"./src/**/*.spec.js\""
+    "test": "npm run lint && mocha --recursive \"./src/**/*.spec.js\"",
+    "test:file": "mocha"
   }
 }

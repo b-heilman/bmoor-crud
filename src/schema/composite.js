@@ -8,7 +8,12 @@ const {Network} = require('../graph/Network.js');
 const {Path, pathToAccessors} = require('../graph/path.js');
 const {Query, QueryJoin} = require('./query.js');
 
-function getOutgoingRelationship(nexus, baseModel, targetModel, local=null){
+async function getOutgoingRelationship(nexus, baseModel, targetModel, local=null){
+	await Promise.all([
+		nexus.loadModel(baseModel),
+		nexus.loadModel(targetModel)
+	]);
+	
 	let relationship = nexus.mapper.getRelationship(
 		baseModel, targetModel, local
 	);
@@ -511,7 +516,7 @@ class Composite extends Structure {
 		let baseSeries = null;
 		let targetSeries = null;
 
-		let relationship = getOutgoingRelationship(
+		let relationship = await getOutgoingRelationship(
 			this.nexus, baseModel, targetModel, local
 		);
 

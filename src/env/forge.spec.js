@@ -7,7 +7,6 @@ const {Config} = require('bmoor/src/lib/config.js');
 const {Bus} = require('../server/bus.js');
 const {Nexus} = require('./nexus.js');
 const {Context} = require('../server/context.js');
-const loader = require('../server/loader.js');
 
 const sut = require('./forge.js');
 
@@ -50,10 +49,6 @@ describe('src/env/forge.js', function(){
 		let service1 = null;
 		let service2 = null;
 
-		const directories = new Config({
-			model: 'models'
-		});
-
 		beforeEach(async function(){
 			ctx = new Context({method: ''});
 
@@ -63,8 +58,7 @@ describe('src/env/forge.js', function(){
 			service1 = nexus.getCrud('service-1');
 			service2 = nexus.getCrud('service-2');
 
-			stubs.loader = sinon.stub(loader, 'loadFiles')
-			.resolves([{
+			await forge.installCruds([{
 				name: 'service-1',
 				settings: {
 					connector: 'interface1',
@@ -91,10 +85,6 @@ describe('src/env/forge.js', function(){
 					}
 				}
 			}]);
-
-			await forge.installCruds(
-				await forge.loadCruds(directories)
-			);
 		});
 
 		describe('::configureCrud', function(){
@@ -921,7 +911,6 @@ describe('src/env/forge.js', function(){
 	});
 
 	describe('::install', function(){
-		const loader = require('../server/loader.js');
 		const {Config} = require('bmoor/src/lib/config.js');
 
 		let ctx = null;
@@ -933,6 +922,7 @@ describe('src/env/forge.js', function(){
 			trace = [];
 			permissions = {};
 
+			stubs.effect = sinon.stub();
 			stubs.execute = sinon.stub();
 
 			ctx = new Context({
@@ -948,131 +938,79 @@ describe('src/env/forge.js', function(){
 			);
 
 			const cfg = new Config({
-				crud: {
-					model: 'model-dir',
-					decorator: 'decorator-dir',
-					hook: 'hook-dir',
-					effect: 'effect-dir',
-					security: 'security-dir',
-					composite: 'comp-dir'
-				}
+				cruds: [{
+					name: 'service-1',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true
+						},
+						security: {
+							filter: 'can-read'
+						}
+					}
+				}, {
+					name: 'service-2',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true
+						}
+					}
+				}],
+				decorators: [{
+					name: 'service-1',
+					settings: {
+						hello: function(){
+							expect(this.create)
+							.to.not.equal(undefined);
+
+							return 'world';
+						}
+					}
+				}],
+				hooks: [{
+					name: 'service-1',
+					settings: {
+						afterCreate: async function(){
+							trace.push(1);
+						}
+					}
+				}],
+				security: [{
+					name: 'service-1',
+					settings: {
+						canCreate: async function(){
+							trace.push(2);
+							return true;
+						}
+					}
+				}],
+				effects: [{
+					name: 'service-1',
+					settings: [{
+						model: 'service-2',
+						action: 'update',
+						callback: stubs.effect
+					}]
+				}]
 			});
 
-			stubs.getFile = sinon.stub(loader, 'getFiles');
-
-			// models
-			stubs.getFile.onCall(0)
-			.resolves([{
-				name: 'service-1',
-				path: 'model-path-1'
-			},{
-				name: 'service-2',
-				path: 'model-path-2'
-			}]);
-
-			// composites
-			stubs.getFile.onCall(1)
-			.resolves([]);
-
-			// decorators
-			stubs.getFile.onCall(2)
-			.resolves([{
-				name: 'service-1',
-				path: 'decorator-path-1'
-			}]);
-
-			// hooks
-			stubs.getFile.onCall(3)
-			.resolves([{
-				name: 'service-1',
-				path: 'hook-path-1'
-			}]);
-
-			// security
-			stubs.getFile.onCall(4)
-			.resolves([{
-				name: 'service-1',
-				path: 'security-path-1'
-			}]);
-
-			// effects
-			stubs.getFile.onCall(5)
-			.resolves([{
-				name: 'service-1',
-				path: 'effect-path-1'
-			}]);
-
-			// this overloads what settings are returned
-			// for tests below.  So service-1 is not real
-			stubs.getSettings = sinon.stub(loader, 'getSettings');
-			
-			stubs.getSettings.withArgs('model-path-1')
-			.resolves({
-				connector: 'http',
-				fields: {
-					id: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
-					},
-					name: true
-				},
-				security: {
-					filter: 'can-read'
-				}
-			});
-
-			stubs.getSettings.withArgs('model-path-2')
-			.resolves({
-				connector: 'http',
-				fields: {
-					id: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
-					},
-					name: true
-				}
-			});
-
-			stubs.getSettings.withArgs('decorator-path-1')
-			.resolves({
-				hello: function(){
-					expect(this.create)
-					.to.not.equal(undefined);
-
-					return 'world';
-				}
-			});
-
-			stubs.getSettings.withArgs('hook-path-1')
-			.resolves({
-				afterCreate: async function(){
-					trace.push(1);
-				}
-			});
-
-			stubs.getSettings.withArgs('security-path-1')
-			.resolves({
-				canCreate: async function(){
-					trace.push(2);
-					return true;
-				}
-			});
-
-			stubs.effect = sinon.stub();
-			stubs.getSettings.withArgs('effect-path-1')
-			.resolves([{
-				model: 'service-2',
-				action: 'update',
-				callback: stubs.effect
-			}]);
-
-			await forge.install(cfg.sub('crud'));
+			await forge.install(cfg);
 
 			// this method is not real
 			service = await nexus.loadCrud('service-1');
@@ -1371,7 +1309,7 @@ describe('src/env/forge.js', function(){
 				}]
 			});
 			
-			await forge.install(new Config(), cfg);
+			await forge.install(cfg);
 
 			// this method is not real
 			service = await nexus.loadCrud('service-1');
