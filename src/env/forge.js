@@ -59,6 +59,40 @@ class Forge {
 
 				const doc = await this.nexus.configureDocument(ref, settings);
 
+				// TODO: Can I get a key?
+				Object.keys(doc.structure.context.tables)
+				.map(ref => {
+					this.messageBus.addListener(ref, 'create',
+						(_, datum, ctx) => this.messageBus.triggerEvent(
+							ref,
+							'push', 
+							[null, {[ref] : [datum]}, ctx]
+						)
+					);
+
+					this.messageBus.addListener(ref, 'update',
+						(_, datum, ctx) => this.messageBus.triggerEvent(
+							ref,
+							'push', 
+							[null, {[ref] : [datum]}, ctx]
+						)
+					);
+
+					this.messageBus.addListener(ref, 'delete',
+						(datum, _, ctx) => this.messageBus.triggerEvent(
+							ref,
+							'push', 
+							[null, {[ref] : [datum]}, ctx]
+						)
+					);
+				});
+
+				hook(doc, {
+					afterPush: (datum, ctx) => {
+						return this.messageBus.triggerEvent(ref, 'push', [null, datum, ctx]);
+					}
+				});
+
 				return doc;
 			})
 		);

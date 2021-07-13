@@ -356,15 +356,26 @@ const normalization = require('./normalization.js');
 	}
 
 	async push(datum, ctx){
+		const hooks = this.hooks;
 		const instructions = this.buildNormalizedSchema();
+
+		if (hooks.beforePush){
+			await hooks.beforePush(datum, ctx, this);
+		}
 
 		await this.normalize(datum, instructions, ctx);
 
-		return normalization.deflate(
+		const rtn = await normalization.deflate(
 			instructions,
 			this.structure.nexus,
 			ctx
 		);
+
+		if (hooks.afterPush){
+			await hooks.afterPush(datum, ctx, this);
+		}
+
+		return rtn;
 	}
 
 	async update(id, datum, ctx){

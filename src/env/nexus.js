@@ -149,17 +149,17 @@ class Nexus {
 	async configureCrud(ref, settings = {}){
 		await this.loadModel(ref);
 
-		const service = this.getCrud(ref);
+		const crud = this.getCrud(ref);
 
-		await service.configure(settings);
+		await crud.configure(settings);
 
-		await this.setConfigured('service', ref, service);
+		await this.setConfigured('crud', ref, crud);
 
-		return service;
+		return crud;
 	}
 
 	async loadCrud(ref){
-		return loadTarget(this, 'service', ref);
+		return loadTarget(this, 'crud', ref);
 	}
 
 	async configureDecorator(ref, decoration){
