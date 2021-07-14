@@ -1261,6 +1261,9 @@ describe('src/env/nexus.js', function(){
 		});
 
 		describe('multi-tiered definitions', function(){
+			let doc1 = null;
+			let doc2 = null;
+
 			beforeEach(async function(){
 				await nexus.configureModel('test-item', {
 					connector: 'stub',
@@ -1374,7 +1377,7 @@ describe('src/env/nexus.js', function(){
 						'world.name': '> $test-3-world.name'
 					}
 				});
-				const doc1 = await nexus.configureDocument('comp-1');
+				doc1 = await nexus.configureDocument('comp-1');
 
 				stubs.doc1 = sinon.spy(doc1, 'query');
 
@@ -1387,9 +1390,23 @@ describe('src/env/nexus.js', function(){
 						'barName':  '> $test-2-bar.name'
 					}
 				});
-				const doc2 = await nexus.configureDocument('comp-2');
+				doc2 = await nexus.configureDocument('comp-2');
 
 				stubs.doc2 = sinon.spy(doc2, 'query');
+			});
+
+			it('should properly define properties', async function(){
+				expect(Object.keys(doc1.structure.context.tables))
+				.to.deep.equal(['test-3-hello', 'test-3-world']);
+
+				expect(doc1.structure.settings.subs.map(({reference}) => reference.name))
+				.to.deep.equal([]);
+
+				expect(Object.keys(doc2.structure.context.tables))
+				.to.deep.equal(['test-2-foo', 'test-2-bar']);
+
+				expect(doc2.structure.settings.subs.map(({reference}) => reference.name))
+				.to.deep.equal(['comp-1']);
 			});
 
 			it('should allow composites to chain calls', async function(){

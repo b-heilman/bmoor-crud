@@ -750,6 +750,7 @@ module.exports = {
 	buildActions,
 	buildInflate,
 	buildDeflate,
+	buildParam,
 	compareChanges,
 	Structure
 };

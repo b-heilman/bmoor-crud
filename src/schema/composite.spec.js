@@ -14,7 +14,8 @@ describe('src/schema/composite.js', function(){
 		await nexus.configureModel('test-1', {
 			fields: {
 				id: {
-					read: true
+					read: true,
+					key: true
 				},
 				name: {
 					read: true
@@ -31,7 +32,8 @@ describe('src/schema/composite.js', function(){
 		await nexus.configureModel('test-2', {
 			fields: {
 				id: {
-					read: true
+					read: true,
+					key: true
 				},
 				name: {
 					read: true
@@ -55,7 +57,8 @@ describe('src/schema/composite.js', function(){
 		await nexus.configureModel('test-3', {
 			fields: {
 				id: {
-					read: true
+					read: true,
+					key: true
 				},
 				name: {
 					read: true
@@ -652,7 +655,193 @@ describe('src/schema/composite.js', function(){
 			});
 		});
 	});
-	
+
+	describe('::includes', function(){
+		it('should work', async function(){
+			const lookup = new Composite('foo-bar', nexus);
+
+			await lookup.configure({
+				base: 'test-1',
+				key: 'id',
+				fields: {
+					eins: '.name',
+					zwei: '> $test-2.name',
+					drei: '> $test-2.title',
+					fier: '> $test-2 > $test-3.name'
+				}
+			});
+
+			let query = await lookup.includes('test-1', {id: 1}, {});
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-1',
+					schema: 'test-1',
+					joins: []
+				}],
+				fields: [{
+					series: 'test-1',
+					as: 'key',
+					path: 'id'
+				}],
+				params: [{
+					series: 'test-1',
+					path: 'id',
+					operation: '=',
+					value: 1,
+					settings: {}
+				}]
+			});
+
+			query = await lookup.includes('test-2', {id: 2}, {});
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-2',
+					schema: 'test-2',
+					joins: []
+				}, {
+					series: 'test-1',
+					schema: 'test-1',
+					joins: [{
+						name: 'test-2',
+						optional: false,
+						mappings: [{
+							to: 'test1Id',
+							from: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-1',
+					as: 'key',
+					path: 'id'
+				}],
+				params: [{
+					series: 'test-2',
+					path: 'id',
+					operation: '=',
+					value: 2,
+					settings: {}
+				}]
+			});
+
+			query = await lookup.includes('test-3', {id: 3}, {});
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-3',
+					schema: 'test-3',
+					joins: []
+				}, {
+					series: 'test-1',
+					schema: 'test-1',
+					joins: []
+				}, {
+					series: 'test-2',
+					schema: 'test-2',
+					joins: [{
+						name: 'test-3',
+						optional: false,
+						mappings: [{
+							to: 'test2Id',
+							from: 'id'
+						}]
+					}, {
+						name: 'test-1',
+						optional: false,
+						mappings: [{
+							to: 'id',
+							from: 'test1Id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-1',
+					as: 'key',
+					path: 'id'
+				}],
+				params: [{
+					series: 'test-3',
+					path: 'id',
+					operation: '=',
+					value: 3,
+					settings: {}
+				}]
+			});
+		});
+
+		xit('should succeed with a alias alignment', async function(){
+			const lookup = new Composite('foo-bar', nexus);
+
+			await lookup.configure({
+				base: 'test-5',
+				key: 'id',
+				fields: {
+					eins: '.creator1Id > $creator:test-1.name',
+					zwei: '.creator1Id > $creator:test-1.title',
+					drei: '.title',
+					fier: '.owner1Id > ?$owner:test-1.name',
+					funf: '.owner1Id > ?$owner:test-1.title'
+				}
+			});
+			
+			let query = await lookup.includes('test-1', {id: 123});
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-5',
+					schema: 'test-5',
+					joins: []
+				}, {
+					series: 'creator',
+					schema: 'test-1',
+					joins: [{
+						name: 'test-5',
+						optional: false,
+						mappings: [{
+							from: 'id',
+							to: 'creator1Id'
+						}]
+					}]
+				}, {
+					series: 'owner',
+					schema: 'test-1',
+					joins: [{
+						name: 'test-5',
+						optional: true,
+						mappings: [{
+							from: 'id',
+							to: 'owner1Id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-5',
+					as: 'key',
+					path: 'id'
+				}],
+				params: [{
+					series: 'creator',
+					path: 'id',
+					operation: '=',
+					value: 123,
+					settings: {}
+				}, {
+					series: 'owner',
+					path: 'id',
+					operation: '=',
+					value: 123,
+					settings: {}
+				}]
+			});
+		});
+	});
+
 	describe('::getInflater', function(){
 		it('should work', async function(){
 			const lookup = new Composite('blah', nexus);

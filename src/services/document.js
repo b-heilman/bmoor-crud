@@ -379,7 +379,7 @@ const normalization = require('./normalization.js');
 	}
 
 	async update(id, datum, ctx){
-		set(datum, this.setting.key, id);
+		set(datum, this.structure.incomingSettings.key, id);
 
 		return this.push(datum, ctx);
 	}

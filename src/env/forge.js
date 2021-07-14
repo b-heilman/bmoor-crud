@@ -87,6 +87,17 @@ class Forge {
 					);
 				});
 
+				Object.keys(doc.structure.settings.subs)
+				.map(ref => {
+					this.messageBus.addListener(ref, 'push',
+						(_, datum, ctx) => this.messageBus.triggerEvent(
+							ref,
+							'push',
+							[null, {[ref] : [datum]}, ctx]
+						)
+					);
+				});
+
 				hook(doc, {
 					afterPush: (datum, ctx) => {
 						return this.messageBus.triggerEvent(ref, 'push', [null, datum, ctx]);

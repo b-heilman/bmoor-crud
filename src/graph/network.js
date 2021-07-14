@@ -207,6 +207,71 @@ class Network {
 
 		return rtn;
 	}
+
+	path(fromName, toName, toSearch, depth = 3){
+		const links = this.search(toSearch, depth);
+
+		if (links.length === 1){
+			return links;
+		}
+
+		const dex = links.reduce(
+			(agg, link) => {
+				agg[link.name] = {
+					link,
+					connections: []
+				};
+
+				return agg;
+			},
+			{}
+		);
+
+		const names = Object.keys(dex);
+
+		Object.values(dex)
+		.forEach(info => {
+			info.connections = info.link.prune(names);
+		});
+
+		const cur = dex[fromName];
+		delete dex[fromName];
+
+		if (fromName === toName){
+			return [cur.link];
+		}
+
+		let search = [{
+			node: cur,
+			path: [cur.link]
+		}];
+
+		while(search.length){
+			const {node, path} = search.shift();
+			
+			for (let i = 0; i < node.connections.length; i++){
+				const link = node.connections[i];
+				const cur = dex[link.name];
+
+				if (cur){
+					const slice = path.slice(0);
+
+					slice.push(cur.link);
+
+					if (link.name === toName){
+						return slice;
+					} else {
+						delete dex[link.name];
+
+						search.push({
+							node: cur,
+							path: slice
+						});
+					}
+				}
+			}
+		}
+	}
 }
 
 module.exports = {

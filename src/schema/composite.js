@@ -2,11 +2,11 @@
 const {implode} = require('bmoor/src/object.js');
 const {create} = require('bmoor/src/lib/error.js');
 
-const {Structure} = require('./structure.js');
+const {Structure, buildParam} = require('./structure.js');
 const {Network} = require('../graph/Network.js');
 
 const {Path, pathToAccessors} = require('../graph/path.js');
-const {Query, QueryJoin} = require('./query.js');
+const {Query, QueryJoin, QueryField} = require('./query.js');
 
 async function getOutgoingRelationship(nexus, baseModel, targetModel, local=null){
 	await Promise.all([
@@ -545,7 +545,6 @@ class Composite extends Structure {
 	}
 
 	// produces representation for interface layer
-	// TODO: sort-by, limit
 	async getQuery(settings={}, ctx={}){
 		const query = settings.query || new Query(this.properties.model);
 
@@ -597,6 +596,55 @@ class Composite extends Structure {
 			},
 			ctx
 		);
+	}
+
+	async includes(table, datum/*, ctx={}*/){
+		// TODO: if a model shows up twice here, I should run the query once 
+		//   for each
+		// TODO: how to join in from a sub schema?
+		const query = new Query(table);
+
+		await this.link();
+
+		const context = this.context;
+
+		const tables = Object.values(context.tables);
+		if (tables.length > 1){
+			(new Network(this.nexus.mapper)).path(
+				table, this.incomingSettings.base, tables.map(table => table.name), 1
+			).forEach(link => {
+				// a table can be referenced by multiple things, so one table, multiple series...
+				// think an item having a creator and owner
+				context.refs[link.name]
+				.forEach(table => {
+					query.setSchema(table.series, table.schema);
+
+					const connections = this.connections[table.series];
+					
+					if (connections){
+						query.addJoins(table.series, connections.map(
+							(connection) => new QueryJoin(connection.name, [{
+								from: connection.local,
+								to: connection.remote
+							}], connection.optional)
+						));
+					}
+				});
+			});
+		}
+
+		query.addFields(this.incomingSettings.base, [
+			new QueryField(this.incomingSettings.key, 'key')
+		]);
+
+		const model = await this.nexus.loadModel(table);
+
+		query.addParams(
+			table,
+			[buildParam(model.settings.key, model.getKey(datum))]
+		);
+
+		return query;
 	}
 
 	async getInflater(ctx){

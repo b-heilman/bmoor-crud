@@ -343,4 +343,40 @@ describe('src/graph/network', function(){
 			);
 		});
 	});
+
+	describe('::path', function(){
+		it('should order them correctly - order 1', function(){
+			const mapper = new Mapper();
+
+			mapper.addLink('table-1', 'id', 'table-2', 'table1Id');
+			mapper.addLink('table-2', 'id', 'table-3', 'table2Id');
+			mapper.addLink('table-1', 'id', 'table-3', 'table1Id');
+			mapper.addLink('table-3', 'id', 'table-4', 'table3Id');
+			mapper.addLink('table-3', 'id', 'table-5', 'table3Id');
+			mapper.addLink('table-5', 'id', 'table-6', 'table6Id');
+			mapper.addLink('table-6', 'id', 'table-7', 'table7Id');
+
+			const network = new Network(mapper);
+
+			expect(
+				network.path('table-6', 'table-4', ['table-6','table-3','table-4'], 3)
+				.map(t => t.name)
+			).to.deep.equal(['table-6','table-5','table-3','table-4']);
+			
+			expect(
+				network.path('table-1', 'table-4', ['table-1','table-2','table-3', 'table-4'], 3)
+				.map(t => t.name)
+			).to.deep.equal(['table-1','table-3','table-4']);
+
+			expect(
+				network.path('table-1', 'table-3', ['table-1','table-2','table-3', 'table-4'], 3)
+				.map(t => t.name)
+			).to.deep.equal(['table-1','table-3']);
+
+			expect(
+				network.path('table-4', 'table-1', ['table-1','table-2','table-3', 'table-4'], 3)
+				.map(t => t.name)
+			).to.deep.equal(['table-4','table-3','table-1']);
+		});
+	});
 });
