@@ -699,18 +699,18 @@ describe('src/schema/composite.js', function(){
 			expect(query.toJSON())
 			.to.deep.equal({
 				models: [{
-					series: 'test-2',
-					schema: 'test-2',
-					joins: []
-				}, {
 					series: 'test-1',
 					schema: 'test-1',
+					joins: []
+				}, {
+					series: 'test-2',
+					schema: 'test-2',
 					joins: [{
-						name: 'test-2',
+						name: 'test-1',
 						optional: false,
 						mappings: [{
-							to: 'test1Id',
-							from: 'id'
+							from: 'test1Id',
+							to: 'id'
 						}]
 					}]
 				}],
@@ -733,10 +733,6 @@ describe('src/schema/composite.js', function(){
 			expect(query.toJSON())
 			.to.deep.equal({
 				models: [{
-					series: 'test-3',
-					schema: 'test-3',
-					joins: []
-				}, {
 					series: 'test-1',
 					schema: 'test-1',
 					joins: []
@@ -744,18 +740,22 @@ describe('src/schema/composite.js', function(){
 					series: 'test-2',
 					schema: 'test-2',
 					joins: [{
-						name: 'test-3',
-						optional: false,
-						mappings: [{
-							to: 'test2Id',
-							from: 'id'
-						}]
-					}, {
 						name: 'test-1',
 						optional: false,
 						mappings: [{
 							to: 'id',
 							from: 'test1Id'
+						}]
+					}]
+				}, {
+					series: 'test-3',
+					schema: 'test-3',
+					joins: [{
+						name: 'test-2',
+						optional: false,
+						mappings: [{
+							to: 'id',
+							from: 'test2Id'
 						}]
 					}]
 				}],
@@ -774,7 +774,7 @@ describe('src/schema/composite.js', function(){
 			});
 		});
 
-		xit('should succeed with a alias alignment', async function(){
+		it('should succeed with a alias alignment', async function(){
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({

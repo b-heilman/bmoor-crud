@@ -27,7 +27,7 @@ async function formatResponse(res, changes/*, ctx, nexus*/){
 		return {
 			result: res,
 			changes: changes.reduce(
-				function(agg, change){
+				function(agg, change, i){
 					if (!change.md.internal){
 						let modelInfo = agg[change.model];
 
@@ -38,6 +38,7 @@ async function formatResponse(res, changes/*, ctx, nexus*/){
 						}
 
 						modelInfo.push({
+							order: i,
 							action: change.action,
 							datum: change.to || change.from
 						});

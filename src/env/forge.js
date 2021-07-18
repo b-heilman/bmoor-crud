@@ -33,14 +33,30 @@ class Forge {
 				const service = await this.nexus.configureCrud(ref, settings);
 
 				hook(service, {
-					afterCreate: (datum, ctx) => {
-						return this.messageBus.triggerEvent(ref, 'create', [null, datum, ctx]);
+					afterCreate: (key, datum, ctx) => {
+						return this.messageBus.debounceEvent(
+							ref, 
+							'create', 
+							key,
+							[key, null, datum, ctx]
+						);
 					},
-					afterUpdate: (datum, ctx, self, was) => {
-						return this.messageBus.triggerEvent(ref, 'update', [was, datum, ctx]);
+					afterUpdate: (key, datum, ctx, self, was) => {
+						return this.messageBus.debounceEvent(
+							ref, 
+							'update',
+							key,
+							[key, was, datum, ctx]
+						);
 					},
-					afterDelete: (datum, ctx) => {
-						return this.messageBus.triggerEvent(ref, 'delete', [datum, null, ctx]);
+					// this should be before, because any links will be destroyed after delete
+					beforeDelete: (key, datum, ctx) => {
+						return this.messageBus.debounceEvent(
+							ref, 
+							'delete', 
+							key,
+							[key, datum, null, ctx]
+						);
 					}
 				});
 
@@ -59,48 +75,82 @@ class Forge {
 
 				const doc = await this.nexus.configureDocument(ref, settings);
 
-				// TODO: Can I get a key?
 				Object.keys(doc.structure.context.tables)
 				.map(ref => {
 					this.messageBus.addListener(ref, 'create',
-						(_, datum, ctx) => this.messageBus.triggerEvent(
-							ref,
-							'push', 
-							[null, {[ref] : [datum]}, ctx]
-						)
+						async (key, _, datum, ctx) => {
+							const keys = await doc.getAffected(ref, datum, ctx);
+
+							return keys.map(
+								key => this.messageBus.debounceEvent(
+									ref, 
+									'push',
+									key,
+									[key, null, null, ctx]
+								)
+							);
+						}
 					);
 
 					this.messageBus.addListener(ref, 'update',
-						(_, datum, ctx) => this.messageBus.triggerEvent(
-							ref,
-							'push', 
-							[null, {[ref] : [datum]}, ctx]
-						)
+						async (key, _, datum, ctx) => {
+							const keys = await doc.getAffected(ref, datum, ctx);
+							return keys.map(
+								key => this.messageBus.debounceEvent(
+									ref, 
+									'push',
+									key,
+									[key, null, null, ctx]
+								)
+							);
+						}
 					);
 
 					this.messageBus.addListener(ref, 'delete',
-						(datum, _, ctx) => this.messageBus.triggerEvent(
-							ref,
-							'push', 
-							[null, {[ref] : [datum]}, ctx]
-						)
+						async (key, datum, _, ctx) => {
+							const keys = await doc.getAffected(ref, datum, ctx);
+
+							return keys.map(
+								key => this.messageBus.debounceEvent(
+									ref, 
+									'push',
+									key,
+									[key, null, null, ctx]
+								)
+							);
+						}
 					);
 				});
 
 				Object.keys(doc.structure.settings.subs)
 				.map(ref => {
 					this.messageBus.addListener(ref, 'push',
-						(_, datum, ctx) => this.messageBus.triggerEvent(
-							ref,
-							'push',
-							[null, {[ref] : [datum]}, ctx]
-						)
+						(triggerKeys, datum, ctx) => {
+							const keys = [];
+							// TODO: join from a child to a key
+							return keys.map(
+								key => this.messageBus.debounceEvent(
+									ref, 
+									'push',
+									key,
+									[key, null, null, ctx]
+								)
+							);
+						}
 					);
 				});
 
 				hook(doc, {
-					afterPush: (datum, ctx) => {
-						return this.messageBus.triggerEvent(ref, 'push', [null, datum, ctx]);
+					afterPush: (keys, _, ctx) => {
+						// TODO: how do I get the key from this?
+						return keys.map(
+							key => this.messageBus.debounceEvent(
+								ref, 
+								'push',
+								key,
+								[key, null, null, ctx]
+							)
+						);
 					}
 				});
 

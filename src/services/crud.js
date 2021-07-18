@@ -97,12 +97,12 @@ class Crud extends View {
 				ctx
 			)
 		)[0];
-		
-		if (hooks.afterCreate){
-			await hooks.afterCreate(datum, ctx, this);
-		}
 
 		const key = this.structure.getKey(datum);
+		if (hooks.afterCreate){
+			await hooks.afterCreate(key, datum, ctx, this);
+		}
+
 		if (ctx.cache){
 			ctx.cache.set(name, key, datum);
 		}
@@ -321,10 +321,6 @@ class Crud extends View {
 
 		const tgt = await this.read(id, ctx);
 
-		if (hooks.beforeUpdate){
-			await hooks.beforeUpdate(tgt, ctx, this, delta);
-		}
-
 		if (security.canUpdate){
 			if (!(await security.canUpdate(tgt, ctx))){
 				throw create(`now allowed to update instance of ${name}`, {
@@ -335,6 +331,10 @@ class Crud extends View {
 					}
 				});
 			}
+		}
+
+		if (hooks.beforeUpdate){
+			await hooks.beforeUpdate(tgt, ctx, this, delta);
 		}
 
 		const datum = (
@@ -351,7 +351,7 @@ class Crud extends View {
 		)[0];
 
 		if (hooks.afterUpdate){
-			await hooks.afterUpdate(datum, ctx, this);
+			await hooks.afterUpdate(id, datum, ctx, this);
 		}
 
 		if (ctx.cache){
@@ -391,10 +391,6 @@ class Crud extends View {
 
 		const datum = await this.read(id, ctx);
 
-		if (hooks.beforeDelete){
-			await hooks.beforeDelete(datum, ctx, this);
-		}
-
 		if (security.canDelete){
 			if (!(await security.canDelete(datum, ctx))){
 				throw create(`now allowed to update instance of ${name}`, {
@@ -407,6 +403,10 @@ class Crud extends View {
 			}
 		}
 
+		if (hooks.beforeDelete){
+			await hooks.beforeDelete(id, datum, ctx, this);
+		}
+		
 		await this._delete({
 			query: await this.structure.getQuery(
 				{

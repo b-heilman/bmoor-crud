@@ -214,7 +214,7 @@ describe('src/service/normalization', function(){
 					class2Id: 'bar-2',
 				}]
 			}, nexus, ctx)
-			.then(() => {
+			.then(res => {
 				expect(stubs.class1.getCall(0).args[0])
 				.to.deep.equal({
 					info: 'eins'
@@ -229,6 +229,27 @@ describe('src/service/normalization', function(){
 				.to.deep.equal({
 					class2Id: 456
 				});
+
+				expect(res)
+				.to.deep.equal([{
+					model: 'class-1',
+					action: 'read',
+					datum: {
+						id: 123
+					}
+				}, {
+					model: 'class-2',
+					action: 'create',
+					datum: {
+						id: 456
+					}
+				}, {
+					model: 'class-3',
+					action: 'create',
+					datum: {
+						id: 789
+					}
+				}]);
 
 				done();
 			}).catch(done);

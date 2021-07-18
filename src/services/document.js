@@ -372,7 +372,18 @@ const normalization = require('./normalization.js');
 		);
 
 		if (hooks.afterPush){
-			await hooks.afterPush(datum, ctx, this);
+			let key = null;
+			let rootModel = this.structure.incomingSettings.base;
+
+			// the first instance of the root model SHOULD be the primary
+			// object
+			for(let i = 0, c = rtn.length; i < c && key===null; i++){
+				if (rtn[i].model === rootModel){
+					key = this.base.getKey(rtn[i].datum);
+				}
+			}
+
+			await hooks.afterPush([key], rtn, ctx, this);
 		}
 
 		return rtn;
@@ -386,6 +397,21 @@ const normalization = require('./normalization.js');
 
 	async create(datum, ctx){
 		return this.push(datum, ctx);
+	}
+
+	async getAffected(modelName, datum, ctx){
+		const res = await super.read(
+			{
+				query: await this.structure.includes(
+					modelName,
+					datum,
+					ctx
+				)
+			}, 
+			ctx
+		);
+
+		return res.map(response => response.key);
 	}
 }
 

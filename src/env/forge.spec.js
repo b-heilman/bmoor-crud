@@ -94,7 +94,10 @@ describe('src/env/forge.js', function(){
 					id: 10
 				}]);
 
-				bus.broadcast.on('service-1.create', function(was, datum, myCtx){
+				bus.broadcast.on('service-1.create', function(key, was, datum, myCtx){
+					expect(key)
+					.to.deep.equal(10);
+
 					expect(datum)
 					.to.deep.equal({id:10, foo: 'bar'});
 
@@ -133,7 +136,10 @@ describe('src/env/forge.js', function(){
 					foo: 'bar'
 				}]);
 
-				bus.broadcast.on('service-1.update', function(was, datum, myCtx){
+				bus.broadcast.on('service-1.update', function(key, was, datum, myCtx){
+					expect(key)
+					.to.deep.equal(1);
+
 					expect(datum)
 					.to.deep.equal({id: 20, foo: 'bar'});
 
@@ -177,7 +183,10 @@ describe('src/env/forge.js', function(){
 					foo: 'bar'
 				}]);
 
-				bus.broadcast.on('service-1.delete', function(datum, _, myCtx){
+				bus.broadcast.on('service-1.delete', function(key, datum, _, myCtx){
+					expect(key)
+					.to.equal(1);
+
 					expect(datum)
 					.to.deep.equal({foo: 'bar'});
 
@@ -329,7 +338,10 @@ describe('src/env/forge.js', function(){
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'create',
-					callback: function(service, was, datum, myCtx){
+					callback: function(service, key, was, datum, myCtx){
+						expect(key)
+						.to.equal(30);
+
 						expect(service)
 						.to.equal(service2);
 
@@ -380,7 +392,10 @@ describe('src/env/forge.js', function(){
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'update',
-					callback: function(service, was, datum, myCtx){
+					callback: function(service, key, was, datum, myCtx){
+						expect(key)
+						.to.equal(1);
+
 						expect(service)
 						.to.equal(service2);
 
@@ -434,7 +449,10 @@ describe('src/env/forge.js', function(){
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
 					action: 'delete',
-					callback: function(service, was, datum, myCtx){
+					callback: function(service, key, was, datum, myCtx){
+						expect(key)
+						.to.equal(1);
+
 						expect(service)
 						.to.equal(service2);
 
@@ -971,6 +989,94 @@ describe('src/env/forge.js', function(){
 							name: true
 						}
 					}
+				}, {
+					name: 'service-3',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true,
+							service1Id: {
+								create: true,
+								read: true,
+								link: {
+									name: 'service-1',
+									field: 'id'
+								}
+							},
+							service2Id: {
+								create: true,
+								read: true,
+								link: {
+									name: 'service-2',
+									field: 'id'
+								}
+							}
+						}
+					}
+				}, {
+					name: 'service-4',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true,
+							service3Id: {
+								create: true,
+								read: true,
+								link: {
+									name: 'service-3',
+									field: 'id'
+								}
+							}
+						}
+					}
+				}],
+				documents: [{
+					name: 'doc-1',
+					settings: {
+						base: 'service-1',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name'
+						}
+					}
+				}, {
+					name: 'doc-2',
+					settings: {
+						base: 'service-4',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name'
+						}
+					}
+				}, {
+					name: 'doc-3',
+					settings: {
+						base: 'service-3',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name',
+							service1Name: '> $service-1.name',
+							service2Name: '> $service-2.name',
+							links: ['> #doc-2']
+						}
+					}
 				}],
 				decorators: [{
 					name: 'service-1',
@@ -1190,8 +1296,11 @@ describe('src/env/forge.js', function(){
 
 			let called = false;
 
-			stubs.effect.callsFake(function(myService, from, to, myCtx){
+			stubs.effect.callsFake(function(myService, key, from, to, myCtx){
 				called = true;
+
+				expect(key)
+				.to.equal(13);
 
 				expect(service)
 				.to.equal(myService);
@@ -1269,8 +1378,95 @@ describe('src/env/forge.js', function(){
 							name: true
 						}
 					}
+				}, {
+					name: 'service-3',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true,
+							service1Id: {
+								create: true,
+								read: true,
+								link: {
+									name: 'service-1',
+									field: 'id'
+								}
+							},
+							service2Id: {
+								create: true,
+								read: true,
+								link: {
+									name: 'service-2',
+									field: 'id'
+								}
+							}
+						}
+					}
+				}, {
+					name: 'service-4',
+					settings: {
+						connector: 'http',
+						fields: {
+							id: {
+								create: false,
+								read: true,
+								update: false,
+								delete: true,
+								key: true
+							},
+							name: true,
+							service3Id: {
+								create: true,
+								read: true,
+								link: {
+									name: 'service-3',
+									field: 'id'
+								}
+							}
+						}
+					}
 				}],
-				documents: [],
+				documents: [{
+					name: 'doc-1',
+					settings: {
+						base: 'service-1',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name'
+						}
+					}
+				}, {
+					name: 'doc-2',
+					settings: {
+						base: 'service-4',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name'
+						}
+					}
+				}, {
+					name: 'doc-3',
+					settings: {
+						base: 'service-3',
+						key: 'id',
+						fields: {
+							'id': '.id',
+							'name': '.name',
+							service1Name: '> $service-1.name',
+							service2Name: '> $service-2.name',
+							links: ['> #doc-2']
+						}
+					}
+				}],
 				decorators: [{
 					name: 'service-1',
 					settings: {
@@ -1489,8 +1685,11 @@ describe('src/env/forge.js', function(){
 
 			let called = false;
 
-			stubs.effect.callsFake(function(myService, from, to, myCtx){
+			stubs.effect.callsFake(function(myService, key, from, to, myCtx){
 				called = true;
+
+				expect(key)
+				.to.equal(13);
 
 				expect(service)
 				.to.equal(myService);

@@ -598,26 +598,36 @@ class Composite extends Structure {
 		);
 	}
 
-	async includes(table, datum/*, ctx={}*/){
-		// TODO: if a model shows up twice here, I should run the query once 
-		//   for each
+	async includes(modelName, datum/*, ctx={}*/){
 		// TODO: how to join in from a sub schema?
-		const query = new Query(table);
+		const query = new Query(this.incomingSettings.base);
 
-		await this.link();
+		const [model] = await Promise.all([
+			this.nexus.loadModel(modelName),
+			this.link()
+		]);
 
 		const context = this.context;
 
 		const tables = Object.values(context.tables);
 		if (tables.length > 1){
 			(new Network(this.nexus.mapper)).path(
-				table, this.incomingSettings.base, tables.map(table => table.name), 1
+				modelName, this.incomingSettings.base, tables.map(table => table.name), 1
 			).forEach(link => {
 				// a table can be referenced by multiple things, so one table, multiple series...
 				// think an item having a creator and owner
 				context.refs[link.name]
 				.forEach(table => {
 					query.setSchema(table.series, table.schema);
+
+					// a model can have multiple series, if so, let's just link
+					// in here
+					if (link.name === modelName){
+						query.addParams(
+							table.series,
+							[buildParam(model.settings.key, model.getKey(datum))]
+						);
+					}
 
 					const connections = this.connections[table.series];
 					
@@ -636,13 +646,6 @@ class Composite extends Structure {
 		query.addFields(this.incomingSettings.base, [
 			new QueryField(this.incomingSettings.key, 'key')
 		]);
-
-		const model = await this.nexus.loadModel(table);
-
-		query.addParams(
-			table,
-			[buildParam(model.settings.key, model.getKey(datum))]
-		);
 
 		return query;
 	}

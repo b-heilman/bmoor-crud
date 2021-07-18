@@ -1155,12 +1155,20 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 1,
-					name: 'item-created'
+					action: 'create',
+					model: 'test-item',
+					datum: {
+						id: 1,
+						name: 'item-created'
+					}
 				},
 				{
-					id: 1,
-					name: 'category-created'
+					action: 'create',
+					model: 'test-category',
+					datum: {
+						id: 1,
+						name: 'category-created'
+					}
 				}
 			]);
 		});
@@ -1239,12 +1247,20 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 'item-update-1',
-					name: 'item-update'
+					action: 'update',
+					model: 'test-item',
+					datum: {
+						id: 'item-update-1',
+						name: 'item-update'
+					}
 				},
 				{
-					id: 1,
-					name: 'category-update'
+					action: 'update',
+					model: 'test-category',
+					datum: {
+						id: 1,
+						name: 'category-update'
+					}
 				}
 			]);
 
@@ -1465,21 +1481,41 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 'family-1',
-					name: 'family-updated'
+					action: 'update',
+					model: 'test-family',
+					datum: {
+						id: 'family-1',
+						name: 'family-updated'
+					}
 				},
 				{
-					id: 'item-1',
-					name: 'item-updated'
+					action: 'update',
+					model: 'test-item',
+					datum: {
+						id: 'item-1',
+						name: 'item-updated'
+					}
 				}, {
-					id: 'item-2',
-					name: 'item-updated'
+					action: 'update',
+					model: 'test-item',
+					datum: {
+						id: 'item-2',
+						name: 'item-updated'
+					}
 				}, {
-					id: 'cat-2',
-					name: 'category-created'
+					action: 'create',
+					model: 'test-category',
+					datum: {
+						id: 'cat-2',
+						name: 'category-created'
+					}
 				}, {
-					id: 'cat-1',
-					name: 'category-update'
+					action: 'update',
+					model: 'test-category',
+					datum: {
+						id: 'cat-1',
+						name: 'category-update'
+					}
 				}
 			]);
 
@@ -1595,17 +1631,33 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 'family-1',
-					name: 'family-updated'
+					model: 'test-family',
+					action: 'update',
+					datum: {
+						id: 'family-1',
+						name: 'family-updated'
+					}
 				}, {
-					id: 'cat-1',
-					name: 'category-created'
+					model: 'test-category',
+					action: 'create',
+					datum: {
+						id: 'cat-1',
+						name: 'category-created'
+					}
 				}, {
-					id: 'tag-1',
-					name: 'tag-created'
+					model: 'test-tag',
+					action: 'create',
+					datum: {
+						id: 'tag-1',
+						name: 'tag-created'
+					}
 				}, {
-					id: 'tag-2',
-					name: 'tag-created'
+					model: 'test-tag',
+					action: 'create',
+					datum: {
+						id: 'tag-2',
+						name: 'tag-created'
+					}
 				}
 			]);
 
@@ -1715,22 +1767,42 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 'family-1',
-					name: 'family-updated'
+					model: 'test-family',
+					action: 'update',
+					datum: {
+						id: 'family-1',
+						name: 'family-updated'
+					}
 				}, {
-					id: 'cat-1',
-					name: 'category-created'
+					model: 'test-category',
+					action: 'create',
+					datum: {
+						id: 'cat-1',
+						name: 'category-created'
+					}
 				}, {
-					id: 'cat-1',
-					name: 'category-created'
+					model: 'test-category',
+					action: 'create',
+					datum: {
+						id: 'cat-1',
+						name: 'category-created'
+					}
 				}, {
-					id: 'tag-1',
-					name: 'tag-created',
-					required: 'req-1'
+					model: 'test-tag',
+					action: 'create',
+					datum: {
+						id: 'tag-1',
+						name: 'tag-created',
+						required: 'req-1'
+					}
 				}, {
-					id: 'tag-2',
-					name: 'tag-created',
-					required: 'req-2'
+					model: 'test-tag',
+					action: 'create',
+					datum: {
+						id: 'tag-2',
+						name: 'tag-created',
+						required: 'req-2'
+					}
 				}
 			]);
 
@@ -1935,15 +2007,27 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 'item-1',
-					name: 'item-created'
+					model: 'test-item',
+					action: 'create',
+					datum: {
+						id: 'item-1',
+						name: 'item-created'
+					}
 				}, {
-					id: 'material-1',
-					name: 'material-created'
+					model: 'test-material',
+					action: 'create',
+					datum: {
+						id: 'material-1',
+						name: 'material-created'
+					}
 				}, {
-					id: 'im-1',
-					itemId: 'item-1-1',
-					materialId: 'material-1-1'
+					model: 'test-item-material',
+					action: 'create',
+					datum: {
+						id: 'im-1',
+						itemId: 'item-1-1',
+						materialId: 'material-1-1'
+					}
 				}
 			]);
 
@@ -2062,15 +2146,27 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([
 				{
-					id: 'item-1',
-					name: 'item-updated'
+					model: 'test-item',
+					action: 'update',
+					datum: {
+						id: 'item-1',
+						name: 'item-updated'
+					}
 				}, {
-					id: 'material-1',
-					name: 'material-updated'
+					model: 'test-material',
+					action: 'update',
+					datum: {
+						id: 'material-1',
+						name: 'material-updated'
+					}
 				}, {
-					id: 'im-1',
-					itemId: 'item-1-1',
-					materialId: 'material-1-1'
+					model: 'test-item-material',
+					action: 'update',
+					datum: {
+						id: 'im-1',
+						itemId: 'item-1-1',
+						materialId: 'material-1-1'
+					}
 				}
 			]);
 

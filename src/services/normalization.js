@@ -31,10 +31,13 @@ async function ensure(mapper, modelName, payload, ctx){
 async function install(datum, service, master, mapper, ctx){
 	let ref = datum.getReference();
 	let rtn = null;
+	let action = null;
 
 	if (datum.getAction() === 'read'){
 		// either search by key, or the whop thing sent in
 		rtn = await getDatum(service, datum.getContent(), ctx);
+
+		action = 'read';
 
 		if (!rtn){
 			throw create(`unable to read expected datum of type ${service.structure.name}`, {
@@ -68,22 +71,28 @@ async function install(datum, service, master, mapper, ctx){
 				});
 			}
 
+			action = 'update';
 			rtn = await service.update(service.structure.getKey(current), content, ctx);
 		} else if (datum.getAction() === 'update-create'){
 			rtn = await getDatum(service, content, ctx);
 			
 			if (rtn){
+				action = 'update';
 				await service.update(service.structure.getKey(rtn), content, ctx);
 			} else {
+				action = 'create';
 				rtn = await service.create(content, ctx);
 			}
 		}  else if (datum.getAction() === 'read-create'){
 			rtn = await getDatum(service, content, ctx);
 
+			action = 'read';
 			if (!rtn){
+				action = 'create';
 				rtn = await service.create(content, ctx);
 			}
 		} else {
+			action = 'create';
 			rtn = await service.create(content, ctx);
 		}
 	}
@@ -91,7 +100,10 @@ async function install(datum, service, master, mapper, ctx){
 	// when this thing is processed, update any references to it
 	ctx.waitlist.resolve(service, ref, rtn);
 
-	return rtn;
+	return {
+		action,
+		datum: rtn
+	};
 }
 
 /**
@@ -162,6 +174,8 @@ async function deflate(schema, nexus, ctx){
 						nexus.mapper,
 						ctx
 					);
+
+					res.model = serviceName;
 
 					agg.push(res);
 

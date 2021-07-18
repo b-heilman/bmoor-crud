@@ -90,7 +90,7 @@ function secure(crud, settings){
 
 	// do you have a permission to delete a particular datum
 	if (settings.deletePermission){
-		accessCfg.beforeDelete = async function(datum, ctx, service){
+		accessCfg.beforeDelete = async function(key, datum, ctx, service){
 			if (!(ctx.hasPermission(settings.deletePermission) || 
 				(adminPermission && ctx.hasPermission(adminPermission)))
 			){

@@ -243,7 +243,8 @@ describe('src/server/controller.js', function(){
 			changes: {
 				'model-1': [{
 					action: 'create',
-					datum: {value: 2}
+					datum: {value: 2},
+					order: 0
 				}]
 			}
 		});
@@ -280,18 +281,22 @@ describe('src/server/controller.js', function(){
 			changes: {
 				'model-1': [{
 					action: 'create',
-					datum: {value: 2}
+					datum: {value: 2},
+					order: 0
 				}, {
 					action: 'update',
-					datum: {value: 4}
+					datum: {value: 4},
+					order: 3
 				}],
 				'model-2': [{
 					action: 'create',
-					datum: {foo: 'bar'}
+					datum: {foo: 'bar'},
+					order: 1
 				}],
 				'model-3': [{
 					action: 'delete',
-					datum: {hello: 'world'}
+					datum: {hello: 'world'},
+					order: 2
 				}]
 			}
 		});

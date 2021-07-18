@@ -56,14 +56,14 @@ class Model extends Structure {
 				index: [],
 				query: []
 			});
-
+			
 			this.fields.reduce(buildSettings, this.settings);
 		}
 	}
 
 	async configure(settings){
 		await super.configure(settings);
-
+		
 		this.settings = null;
 		this.schema = settings.schema || this.name;
 		this.connector = settings.connector;
@@ -94,6 +94,10 @@ class Model extends Structure {
 	}
 
 	getKey(delta){
+		if (!delta){
+			throw new Error('Can not getKey of undefined delta');
+		}
+
 		return delta[this.settings.key];
 	}
 
