@@ -33,7 +33,10 @@ async function ensure(prom, label){
 		const timeout = config.get('timeout');
 
 		const clear = setTimeout(function(){
-			console.log('nexus stack', JSON.stringify(waiting, null, 2));
+			console.log(
+				'timeout detected nexus stack', 
+				JSON.stringify(waiting, null, 2)
+			);
 
 			reject(new Error('lookup timed out: '+label));
 		}, timeout);

@@ -272,6 +272,14 @@ class Network {
 			}
 		}
 	}
+
+	branch(fromArr, toName, toSearch, depth = 3){
+		return [... new Set(
+			fromArr.map(
+				fromName => this.path(fromName, toName, toSearch, depth)
+			).flat()
+		)];
+	}
 }
 
 module.exports = {

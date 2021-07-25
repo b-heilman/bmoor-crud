@@ -61,51 +61,50 @@ class QueryPosition {
 }
 
 class Query {
-	constructor(baseModel){
-		this.base = baseModel;
+	constructor(baseSeries){
+		this.base = baseSeries;
 		this.models = {};
 		this.sorts = null;
 		this.position = null;
 
-		this.getModel(baseModel);
+		this.getSeries(baseSeries);
 	}
 
 	hasSeries(series){
 		return !!this.models[series];
 	}
 
-	// TODO: I really should call this series because model is a loaded term
-	getModel(model){
-		let rtn = this.models[model];
+	getSeries(series){
+		let rtn = this.models[series];
 
 		if (!rtn){
 			rtn = {
-				schema: model,
+				schema: series,
 				fields: [],
 				params: [],
 				joins: {}
 			};
 
-			this.models[model] = rtn;
+			this.models[series] = rtn;
 		}
 
 		return rtn;
 	}
 
-	setSchema(model, schema){
-		this.getModel(model).schema = schema;
+	setSchema(series, schema){
+		this.getSeries(series).schema = schema;
 
 		return this;
 	}
 
-	addFields(model, fields){
-		this.getModel(model).fields.push(...fields.flat());
+	addFields(series, fields){
+		this.getSeries(series).fields.push(...fields.flat());
 
 		return this;
 	}
 
-	addParams(model, params){
-		this.getModel(model).params.push(...params.flat());
+	addParams(series, params){
+		this.getSeries(series).params.push(...params.flat());
 
 		return this;
 	}
@@ -116,14 +115,14 @@ class Query {
 				join => this.addJoins(join.name, [join.flip(fromModel)])
 			);
 		} else {
-			const model = this.getModel(fromModel);
+			const series = this.getSeries(fromModel);
 
 			joins.forEach(join => {
 				const toModel = join.name;
-				const targetModel = this.getModel(toModel);
+				const targetModel = this.getSeries(toModel);
 
-				if (!(model.joins[toModel] || targetModel.joins[fromModel])){
-					model.joins[toModel] = join;
+				if (!(series.joins[toModel] || targetModel.joins[fromModel])){
+					series.joins[toModel] = join;
 				}
 			});
 		}

@@ -101,7 +101,8 @@ describe('src/schema/composite.js', function(){
 		await nexus.configureModel('test-4', {
 			fields: {
 				id: {
-					read: true
+					read: true,
+					key: true
 				},
 				name: {
 					read: true
@@ -656,7 +657,7 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
-	describe('::includes', function(){
+	describe('::getKeyQueryByModel', function(){
 		it('should work', async function(){
 			const lookup = new Composite('foo-bar', nexus);
 
@@ -671,7 +672,7 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			let query = await lookup.includes('test-1', {id: 1}, {});
+			let query = await lookup.getKeyQueryByModel('test-1', 1, {});
 
 			expect(query.toJSON())
 			.to.deep.equal({
@@ -694,7 +695,7 @@ describe('src/schema/composite.js', function(){
 				}]
 			});
 
-			query = await lookup.includes('test-2', {id: 2}, {});
+			query = await lookup.getKeyQueryByModel('test-2', 2, {});
 
 			expect(query.toJSON())
 			.to.deep.equal({
@@ -728,7 +729,7 @@ describe('src/schema/composite.js', function(){
 				}]
 			});
 
-			query = await lookup.includes('test-3', {id: 3}, {});
+			query = await lookup.getKeyQueryByModel('test-3', 3, {});
 
 			expect(query.toJSON())
 			.to.deep.equal({
@@ -789,7 +790,7 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 			
-			let query = await lookup.includes('test-1', {id: 123});
+			let query = await lookup.getKeyQueryByModel('test-1', 123);
 
 			expect(query.toJSON())
 			.to.deep.equal({
@@ -838,6 +839,134 @@ describe('src/schema/composite.js', function(){
 					value: 123,
 					settings: {}
 				}]
+			});
+		});
+	});
+
+	describe('::getKeyQueryBySub', function(){
+		it('should work', async function(){
+			const sub = new Composite('sub', nexus);
+
+			await sub.configure({
+				base: 'test-4',
+				key: 'id',
+				fields: {
+					eins: '.name',
+					title: '.title'
+				}
+			});
+
+			nexus.loadComposite = async function(name){
+				expect(name)
+				.to.equal('sub');
+
+				return sub;
+			};
+
+			const lookup = new Composite('foo-bar', nexus);
+
+			await lookup.configure({
+				base: 'test-1',
+				key: 'id',
+				fields: {
+					eins: '.name',
+					title: '.title',
+					zwei: '> $test-2.name',
+					subs: ['> $test-2 > $test-3 > $test-pivot > #sub']
+				}
+			});
+
+			let query = await lookup.getKeyQueryBySub('sub', 3, {});
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [
+					{
+						'series': 'test-1',
+						'schema': 'test-1',
+						'joins': []
+					},
+					{
+						'series': 'test-2',
+						'schema': 'test-2',
+						'joins': [
+							{
+								'name': 'test-1',
+								'mappings': [
+									{
+										'from': 'test1Id',
+										'to': 'id'
+									}
+								],
+								'optional': false
+							}
+						]
+					},
+					{
+						'series': 'test-3',
+						'schema': 'test-3',
+						'joins': [
+							{
+								'name': 'test-2',
+								'mappings': [
+									{
+										'from': 'test2Id',
+										'to': 'id'
+									}
+								],
+								'optional': false
+							}
+						]
+					},
+					{
+						'series': 'test-pivot',
+						'schema': 'test-pivot',
+						'joins': [
+							{
+								'name': 'test-3',
+								'mappings': [
+									{
+										'from': 'test3Id',
+										'to': 'id'
+									}
+								],
+								'optional': false
+							}
+						]
+					},
+					{
+						'series': 'sub',
+						'schema': 'test-4',
+						'joins': [
+							{
+								'name': 'test-pivot',
+								'mappings': [
+									{
+										'from': 'id',
+										'to': 'test4Id'
+									}
+								],
+								'optional': false
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						'series': 'test-1',
+						'path': 'id',
+						'as': 'key'
+					}
+				],
+				params: [
+					{
+						'series': 'sub',
+						'path': 'id',
+						'operation': '=',
+						'value': 3,
+						'settings': {}
+					}
+				]
 			});
 		});
 	});

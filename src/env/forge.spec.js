@@ -1314,6 +1314,140 @@ describe('src/env/forge.js', function(){
 			expect(called)
 			.to.equal(true);
 		});
+
+		describe('documents', function(){
+			let doc1 = null;
+			let doc2 = null;
+			let doc3 = null;
+
+			beforeEach(async () => {
+				doc1 = await nexus.loadDocument('doc-1');
+				doc2 = await nexus.loadDocument('doc-2');
+				doc3 = await nexus.loadDocument('doc-3');
+			});
+
+			it('should notify the correct documents on updated', async function(){
+				let doc1Called = false;
+				let doc2Called = false;
+				let doc3Called = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				stubs.doc1Affected = sinon.stub(doc1, 'getAffectedByModel')
+				.resolves([123]);
+
+				stubs.doc2Affected = sinon.stub(doc2, 'getAffectedByModel')
+				.resolves([234]);
+
+				stubs.doc3Affected = sinon.stub(doc3, 'getAffectedByModel')
+				.resolves([345]);
+
+				forge.messageBus.addListener('doc-1', 'push', function(key){
+					doc1Called = true;
+
+					expect(key)
+					.to.equal(123);
+				});
+
+				forge.messageBus.addListener('doc-2', 'push', function(key){
+					doc2Called = true;
+
+					expect(key)
+					.to.equal(234);
+				});
+
+				forge.messageBus.addListener('doc-3', 'push', function(key){
+					doc3Called = true;
+
+					expect(key)
+					.to.equal(345);
+				});
+
+				await service.update(1, {eins: 1}, ctx);
+
+				expect(stubs.doc1Affected.callCount)
+				.to.equal(1);
+
+				expect(stubs.doc2Affected.callCount)
+				.to.equal(0);
+
+				expect(stubs.doc3Affected.callCount)
+				.to.equal(1);
+
+				expect(doc1Called)
+				.to.equal(true);
+
+				expect(doc2Called)
+				.to.equal(false);
+
+				expect(doc3Called)
+				.to.equal(true);
+			});
+
+			it('should correctly hav documents bubble', async function(){
+				let doc1Called = false;
+				let doc2Called = false;
+				let doc3Called = false;
+
+				stubs.execute.resolves([{
+					foo: 'bar'
+				}]);
+
+				stubs.doc1Affected = sinon.stub(doc1, 'getAffectedByModel')
+				.resolves([123]);
+
+				stubs.doc2Affected = sinon.stub(doc2, 'getAffectedByModel')
+				.resolves([234]);
+
+				stubs.doc3Affected = sinon.stub(doc3, 'getAffectedBySub')
+				.resolves([345]);
+
+				forge.messageBus.addListener('doc-1', 'push', function(key){
+					doc1Called = true;
+
+					expect(key)
+					.to.equal(123);
+				});
+
+				forge.messageBus.addListener('doc-2', 'push', function(key){
+					doc2Called = true;
+
+					expect(key)
+					.to.equal(234);
+				});
+
+				forge.messageBus.addListener('doc-3', 'push', function(key){
+					doc3Called = true;
+
+					expect(key)
+					.to.equal(345);
+				});
+
+				const service4 = await nexus.loadCrud('service-4');
+
+				await service4.update(1, {eins: 1}, ctx);
+
+				expect(stubs.doc1Affected.callCount)
+				.to.equal(0);
+
+				expect(stubs.doc2Affected.callCount)
+				.to.equal(1);
+
+				expect(stubs.doc3Affected.callCount)
+				.to.equal(1);
+
+				expect(doc1Called)
+				.to.equal(false);
+
+				expect(doc2Called)
+				.to.equal(true);
+
+				expect(doc3Called)
+				.to.equal(true);
+			});
+		});
 	});
 
 	describe('::install via preload', function(){

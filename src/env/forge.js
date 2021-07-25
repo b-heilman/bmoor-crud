@@ -75,74 +75,79 @@ class Forge {
 
 				const doc = await this.nexus.configureDocument(ref, settings);
 
+				// a model which is part of the document has changed
 				Object.keys(doc.structure.context.tables)
-				.map(ref => {
-					this.messageBus.addListener(ref, 'create',
+				.map(model => {
+					this.messageBus.addListener(model, 'create',
 						async (key, _, datum, ctx) => {
-							const keys = await doc.getAffected(ref, datum, ctx);
+							const keys = await doc.getAffectedByModel(model, key, ctx);
 
-							return keys.map(
+							return Promise.all(keys.map(
 								key => this.messageBus.debounceEvent(
 									ref, 
 									'push',
 									key,
 									[key, null, null, ctx]
 								)
-							);
+							));
 						}
 					);
 
-					this.messageBus.addListener(ref, 'update',
+					this.messageBus.addListener(model, 'update',
 						async (key, _, datum, ctx) => {
-							const keys = await doc.getAffected(ref, datum, ctx);
-							return keys.map(
+							const keys = await doc.getAffectedByModel(model, key, ctx);
+							
+							return Promise.all(keys.map(
 								key => this.messageBus.debounceEvent(
 									ref, 
 									'push',
 									key,
 									[key, null, null, ctx]
 								)
-							);
+							));
 						}
 					);
 
-					this.messageBus.addListener(ref, 'delete',
+					this.messageBus.addListener(model, 'delete',
 						async (key, datum, _, ctx) => {
-							const keys = await doc.getAffected(ref, datum, ctx);
+							const keys = await doc.getAffectedByModel(model, key, ctx);
 
-							return keys.map(
+							return Promise.all(keys.map(
 								key => this.messageBus.debounceEvent(
 									ref, 
 									'push',
 									key,
 									[key, null, null, ctx]
 								)
-							);
+							));
 						}
 					);
 				});
 
-				Object.keys(doc.structure.settings.subs)
-				.map(ref => {
-					this.messageBus.addListener(ref, 'push',
-						(triggerKeys, datum, ctx) => {
-							const keys = [];
-							// TODO: join from a child to a key
-							return keys.map(
+				// a sub document has changed
+				doc.structure.settings.subs
+				.map(sub => {
+					const subName = sub.reference.name;
+
+					this.messageBus.addListener(subName, 'push',
+						async (triggerKey, datum, ctx) => {
+							const keys = await doc.getAffectedBySub(subName, triggerKey, ctx);
+							
+							return Promise.all(keys.map(
 								key => this.messageBus.debounceEvent(
 									ref, 
 									'push',
 									key,
 									[key, null, null, ctx]
 								)
-							);
+							));
 						}
 					);
 				});
 
+				// the document itself was just pushed against
 				hook(doc, {
 					afterPush: (keys, _, ctx) => {
-						// TODO: how do I get the key from this?
 						return keys.map(
 							key => this.messageBus.debounceEvent(
 								ref, 

@@ -398,6 +398,48 @@ function buildSettings(properties, field){
 	return properties;
 }
 
+async function addAccessorsToQuery(accessors, query, nexus){
+	return accessors.reduce(
+		async (prev, accessor) => {
+			let relationship = null;
+			let from = null;
+			let to = null;
+
+			prev = await prev;
+
+			let pSeries = prev.series;
+			let aSeries = accessor.series;
+
+			query.setSchema(aSeries, accessor.model);
+			
+			// this ensures everything is linked accordingly
+			// await addStuff(this, prev, subAccessor);
+			if (accessor.target) {
+				relationship = nexus.mapper.getRelationship(
+					accessor.model, prev.model, accessor.target
+				);
+				from = aSeries;
+				to = pSeries;
+			} else {
+				relationship = nexus.mapper.getRelationship(
+					prev.model, accessor.model, prev.field
+				);
+				from = pSeries;
+				to = aSeries;
+			}
+
+			query.addJoins(from, [
+				new QueryJoin(to, [{
+					from: relationship.local,
+					to: relationship.remote
+				}], accessor.optional)
+			]);
+			
+			return accessor;
+		}
+	);
+}
+
 class Structure {
 	constructor(name, nexus){
 		this.name = name;
@@ -600,43 +642,8 @@ class Structure {
 						throw new Error(`unable to mount: ${mountSeries} from ${path}`);
 					}
 
-					await access.reduce(
-						async (prev, accessor) => {
-							let relationship = null;
-							let from = null;
-							let to = null;
-							let pSeries = prev.series;
-							let aSeries = accessor.series;
-
-							prev = await prev;
-
-							query.setSchema(aSeries, accessor.model);
-							
-							// this ensures everything is linked accordingly
-							// await addStuff(this, prev, subAccessor);
-							if (accessor.target) {
-								relationship = this.nexus.mapper.getRelationship(
-									accessor.model, prev.model, accessor.target
-								);
-								from = aSeries;
-								to = pSeries;
-							} else {
-								relationship = this.nexus.mapper.getRelationship(
-									prev.model, accessor.model, prev.field
-								);
-								from = pSeries;
-								to = aSeries;
-							}
-
-							query.addJoins(from, [
-								new QueryJoin(to, [{
-									from: relationship.local,
-									to: relationship.remote
-								}], accessor.optional)
-							]);
-							
-							return accessor;
-						}
+					await addAccessorsToQuery(
+						access, query, this.nexus
 					);
 					
 					const rootAccessor = access[0];
@@ -752,5 +759,6 @@ module.exports = {
 	buildDeflate,
 	buildParam,
 	compareChanges,
+	addAccessorsToQuery,
 	Structure
 };

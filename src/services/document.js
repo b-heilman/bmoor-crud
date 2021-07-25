@@ -372,6 +372,7 @@ const normalization = require('./normalization.js');
 		);
 
 		if (hooks.afterPush){
+			// TODO: do I need to make sure the key is there?
 			let key = null;
 			let rootModel = this.structure.incomingSettings.base;
 
@@ -399,12 +400,27 @@ const normalization = require('./normalization.js');
 		return this.push(datum, ctx);
 	}
 
-	async getAffected(modelName, datum, ctx){
+	async getAffectedByModel(modelName, key, ctx){
 		const res = await super.read(
 			{
-				query: await this.structure.includes(
+				query: await this.structure.getKeyQueryByModel(
 					modelName,
-					datum,
+					key,
+					ctx
+				)
+			}, 
+			ctx
+		);
+
+		return res.map(response => response.key);
+	}
+
+	async getAffectedBySub(subName, key, ctx){
+		const res = await super.read(
+			{
+				query: await this.structure.getKeyQueryBySub(
+					subName,
+					key,
 					ctx
 				)
 			}, 

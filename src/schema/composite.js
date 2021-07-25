@@ -2,7 +2,7 @@
 const {implode} = require('bmoor/src/object.js');
 const {create} = require('bmoor/src/lib/error.js');
 
-const {Structure, buildParam} = require('./structure.js');
+const {Structure, buildParam, addAccessorsToQuery} = require('./structure.js');
 const {Network} = require('../graph/Network.js');
 
 const {Path, pathToAccessors} = require('../graph/path.js');
@@ -217,6 +217,7 @@ async function buildJoins(composite, reference, i){
 			access.push({
 				loader: 'access',
 				model: reference.composite.incomingSettings.base,
+				series: reference.composite.name,
 				target: key,
 				relationship
 			});
@@ -361,8 +362,8 @@ class Composite extends Structure {
 							);
 						}
 
-						// I don't like this, it limits me to a single, but I'll fix it down
-						// the road.
+						// TODO: I don't like this, it limits me to a single join, 
+						// but I'll fix it down the road.
 						return {
 							name: include.model,
 							property,
@@ -573,7 +574,7 @@ class Composite extends Structure {
 					// this.connection is a directed graph, which is fine unless
 					// we have the pattern 2 <- 1 <- 2 and we end up with two tables
 					// not being joined correctly.  The idea is to hoist the primary node
-					// to the front and delegate he connections to the other tables
+					// to the front and delegate the connections to the other tables
 					const connections = this.connections[table.series];
 					
 					if (connections){
@@ -598,8 +599,7 @@ class Composite extends Structure {
 		);
 	}
 
-	async includes(modelName, datum/*, ctx={}*/){
-		// TODO: how to join in from a sub schema?
+	async getKeyQueryByModel(modelName, key/*, ctx={}*/){
 		const query = new Query(this.incomingSettings.base);
 
 		const [model] = await Promise.all([
@@ -625,9 +625,90 @@ class Composite extends Structure {
 					if (link.name === modelName){
 						query.addParams(
 							table.series,
-							[buildParam(model.settings.key, model.getKey(datum))]
+							[buildParam(model.settings.key, key)]
 						);
 					}
+
+					const connections = this.connections[table.series];
+					
+					if (connections){
+						query.addJoins(table.series, connections.map(
+							(connection) => new QueryJoin(connection.name, [{
+								from: connection.local,
+								to: connection.remote
+							}], connection.optional)
+						));
+					}
+				});
+			});
+		}
+
+		query.addFields(this.incomingSettings.base, [
+			new QueryField(this.incomingSettings.key, 'key')
+		]);
+
+		return query;
+	}
+
+	// this.settings.subs.reference.composite
+	async getKeyQueryBySub(compositeName, key/*, ctx*/){
+		const query = new Query(this.incomingSettings.base);
+
+		await this.link();
+
+		const target = this.settings.subs.reduce(
+			(agg, sub) => {
+				if (agg){
+					return agg;
+				}
+
+				if (sub.reference.composite.name === compositeName){
+					return sub;
+				}
+			},
+			null
+		);
+
+		let joinFrom = [];
+		if (target){
+			const composite = target.reference.composite;
+			const series = composite.incomingSettings.base;
+			const model = await this.nexus.loadModel(series);
+
+			// TODO: so say you have two users, one links to an owner schema, 
+			//  another links to who last updated.  The owner schema being based
+			//  on user makes this ambiguous.  I'm not dealing with it now, I consider
+			//  it an edge case, but it's definitely a problem.
+			joinFrom = await Promise.all(target.joins.map(
+				async (join) => {
+					await addAccessorsToQuery(join.accessor, query, this.nexus);
+				
+					query.addParams(
+						join.accessor[join.accessor.length-1].series,
+						[buildParam(model.settings.key, key)]
+					);
+
+					await addAccessorsToQuery([join.root, join.accessor[0]], query, this.nexus);
+
+					return join.root.series;
+				}
+			));
+		} else {
+			throw new Error('no sub composite found: '+compositeName);
+		}
+
+		const context = this.context;
+
+		const tables = Object.values(context.tables);
+		if (tables.length > 1){
+			(new Network(this.nexus.mapper)).branch(
+				joinFrom, this.incomingSettings.base, tables.map(table => table.name), 1
+			).forEach(link => {
+				// a table can be referenced by multiple things, so one table, multiple series...
+				// think an item having a creator and owner
+				context.refs[link.name]
+				.forEach(table => {
+					query.setSchema(table.series, table.schema);
 
 					const connections = this.connections[table.series];
 					
