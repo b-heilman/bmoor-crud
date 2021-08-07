@@ -103,6 +103,9 @@ const normalization = require('./normalization.js');
 					}
 				));
 
+				// TODO: figure out what to do about variables
+				this.structure.calculateDynamics(queryDatum, {});
+
 				// delete after incase there's a collision between subs
 				clears.forEach(path => del(queryDatum, path));
 

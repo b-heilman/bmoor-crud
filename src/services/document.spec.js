@@ -843,6 +843,13 @@ describe('src/services/document.js', function(){
 				fields: {
 					'item': '.name',
 					'categoryName':  '> $test-category.name'
+				},
+				dynamics: {
+					a: {
+						field: function(datum){
+							return datum.item+'_a';
+						}
+					}
 				}
 			});
 
@@ -914,7 +921,10 @@ describe('src/services/document.js', function(){
 			expect(res)
 			.to.deep.equal([{
 				item: 'item-1',
-				categoryName: 'category-1'
+				categoryName: 'category-1',
+				a: {
+					field: 'item-1_a'
+				}
 			}]);
 		});
 

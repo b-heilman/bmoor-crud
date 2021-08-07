@@ -1,6 +1,7 @@
 
 const {implode} = require('bmoor/src/object.js');
 const {create} = require('bmoor/src/lib/error.js');
+const {makeSetter} = require('bmoor/src/core.js');
 
 const {Structure, buildParam, addAccessorsToQuery} = require('./structure.js');
 const {Network} = require('../graph/Network.js');
@@ -233,6 +234,24 @@ async function buildJoins(composite, reference, i){
 	));
 }
 
+function buildCalculations(schema){
+	const dynamics = implode(schema);
+
+	return Object.keys(dynamics).reduce(
+		(old, path) => {
+			const fn = dynamics[path];
+			const setter = makeSetter(path);
+
+			return function(datum, variables){
+				setter(datum, fn(old(datum, variables), variables));
+
+				return datum;
+			};
+		},
+		(datum) => datum
+	);
+}
+
 class Composite extends Structure {
 	// connects all the models and all the fields
 	async link(){
@@ -428,6 +447,7 @@ class Composite extends Structure {
 			settings.fields,
 			settings.base
 		);
+		this.calculateDynamics = buildCalculations(settings.dynamics);
 
 		return this.build();
 	}

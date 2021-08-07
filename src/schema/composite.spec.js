@@ -30,6 +30,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-2', {
+			schema: 'table_2',
 			fields: {
 				id: {
 					read: true,
@@ -400,8 +401,29 @@ describe('src/schema/composite.js', function(){
 	});
 
 	describe('::getQuery', function(){
+		// TODO: run this against models that have alias schemas
 		it('should work', async function(){
 			const lookup = new Composite('foo-bar', nexus);
+
+			await nexus.configureModel('my-model', {
+				schema: 'a_schema',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						read: true
+					},
+					test1Id: {
+						read: true,
+						link: {
+							name: 'test-1',
+							field: 'id'
+						}
+					}
+				}
+			});
 
 			await lookup.configure({
 				base: 'test-1',
@@ -409,7 +431,8 @@ describe('src/schema/composite.js', function(){
 					eins: '.name',
 					zwei: '> $test-2.name',
 					drei: '> $test-2.title',
-					fier: '> $test-2 > $test-3.name'
+					fier: '> $test-2 > $test-3.name',
+					aliased: '> $my-model.name'
 				}
 			});
 
@@ -430,7 +453,18 @@ describe('src/schema/composite.js', function(){
 					joins: []
 				}, {
 					series: 'test-2',
-					schema: 'test-2',
+					schema: 'table_2',
+					joins: [{
+						name: 'test-1',
+						optional: false,
+						mappings: [{
+							from: 'test1Id',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'my-model',
+					schema: 'a_schema',
 					joins: [{
 						name: 'test-1',
 						optional: false,
@@ -463,6 +497,10 @@ describe('src/schema/composite.js', function(){
 					series: 'test-2',
 					as: 'drei',
 					path: 'title'
+				}, {
+					series: 'my-model',
+					as: 'aliased',
+					path: 'name'
 				}, {
 					series: 'test-3',
 					as: 'fier',
@@ -507,7 +545,7 @@ describe('src/schema/composite.js', function(){
 					joins: []
 				}, {
 					series: 'test-2',
-					schema: 'test-2',
+					schema: 'table_2',
 					joins: [{
 						name: 'test-1',
 						optional: false,
@@ -657,6 +695,50 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
+	describe('::calculateDynamics', function(){
+		it('should work', async function(){
+			const lookup = new Composite('foo-bar', nexus);
+
+			await lookup.configure({
+				base: 'test-1',
+				key: 'id',
+				fields: {
+					eins: '.name',
+					zwei: '> $test-2.name',
+					drei: '> $test-2.title',
+					fier: '> $test-2 > $test-3.name'
+				},
+				dynamics: {
+					foo: function(datum, variables){
+						return variables.one + variables.two;
+					},
+					hello: {
+						world: function(datum){
+							return datum.eins+':'+datum.zwei;
+						}
+					}
+				}
+			});
+
+			const datum = {
+				eins: 'eins',
+				zwei: 'zwei'
+			};
+
+			lookup.calculateDynamics(datum, {one: 1, two: 2});
+
+			expect(datum)
+			.to.deep.equal({
+				eins: 'eins',
+				zwei: 'zwei',
+				foo: 3,
+				hello: {
+					world: 'eins:zwei'
+				}
+			});
+		});
+	});
+
 	describe('::getKeyQueryByModel', function(){
 		it('should work', async function(){
 			const lookup = new Composite('foo-bar', nexus);
@@ -705,7 +787,7 @@ describe('src/schema/composite.js', function(){
 					joins: []
 				}, {
 					series: 'test-2',
-					schema: 'test-2',
+					schema: 'table_2',
 					joins: [{
 						name: 'test-1',
 						optional: false,
@@ -739,7 +821,7 @@ describe('src/schema/composite.js', function(){
 					joins: []
 				}, {
 					series: 'test-2',
-					schema: 'test-2',
+					schema: 'table_2',
 					joins: [{
 						name: 'test-1',
 						optional: false,
@@ -888,7 +970,7 @@ describe('src/schema/composite.js', function(){
 					},
 					{
 						'series': 'test-2',
-						'schema': 'test-2',
+						'schema': 'table_2',
 						'joins': [
 							{
 								'name': 'test-1',

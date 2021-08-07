@@ -410,7 +410,8 @@ async function addAccessorsToQuery(accessors, query, nexus){
 			let pSeries = prev.series;
 			let aSeries = accessor.series;
 
-			query.setSchema(aSeries, accessor.model);
+			const model = nexus.getModel(accessor.model);
+			query.setSchema(aSeries, model.schema);
 			
 			// this ensures everything is linked accordingly
 			// await addStuff(this, prev, subAccessor);
@@ -648,7 +649,8 @@ class Structure {
 					
 					const rootAccessor = access[0];
 					
-					query.setSchema(rootAccessor.series, rootAccessor.model);
+					const model = this.nexus.getModel(rootAccessor.model); // has to be defined by now
+					query.setSchema(rootAccessor.series, model.schema);
 
 					// So, if you write a query... you shoud use .notation for incoming property
 					// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
