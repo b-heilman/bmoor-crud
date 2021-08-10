@@ -657,7 +657,6 @@ class Composite extends Structure {
 					// not being joined correctly.  The idea is to hoist the primary node
 					// to the front and delegate the connections to the other tables
 					const connections = this.connections[table.series];
-					
 					if (connections){
 						query.addJoins(table.series, connections.map(
 							(connection) => new QueryJoin(connection.name, [{

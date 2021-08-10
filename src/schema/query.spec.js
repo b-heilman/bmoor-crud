@@ -51,7 +51,7 @@ describe('src/schema/query.js', function(){
 			query.addJoins('c', [new sut.QueryJoin('b', [])]);
 
 			expect(query.toJSON().models.map(model => model.series))
-			.to.deep.equal(['c', 'a', 'b']);
+			.to.deep.equal(['c', 'b', 'a']);
 		});
 
 		it('should work with three direct, as siblings', function(){
@@ -96,7 +96,7 @@ describe('src/schema/query.js', function(){
 			query.setSchema('b', 'schemaB');
 
 			query.addJoins('b', [new sut.QueryJoin('a', [])]);
-			query.addJoins('e', [new sut.QueryJoin('a')]);
+			query.addJoins('e', [new sut.QueryJoin('a', [])]);
 			query.addJoins('d', [new sut.QueryJoin('b', [])]);
 			query.addJoins('c', [new sut.QueryJoin('e', [])]);
 
@@ -186,6 +186,53 @@ describe('src/schema/query.js', function(){
 					value: [1,2],
 					settings: {}
 				}]
+			});
+		});
+
+
+		it('should fix a query that has two 0 joins', function(){
+			const query = new sut.Query('a');
+
+			query.setSchema('a', 'schemaA');
+			query.setSchema('c', 'schemaC');
+			query.setSchema('b', 'schemaB');
+
+			query.addJoins('b', [
+				new sut.QueryJoin('a', [{from:'aId', to:'id'}]),
+				new sut.QueryJoin('c', [{from:'cId', to:'id'}])
+			]);
+
+			expect(query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'a',
+					schema: 'schemaA',
+					joins: []
+				}, {
+					series: 'b',
+					schema: 'schemaB',
+					joins: [{
+						name: 'a',
+						optional: false,
+						mappings: [{
+							from: 'aId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'c',
+					schema: 'schemaC',
+					joins: [{
+						name: 'b',
+						optional: false,
+						mappings: [{
+							from: 'id',
+							to: 'cId'
+						}]
+					}]
+				}],
+				fields: [],
+				params: []
 			});
 		});
 	});

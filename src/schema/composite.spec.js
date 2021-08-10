@@ -475,6 +475,46 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
+			await nexus.configureModel('my-tail', {
+				schema: 'tail_schema',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						read: true
+					}
+				}
+			});
+
+			await nexus.configureModel('my-pivot', {
+				schema: 'pivot_schema',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						read: true
+					},
+					test1Id: {
+						read: true,
+						link: {
+							name: 'test-1',
+							field: 'id'
+						}
+					},
+					myTailId: {
+						read: true,
+						link: {
+							name: 'my-tail',
+							field: 'id'
+						}
+					}
+				}
+			});
+
 			await lookup.configure({
 				base: 'test-1',
 				fields: {
@@ -482,7 +522,9 @@ describe('src/schema/composite.js', function(){
 					zwei: '> $test-2.name',
 					drei: '> $test-2.title',
 					fier: '> $test-2 > $test-3.name',
-					aliased: '> $my-model.name'
+					aliased: '> $my-model.name',
+					pivot: '> $my-pivot.name',
+					tail: '> $my-pivot > $my-tail.name'
 				}
 			});
 
@@ -524,6 +566,17 @@ describe('src/schema/composite.js', function(){
 						}]
 					}]
 				}, {
+					series: 'my-pivot',
+					schema: 'pivot_schema',
+					joins: [{
+						name: 'test-1',
+						optional: false,
+						mappings: [{
+							from: 'test1Id',
+							to: 'id'
+						}]
+					}]
+				}, {
 					series: 'test-3',
 					schema: 'test-3',
 					joins: [{
@@ -532,6 +585,17 @@ describe('src/schema/composite.js', function(){
 						mappings: [{
 							from: 'test2Id',
 							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'my-tail',
+					schema: 'tail_schema',
+					joins: [{
+						name: 'my-pivot',
+						optional: false,
+						mappings: [{
+							to: 'myTailId',
+							from: 'id'
 						}]
 					}]
 				}],
@@ -552,8 +616,16 @@ describe('src/schema/composite.js', function(){
 					as: 'aliased',
 					path: 'name'
 				}, {
+					series: 'my-pivot',
+					as: 'pivot',
+					path: 'name'
+				}, {
 					series: 'test-3',
 					as: 'fier',
+					path: 'name'
+				}, {
+					series: 'my-tail',
+					as: 'tail',
 					path: 'name'
 				}],
 				params: [{
@@ -831,7 +903,6 @@ describe('src/schema/composite.js', function(){
 					version: '> $test-2.name'
 				},
 				encode: function(datum){
-					console.log('cp-1');
 					expect(datum)
 					.to.deep.equal({hello: 'world'});
 
@@ -849,7 +920,6 @@ describe('src/schema/composite.js', function(){
 					other: '> #foo-bar-1'
 				},
 				encode: function(datum){
-					console.log('cp-2');
 					expect(datum)
 					.to.deep.equal({hello: 'world', foo: 'bar'});
 

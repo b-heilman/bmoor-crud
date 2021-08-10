@@ -82,7 +82,8 @@ class Query {
 				schema: series,
 				fields: [],
 				params: [],
-				joins: {}
+				joins: {},
+				links: {}
 			};
 
 			this.models[series] = rtn;
@@ -123,6 +124,7 @@ class Query {
 
 				if (!(series.joins[toModel] || targetModel.joins[fromModel])){
 					series.joins[toModel] = join;
+					targetModel.links[fromModel] = join.flip(fromModel);
 				}
 			});
 		}
@@ -152,6 +154,24 @@ class Query {
 				...this.models[series]
 			};
 		});
+
+		const extraRoots = toProcess.filter(
+			link => !Object.values(link.joins).length && link.series !== this.base
+		);
+
+		if (extraRoots.length){
+			// we can only have one table without links, and that is the base 
+			// so steal links from other nodes
+			extraRoots.forEach(extraLink => {
+				const join = Object.values(extraLink.links)[0];
+
+				extraLink.joins[join.name] = join;
+
+				const otherSeries = this.getSeries(join.name);
+
+				delete otherSeries.joins[extraLink.series];
+			});
+		}
 
 		while(toProcess.length){
 			const origLength = toProcess.length;
