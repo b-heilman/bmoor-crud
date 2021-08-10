@@ -606,7 +606,7 @@ class Structure {
 					let path = null;
 					let series = query.base;
 
-					const params = settings.params[field];
+					const param = settings.params[field];
 
 					if (field[0] === '$'){
 						const pos = field.indexOf('.');
@@ -619,7 +619,7 @@ class Structure {
 
 					query.addParams(
 						series,
-						[buildParam(path, params)]
+						[buildParam(path, param)]
 					);
 				}
 			);

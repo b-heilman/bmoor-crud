@@ -20,10 +20,11 @@ async function getOutgoingRelationship(nexus, baseModel, targetModel, local=null
 	);
 
 	if (!relationship){
-		throw new Error(
-			`unable to connect ${baseModel} to ${targetModel}`+
-			(local ? ' via '+local : '')
-		);
+		const additional = (local ? ' via '+local : '');
+		throw create(`unable to connect ${baseModel} to ${targetModel}${additional}`, {
+			code: 'BMOOR_CRUD_COMPOSITE_RELATIONSHIP',
+			context: {}
+		});
 	}
 
 	// I only want outgoing relationships
@@ -179,30 +180,43 @@ async function buildJoins(composite, reference, i){
 				root = access.shift();
 			}
 
-			//let's verify the link is ok...
+			// tail is the trailing accessor, root is the known one
 			const tail = access.length ? access[access.length-1] : root;
-
-			const relationship = composite.nexus.mapper.getRelationship(
-				tail.model, reference.composite.incomingSettings.base
-			);
-
+			
 			let key = null;
-			if (relationship){
-				key = relationship.remote;
-				tail.field = relationship.local;
+			let clear = null;
+			let relationship = null;
+
+			if (tail.model === reference.composite.incomingSettings.base){
+				const model = await composite.nexus.loadModel(tail.model);
+
+				key = model.settings.key;
+
+				tail.field = key;
 			} else {
-				throw new Error(tail.model+
-					' can not connect to '+reference.composite.incomingSettings.base+
-					': '+reference.property.statement
+				relationship = composite.nexus.mapper.getRelationship(
+					tail.model, reference.composite.incomingSettings.base
 				);
+
+				if (relationship){
+					key = relationship.remote;
+					tail.field = relationship.local;
+				} else {
+					const base = reference.composite.incomingSettings.base;
+					const model = tail.model;
+					const statement = reference.property.statement;
+					
+					throw create(`composite ${this.name}: can not connect ${model} to ${base}`, {
+						code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES',
+						context: {
+							statement
+						}
+					});
+				}
 			}
 
-			// it can be assumed that everything at this point is already
-			// connected
-			const model = await composite.nexus.loadModel(root.model);
-			let field = model.getField(root.field);
-			let clear = null;
-
+			let field = (await composite.nexus.loadModel(root.model)).getField(root.field);
+			
 			if (!composite.hasField(field)){
 				const ref = `sub_${i}`;
 				
@@ -234,7 +248,7 @@ async function buildJoins(composite, reference, i){
 	));
 }
 
-function buildCalculations(schema){
+function buildCalculations(schema, base){
 	const dynamics = implode(schema);
 
 	return Object.keys(dynamics).reduce(
@@ -248,11 +262,17 @@ function buildCalculations(schema){
 				return datum;
 			};
 		},
-		(datum) => datum
+		base
 	);
 }
 
 class Composite extends Structure {
+	constructor(name, nexus){
+		super(name, nexus);
+
+		this.calculateDynamics = (datum) => datum;
+	}
+
 	// connects all the models and all the fields
 	async link(){
 		if (this.references){
@@ -291,13 +311,16 @@ class Composite extends Structure {
 					if (!settings.onChange){
 						settings.onChange = parent.incomingSettings.onChange;
 					}
+
+					this.calculateDynamics = parent.calculateDynamics;
 				}
 
 				this.properties.calculateRoots();
 
 				if (this.properties.content.length === 0){
-					reject(create('no properties found: '+this.name, {
-						code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES'
+					reject(create(`composite ${this.name}: no properties found`, {
+						code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES',
+						context: settings
 					}));
 				}
 
@@ -328,14 +351,21 @@ class Composite extends Structure {
 
 						if (!accessor.field){
 							reject(
-								create('model references need a field: '+path, {
-									code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID'
+								create(`composite ${this.name}: need a field ${path}`, {
+									code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID',
+									context: {
+										accessor
+									}
 								})
 							);
 						} else if (property.isArray){
 							reject(
-								create('dynamic subschemas not yet supported: '+path, {
-									code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_MAGIC'
+								create(`composite ${this.name}: dynamic array defined ${path}`, {
+									code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_MAGIC',
+									context: {
+										accessor,
+										property
+									}
 								})
 							);
 						}
@@ -375,8 +405,11 @@ class Composite extends Structure {
 
 						if (include.field){
 							reject(
-								create('can not pull fields from composites: '+path, {
-									code: 'BMOOR_CRUD_COMPOSITE_SCHEMA_ACCESS'
+								create(`composite ${this.name}: no field from ${path}`, {
+									code: 'BMOOR_CRUD_COMPOSITE_SCHEMA_ACCESS',
+									context: {
+										property
+									}
 								})
 							);
 						}
@@ -391,8 +424,11 @@ class Composite extends Structure {
 						};
 					} else {
 						reject(
-							create('unknown line type: '+property.type, {
-								code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN'
+							create(`composite ${this.name}: unknown type ${property.type}`, {
+								code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN',
+								context: {
+									property
+								}
 							})
 						);
 					}
@@ -447,9 +483,15 @@ class Composite extends Structure {
 			settings.fields,
 			settings.base
 		);
-		this.calculateDynamics = buildCalculations(settings.dynamics);
 
-		return this.build();
+		const rtn = await this.build();
+
+		this.calculateDynamics = buildCalculations(
+			settings.dynamics,
+			this.calculateDynamics
+		);
+
+		return rtn;  
 	}
 
 	hasStructure(structureName){
@@ -475,8 +517,10 @@ class Composite extends Structure {
 
 	defineField(path, settings={}){
 		if (!settings.extends){
-			console.log('complex: failed to define', path, settings);
-			throw new Error(`Attempting to define complex field without a base: ${path}`);
+			throw create(`complex ${this.name}: failed on ${path}`, {
+				code: 'BMOOR_CRUD_COMPOSITE_SERIES',
+				context: settings
+			});
 		}
 
 		// let's overload the other field's settings
@@ -491,7 +535,7 @@ class Composite extends Structure {
 	async addField(path, settings={}){
 		if (!settings.series){
 			throw create(`Unable to link path without target series`, {
-				code: 'BMOOR_CRUD_COMPLEX_SERIES',
+				code: 'BMOOR_CRUD_COMPOSITE_SERIES',
 				context: settings
 			});
 		}
@@ -504,7 +548,7 @@ class Composite extends Structure {
 
 		if (!field){
 			throw create(`Complex, unknown field: ${modelName}.${reference}`, {
-				code: 'BMOOR_CRUD_COMPLEX_UNKNOWN',
+				code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN',
 				context: {
 					path,
 					modelName,
@@ -516,7 +560,7 @@ class Composite extends Structure {
 		if (this.connector){
 			if (this.connector !== model.connector){
 				throw create(`Mixing connector types: ${this.connector} => ${modelName}.${model.connector}`, {
-					code: 'BMOOR_CRUD_COMPLEX_CONNECTOR',
+					code: 'BMOOR_CRUD_COMPOSITE_CONNECTOR',
 					context: {
 						current: this.connector,
 						model: modelName,
@@ -714,7 +758,12 @@ class Composite extends Structure {
 				}
 			));
 		} else {
-			throw new Error('no sub composite found: '+compositeName);
+			throw create(`composite: ${this.name} unable to join ${compositeName}`, {
+				code: 'BMOOR_CRUD_COMPOSITE_SUB',
+				context: {
+					key
+				}
+			});
 		}
 
 		const context = this.context;

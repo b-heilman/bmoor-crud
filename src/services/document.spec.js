@@ -725,6 +725,186 @@ describe('src/services/document.js', function(){
 		});
 	});
 
+	describe('::readAll', function(){
+		it('should properly generate a sql request', async function(){
+			connectorExecute = [{
+				'item': 'item-1',
+				'personName': 'person-1',
+				'categoryName': 'category-1'
+			}];
+
+			nexus.configureComposite('test-1', {
+				base: 'test-item',
+				key: 'id',
+				fields: {
+					'item': '.name',
+					'personName': '>? $test-person.name',
+					'categoryName':  '> $test-category.name'
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+
+			await doc.link();
+			
+			const res = await doc.readAll(context);
+			
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item',
+					schema: 'test-item',
+					joins: []
+				}, {
+					series: 'test-person',
+					schema: 'test-person',
+					joins: [{
+						name: 'test-item',
+						optional: true,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-category',
+					schema: 'test-category',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-item',
+					as: 'item',
+					path: 'name'
+				}, {
+					series: 'test-person',
+					as: 'personName',
+					path: 'name'
+				}, {
+					series: 'test-category',
+					as: 'categoryName',
+					path: 'name'
+				}],
+				params: []
+			});
+
+			expect(res)
+			.to.deep.equal([{
+				item: 'item-1',
+				personName: 'person-1',
+				categoryName: 'category-1'
+			}]);
+		});
+	});
+
+	describe('::readMany', function(){
+		it('should properly generate a sql request', async function(){
+			connectorExecute = [{
+				'item': 'item-1',
+				'personName': 'person-1',
+				'categoryName': 'category-1'
+			}];
+
+			nexus.configureComposite('test-1', {
+				base: 'test-item',
+				key: 'id',
+				fields: {
+					'item': '.name',
+					'personName': '>? $test-person.name',
+					'categoryName':  '> $test-category.name'
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+
+			await doc.link();
+			
+			const res = await doc.readMany([1,2,3], context);
+			
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item',
+					schema: 'test-item',
+					joins: []
+				}, {
+					series: 'test-person',
+					schema: 'test-person',
+					joins: [{
+						name: 'test-item',
+						optional: true,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-category',
+					schema: 'test-category',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-item',
+					as: 'item',
+					path: 'name'
+				}, {
+					series: 'test-person',
+					as: 'personName',
+					path: 'name'
+				}, {
+					series: 'test-category',
+					as: 'categoryName',
+					path: 'name'
+				}],
+				params: [{
+					series: 'test-item',
+					path: 'id',
+					operation: '=',
+					settings: {},
+					value: [1,2,3]
+				}]
+			});
+
+			expect(res)
+			.to.deep.equal([{
+				item: 'item-1',
+				personName: 'person-1',
+				categoryName: 'category-1'
+			}]);
+		});
+	});
+
 	describe('::link', function(){
 		it('should fail without defined properties', async function(){
 			try {
@@ -743,7 +923,7 @@ describe('src/services/document.js', function(){
 				.to.equal(false);
 			} catch (ex){
 				expect(ex.message)
-				.to.equal('no properties found: test-composite-ut');
+				.to.equal('composite test-composite-ut: no properties found');
 			}
 		});
 

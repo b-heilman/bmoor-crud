@@ -109,8 +109,8 @@ const normalization = require('./normalization.js');
 				// delete after incase there's a collision between subs
 				clears.forEach(path => del(queryDatum, path));
 
-				if (this.incomingSettings.encoding){
-					return this.incomingSettings.encoding(queryDatum, ctx);
+				if (this.structure.incomingSettings.encoding){
+					return this.structure.incomingSettings.encoding(queryDatum, ctx);
 				} else {
 					return queryDatum;
 				}
@@ -132,6 +132,26 @@ const normalization = require('./normalization.js');
 		return (
 			await this.query(query, ctx)
 		)[0];
+	}
+
+	async readAll(ctx){
+		await this.link();
+
+		return this.query({}, ctx);
+	}
+
+	async readMany(ids, ctx){
+		await this.link();
+
+		// so anything pass as param should always be passed as against the base
+		// otherwise it should be a join...
+		const query = {
+			params: {
+				[this.structure.incomingSettings.key]: ids
+			}
+		};
+
+		return this.query(query, ctx);
 	}
 
 	async normalize(incomingDatum, instructions, ctx){
@@ -290,43 +310,45 @@ const normalization = require('./normalization.js');
 
 						access.reduce(
 							(prev, cur) => {
-								const direction = cur.relationship.metadata.direction;
+								if (cur.relationship){
+									const direction = cur.relationship.metadata.direction;
 
-								// map one way or another, figure out direction
-								let left = null;
-								let right = null;
-								let field = null;
+									// map one way or another, figure out direction
+									let left = null;
+									let right = null;
+									let field = null;
 
-								if (direction === 'incoming'){
-									left = cur.model;
-									right = prev.model;
-									field = cur.relationship.remote;
-								} else { // outgoing
-									left = prev.model;
-									right = cur.model;
-									field = cur.relationship.local;
+									if (direction === 'incoming'){
+										left = cur.model;
+										right = prev.model;
+										field = cur.relationship.remote;
+									} else { // outgoing
+										left = prev.model;
+										right = cur.model;
+										field = cur.relationship.local;
+									}
+
+									// what if one of them doesn't exist?
+									const target = subSeries.get(left);
+									let datum = null;
+
+									if (target){
+										datum = target[0];
+									} else {
+										datum = subSeries.stub(left);
+									}
+
+									const source = prev.seriesSession.get(right);
+									let s = null;
+
+									if (source){
+										s = source[0];
+									} else {
+										s = subSeries.stub(right);
+									}
+
+									datum.setField(field, s.getReference());
 								}
-
-								// what if one of them doesn't exist?
-								const target = subSeries.get(left);
-								let datum = null;
-
-								if (target){
-									datum = target[0];
-								} else {
-									datum = subSeries.stub(left);
-								}
-
-								const source = prev.seriesSession.get(right);
-								let s = null;
-
-								if (source){
-									s = source[0];
-								} else {
-									s = subSeries.stub(right);
-								}
-
-								datum.setField(field, s.getReference());
 
 								return {
 									model: cur.model,

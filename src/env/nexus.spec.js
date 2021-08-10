@@ -1268,7 +1268,10 @@ describe('src/env/nexus.js', function(){
 				await nexus.configureModel('test-item', {
 					connector: 'stub',
 					fields: {
-						id: true,
+						id: {
+							read: true,
+							key: true
+						},
 						name: true
 					}
 				});
@@ -1816,6 +1819,277 @@ describe('src/env/nexus.js', function(){
 							name: 'zwei'
 						}
 					}]
+				});
+			});
+
+			it('should allow composites to have the same base', async function(){
+				await nexus.configureComposite('comp-3', {
+					base: 'test-item',
+					key: 'id',
+					fields: {
+						'item': '.name',
+						'personName': '> $test-person.name',
+						'categoryName':  '> $test-category.name',
+						'link': ['> $test-category.fooId > $test-2-foo > #comp-1']
+					}
+				});
+
+				await nexus.configureDocument('comp-3');
+
+				await nexus.configureComposite('comp-3-dupe', {
+					base: 'test-item',
+					key: 'id',
+					fields: {
+						'item': '.name',
+						'personName': '> $test-person.name',
+						'categoryName':  '> $test-category.name',
+						// 'link': ['> $test-category.fooId > $test-2-foo > #comp-1'],
+						'other': '> #comp-3'
+					}
+				});
+
+				const doc3 = await nexus.configureDocument('comp-3-dupe');
+
+				// comp-3-dupe
+				stubs.execute.onCall(0)
+				.resolves([{
+					'item': 'item-1',
+					'personName': 'person-1',
+					'categoryName': 'category-1',
+					'sub_0': 789
+				}]);
+
+
+				// comp-3
+				stubs.execute.onCall(1)
+				.resolves([{
+					'item': 'item-3',
+					'personName': 'person-3',
+					'categoryName': 'category-3',
+					'sub_0': 456
+				}]);
+
+				stubs.execute.onCall(2)
+				.resolves([{
+					hello: {
+						name: 'eins'
+					},
+					world: {
+						name: 'zwei'
+					}
+				}]);
+
+				const res = await doc3.read(1, {});
+
+				const args1 = stubs.execute.getCall(0).args[0];
+
+				expect(args1.method)
+				.to.equal('read');
+				
+				expect(args1.query.toJSON())
+				.to.deep.equal({
+					'models': [
+						{
+							'series': 'test-item',
+							schema: 'test-item',
+							joins: []
+						},
+						{
+							'series': 'test-person',
+							schema: 'test-person',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
+								}]
+							}]
+						},
+						{
+							'series': 'test-category',
+							schema: 'test-category',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
+								}]
+							}]
+						}
+					],
+					fields: [{
+						series: 'test-item',
+						'path': 'name',
+						'as': 'item'
+					}, {
+						series: 'test-item',
+						'path': 'id',
+						'as': 'sub_0'
+					}, {
+						series: 'test-person',
+						'path': 'name',
+						'as': 'personName'
+					}, {
+						series: 'test-category',
+						'path': 'name',
+						'as': 'categoryName'
+					}],
+					params: [{
+						series: 'test-item',
+						path: 'id',
+						operation: '=',
+						value: 1,
+						settings: {}
+					}]
+				});
+
+				const args2 = stubs.execute.getCall(1).args[0];
+
+				expect(args2.method)
+				.to.equal('read');
+				
+				expect(args2.query.toJSON())
+				.to.deep.equal({
+					'models': [
+						{
+							'series': 'test-item',
+							schema: 'test-item',
+							joins: []
+						},
+						{
+							'series': 'test-person',
+							schema: 'test-person',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
+								}]
+							}]
+						},
+						{
+							'series': 'test-category',
+							schema: 'test-category',
+							joins: [{
+								name: 'test-item',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'itemId'
+								}]
+							}]
+						}
+					],
+					fields: [{
+						series: 'test-item',
+						'path': 'name',
+						'as': 'item'
+					}, {
+						series: 'test-person',
+						'path': 'name',
+						'as': 'personName'
+					}, {
+						series: 'test-category',
+						'path': 'name',
+						'as': 'categoryName'
+					}, {
+						series: 'test-category',
+						'path': 'fooId',
+						'as': 'sub_0'
+					}],
+					params: [{
+						series: 'test-item',
+						path: 'id',
+						operation: '=',
+						value: 789,
+						settings: {}
+					}]
+				});
+
+				const args3 = stubs.execute.getCall(2).args[0];
+				
+				expect(args3.method)
+				.to.equal('read');
+				
+				expect(args3.query.toJSON())
+				.to.deep.equal({
+					'models': [
+						{
+							'series': 'test-3-hello',
+							schema: 'test-3-hello',
+							joins: []
+						},
+						{
+							'series': 'test-3-world',
+							schema: 'test-3-world',
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'id',
+									from: 'helloId'
+								}]
+							}]
+						},
+						{
+							series: 'test-2-foo',
+							schema: 'test-2-foo',
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'fooId',
+									from: 'id'
+								}]
+							}]
+						}
+					],
+					fields: [{
+						series: 'test-3-hello',
+						'path': 'name',
+						'as': 'hello.name'
+					}, {
+						series: 'test-3-world',
+						'path': 'name',
+						'as': 'world.name'
+					}],
+					params: [{
+						series: 'test-2-foo',
+						path: 'id',
+						operation: '=',
+						value: 456,
+						settings: {}
+					}]
+				});
+
+				expect(stubs.doc1.getCall(0).args[0])
+				.to.deep.equal({
+					joins: {
+						'.id$test-2-foo.id>.fooId$test-3-hello': 456
+					}
+				});
+
+				expect(res)
+				.to.deep.equal({
+					item: 'item-1',
+					personName: 'person-1',
+					categoryName: 'category-1',
+					other: {
+						item: 'item-3',
+						personName: 'person-3',
+						categoryName: 'category-3',
+						link: [{
+							hello: {
+								name: 'eins'
+							},
+							world: {
+								name: 'zwei'
+							}
+						}]
+					}
 				});
 			});
 		});

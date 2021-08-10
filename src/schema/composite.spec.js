@@ -155,6 +155,56 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
+	describe('::configure', function(){
+		it('should run correctly', async function(){
+			await (new Composite('foo-bar-1', nexus)).configure({
+				base: 'test-1',
+				fields: {
+					name: '.name',
+					version: '> $test-2.name'
+				}
+			});
+		});
+
+		describe('via nexus', function(){
+			it('should allow a child composite', async function(){
+				await nexus.configureComposite('foo-bar-1', {
+					base: 'test-1',
+					fields: {
+						name: '.name',
+						version: '> $test-2.name'
+					}
+				});
+
+				await nexus.configureComposite('foo-bar-2', {
+					base: 'test-3',
+					fields: {
+						name: '.name',
+						version: '> $test-2 > #foo-bar-1'
+					}
+				});
+			});
+
+			it('should allow a child composite, from same base', async function(){
+				await nexus.configureComposite('foo-bar-1', {
+					base: 'test-1',
+					fields: {
+						name: '.name',
+						version: '> $test-2.name'
+					}
+				});
+
+				await nexus.configureComposite('foo-bar-2', {
+					base: 'test-1',
+					fields: {
+						json: '.json',
+						other: '> #foo-bar-1'
+					}
+				});
+			});
+		});
+	});
+
 	describe('::getChangeType', function(){
 		let sut = null;
 
