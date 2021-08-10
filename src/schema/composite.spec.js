@@ -789,6 +789,81 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
+	describe('::encodeResults', function(){
+		it('should work', async function(){
+			const lookup = new Composite('foo-bar', nexus);
+
+			await lookup.configure({
+				base: 'test-1',
+				key: 'id',
+				fields: {
+					eins: '.name'
+				},
+				encode: function(){
+					return 'ok';
+				}
+			});
+
+			expect(await lookup.encodeResults({one: 1, two: 2}))
+			.to.deep.equal('ok');
+		});
+
+		it('should correctly default', async function(){
+			const lookup = new Composite('foo-bar', nexus);
+
+			await lookup.configure({
+				base: 'test-1',
+				key: 'id',
+				fields: {
+					eins: '.name'
+				}
+			});
+
+			expect(await lookup.encodeResults({one: 1, two: 2}))
+			.to.deep.equal({one: 1, two: 2});
+		});
+
+		it('should correctly stack', async function(){
+			await nexus.configureComposite('foo-bar-1', {
+				base: 'test-1',
+				fields: {
+					name: '.name',
+					version: '> $test-2.name'
+				},
+				encode: function(datum){
+					console.log('cp-1');
+					expect(datum)
+					.to.deep.equal({hello: 'world'});
+
+					datum.foo = 'bar';
+
+					return datum;
+				}
+			});
+
+			const lookup = await nexus.configureComposite('foo-bar-2', {
+				base: 'test-1',
+				extends: 'foo-bar-1',
+				fields: {
+					json: '.json',
+					other: '> #foo-bar-1'
+				},
+				encode: function(datum){
+					console.log('cp-2');
+					expect(datum)
+					.to.deep.equal({hello: 'world', foo: 'bar'});
+
+					datum.eins = 'zwei';
+
+					return datum;
+				}
+			});
+
+			expect(await lookup.encodeResults({hello: 'world'}))
+			.to.deep.equal({hello: 'world', foo: 'bar', eins: 'zwei'});
+		});
+	});
+
 	describe('::getKeyQueryByModel', function(){
 		it('should work', async function(){
 			const lookup = new Composite('foo-bar', nexus);

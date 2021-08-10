@@ -271,6 +271,7 @@ class Composite extends Structure {
 		super(name, nexus);
 
 		this.calculateDynamics = (datum) => datum;
+		this.encodeResults = (datum) => datum;
 	}
 
 	// connects all the models and all the fields
@@ -313,6 +314,8 @@ class Composite extends Structure {
 					}
 
 					this.calculateDynamics = parent.calculateDynamics;
+
+					this.encodeResults = parent.encodeResults;
 				}
 
 				this.properties.calculateRoots();
@@ -490,6 +493,20 @@ class Composite extends Structure {
 			settings.dynamics,
 			this.calculateDynamics
 		);
+
+		if (settings.encode){
+			const encode = settings.encode;
+
+			if (this.encodeResults){
+				const old = this.encodeResults;
+
+				this.encodeResults = async function(schema, ctx){
+					return encode(await old(schema, ctx), ctx); 
+				};
+			} else {
+				this.encodeResults = encode;
+			}
+		}
 
 		return rtn;  
 	}

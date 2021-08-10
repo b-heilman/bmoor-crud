@@ -109,8 +109,8 @@ const normalization = require('./normalization.js');
 				// delete after incase there's a collision between subs
 				clears.forEach(path => del(queryDatum, path));
 
-				if (this.structure.incomingSettings.encoding){
-					return this.structure.incomingSettings.encoding(queryDatum, ctx);
+				if (this.structure.encodeResults){
+					return this.structure.encodeResults(queryDatum, ctx);
 				} else {
 					return queryDatum;
 				}

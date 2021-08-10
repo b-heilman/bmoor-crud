@@ -433,6 +433,103 @@ describe('src/services/document.js', function(){
 			});
 		});
 
+		it('should properly encode', async function(){
+			connectorExecute = [{
+				'item': 'item-1',
+				'personName': 'person-1',
+				'categoryName': 'category-1'
+			}];
+
+			nexus.configureComposite('test-1', {
+				base: 'test-item',
+				key: 'id',
+				fields: {
+					'item': '.name',
+					'personName': '>? $test-person.name',
+					'categoryName':  '> $test-category.name'
+				},
+				encode: function(datum){
+					expect(datum)
+					.to.deep.equal({
+						item: 'item-1',
+						personName: 'person-1',
+						categoryName: 'category-1'
+					});
+
+					return {foo: 'bar'};
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+
+			await doc.link();
+			
+			const res = await doc.read(1, context);
+			
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item',
+					schema: 'test-item',
+					joins: []
+				}, {
+					series: 'test-person',
+					schema: 'test-person',
+					joins: [{
+						name: 'test-item',
+						optional: true,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-category',
+					schema: 'test-category',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-item',
+					as: 'item',
+					path: 'name'
+				}, {
+					series: 'test-person',
+					as: 'personName',
+					path: 'name'
+				}, {
+					series: 'test-category',
+					as: 'categoryName',
+					path: 'name'
+				}],
+				params: [{
+					series: 'test-item',
+					path: 'id',
+					operation: '=',
+					settings: {},
+					value: 1
+				}]
+			});
+
+			expect(res)
+			.to.deep.equal({foo: 'bar'});
+		});
+
 		it('should properly inflate a data response, without security', async function(){
 			connectorExecute = [{
 				'item': 'item-1',
