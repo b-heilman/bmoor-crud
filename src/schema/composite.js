@@ -4,7 +4,7 @@ const {create} = require('bmoor/src/lib/error.js');
 const {makeSetter} = require('bmoor/src/core.js');
 
 const {Structure, buildParam, addAccessorsToQuery} = require('./structure.js');
-const {Network} = require('../graph/Network.js');
+const {Network} = require('../graph/network.js');
 
 const {Path, pathToAccessors} = require('../graph/path.js');
 const {Query, QueryJoin, QueryField} = require('./query.js');

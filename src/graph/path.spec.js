@@ -1,7 +1,7 @@
 
 const expect = require('chai').expect;
 
-const sut = require('./Path.js');
+const sut = require('./path.js');
 
 describe('src/graph/path.js', function(){
 	describe('Path', function(){
