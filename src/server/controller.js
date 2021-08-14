@@ -14,8 +14,13 @@ async function parseQuery(view, ctx){
 	// ? sort=-$foo.name,+bar
 	// ? limit=100
 	// TODO: pagination?
+	let parsedParams = params;
+	if (view){
+		parsedParams = await view.structure.clean('query', params, ctx);
+	}
+
 	return {
-		params: await view.structure.clean('query', params, ctx),
+		params: parsedParams,
 		joins,
 		sort,
 		position: {limit}

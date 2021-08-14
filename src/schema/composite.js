@@ -673,7 +673,9 @@ class Composite extends Structure {
 			{
 				query: query,
 				joins: settings.joins,
-				params: settings.params
+				params: settings.params,
+				sort: settings.sort,
+				position: settings.position
 			},
 			ctx
 		);

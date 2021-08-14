@@ -429,6 +429,18 @@ async function addAccessorsToQuery(accessors, query, nexus){
 				to = aSeries;
 			}
 
+			if (!relationship){
+				throw create(`accessor relationship failed: ${prev.model} -> ${accessor.model}`, {
+					code: 'BMOOR_CRUD_STRUCTURE_RELATIONSHIP',
+					context: {
+						accessorModel: accessor.model,
+						accessorField: accessor.target,
+						prevModel: prev.model,
+						prevField: prev.field
+					}
+				});
+			}
+
 			query.addJoins(from, [
 				new QueryJoin(to, [{
 					from: relationship.local,
@@ -600,6 +612,12 @@ class Structure {
 			}
 		);
 
+		// parameters we can querying off of, must already be inside the structure
+		/** structure
+		 * {
+		 * 	[inside series].[inside property]: [inside value]
+		 * }
+		 **/
 		if (settings.params){
 			Object.keys(settings.params).map(
 				field => {
@@ -614,6 +632,10 @@ class Structure {
 						series = field.substr(1, pos-1);
 						path = field.substr(pos+1);
 					} else {
+						if (field[0] === '.'){
+							field = field.substr(1);
+						}
+
 						path = field;
 					}
 
@@ -625,13 +647,34 @@ class Structure {
 			);
 		}
 
+		// this is the query property.  It allows you to 'join in' from the outside
+		/** structure
+		 * {
+		 * 	[[outside property][outside series] > [inside series]]: [outside value]
+		 * }
+		 **/
 		if (settings.joins){
 			await Object.keys(settings.joins || {})
 			.reduce(
 				async (prom, path) => {
 					await prom;
 					
+					path = path.trimStart();
+
 					const comparison = settings.joins[path];
+
+					if (path[0] === '.'){
+						/**
+						 * I want to allow .property notion here, but I don't want to break
+						 * .aField$series so I have to check
+						 **/
+						const seriesPos = path.indexOf('$');
+
+						if (seriesPos === -1){
+							path = '$'+query.base+path;
+						}
+					}
+
 					const access = (new Path(path)).access;
 
 					// links in are [model].value > [existingModel]
@@ -666,6 +709,8 @@ class Structure {
 		if (settings.sort){
 			const sorts = settings.sort.split(',')
 				.map(option => {
+					option = option.trimStart();
+
 					let ascending = true;
 					let char = option[0];
 
@@ -682,12 +727,14 @@ class Structure {
 
 						base = option.substr(1, pos-1);
 						option = option.substr(pos+1);
+					} else if (option[0] === '.'){
+						option = option.substr(1);
 					}
 
 					return new QuerySort(base, option, ascending);
 				});
 
-			query.setSort(sorts);
+			query.setSorts(sorts);
 		}
 
 		if (settings.position && settings.position.limit){

@@ -49,24 +49,38 @@ class Gateway {
 		);
 	}
 
+	async installQuerier(){
+		return Promise.all(
+			instructions.map(async (rule) => {
+				const ref = rule.name;
+				const settings = rule.settings;
+
+				return this.nexus.configureSynthetic(ref, settings);
+			})
+		);
+	}
+
 	async install(cfg){
-		const [guards, actions, utilities, synthetics] = await Promise.all([
+		const [guards, actions, utilities, synthetics, querier] = await Promise.all([
 			this.installGuards(cfg.get('guards')||[]),
 			this.installActions(cfg.get('actions')||[]),
 			this.installUtilities(cfg.get('utilities')||[]),
-			this.installSynthetics(cfg.get('synthetics')||[])
+			this.installSynthetics(cfg.get('synthetics')||[]),
+			this.installQuerier()
 		]);
 
 		this.guards = guards;
 		this.actions = actions;
 		this.utilities = utilities;
 		this.synthetics = synthetics;
+		this.querier = querier;
 
 		return {
 			guards,
 			actions,
 			utilities,
-			synthetics
+			synthetics,
+			querier
 		};
 	}
 }

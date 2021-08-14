@@ -5,8 +5,8 @@ const {Waitlist} = require('./waitlist.js');
 class Context {
 	constructor(systemContext = {}, cfg={}, cache=null){
 		cfg = Object.assign({
-			query: 'query', 
-			params: 'params',
+			query: 'query',   // ?foo=bar
+			params: 'params', // /hello/:world
 			method: 'method',
 			content: 'body',
 			permissions: 'permissions'

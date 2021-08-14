@@ -237,8 +237,8 @@ class Query {
 			}
 		);
 
-		if (this.sort){
-			res.sort = this.sort;
+		if (this.sorts){
+			res.sorts = this.sorts;
 		}
 
 		if (this.position){

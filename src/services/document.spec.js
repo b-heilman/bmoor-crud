@@ -20,7 +20,9 @@ describe('src/services/document.js', function(){
 
 	const changeTypes = require('../schema/structure.js').config.get('changeTypes');
 
-	beforeEach(function(){stubs = {};
+	beforeEach(function(){
+		stubs = {};
+		
 		connector = {
 			execute: (...args) => stubs.execute(...args)
 		};
@@ -990,6 +992,158 @@ describe('src/services/document.js', function(){
 					operation: '=',
 					settings: {},
 					value: [1,2,3]
+				}]
+			});
+
+			expect(res)
+			.to.deep.equal([{
+				item: 'item-1',
+				personName: 'person-1',
+				categoryName: 'category-1'
+			}]);
+		});
+	});
+
+	describe('::query', function(){
+		it('should handle a full query', async function(){
+			connectorExecute = [{
+				'item': 'item-1',
+				'personName': 'person-1',
+				'categoryName': 'category-1'
+			}];
+
+			nexus.configureComposite('test-1', {
+				base: 'test-item',
+				key: 'id',
+				fields: {
+					'item': '.name',
+					'personName': '>? $test-person.name',
+					'categoryName':  '> $test-category.name'
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+			
+			const res = await doc.query({
+					params: {
+						'.name': {
+							'~': '%foo%'
+						},
+						'$test-category.name': 'ok'
+					},
+					joins: {
+						'.name$test-material > $test-item-material > $test-item': 'hello'
+					},
+					sort: '.name, -$test-category.name,+$test-person.name'
+				},
+				context
+			);
+			
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			console.log(JSON.stringify(args.query.toJSON(), null, 2));
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item',
+					schema: 'test-item',
+					joins: []
+				}, {
+					series: 'test-person',
+					schema: 'test-person',
+					joins: [{
+						name: 'test-item',
+						optional: true,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-category',
+					schema: 'test-category',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-item-material',
+					schema: 'test-item-material',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-material',
+					schema: 'test-material',
+					joins: [{
+						name: 'test-item-material',
+						optional: false,
+						mappings: [{
+							from: 'id',
+							to: 'materialId'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-item',
+					as: 'item',
+					path: 'name'
+				}, {
+					series: 'test-person',
+					as: 'personName',
+					path: 'name'
+				}, {
+					series: 'test-category',
+					as: 'categoryName',
+					path: 'name'
+				}],
+				params: [{
+					series: 'test-item',
+					path: 'name',
+					operation: '~',
+					value: '%foo%',
+					settings: {}
+				}, {
+					series: 'test-category',
+					path: 'name',
+					operation: '=',
+					value: 'ok',
+					settings: {}
+				}, {
+					series: 'test-material',
+					path: 'name',
+					operation: '=',
+					value: 'hello',
+					settings: {}
+				}],
+				sorts: [{
+					series: 'test-item',
+					path: 'name',
+					ascending: true
+				}, {
+					series: 'test-category',
+					path: 'name',
+					ascending: false
+				}, {
+					series: 'test-person',
+					path: 'name',
+					ascending: true
 				}]
 			});
 
