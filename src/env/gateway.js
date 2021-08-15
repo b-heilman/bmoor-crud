@@ -1,5 +1,7 @@
 
 // this is our building object, it produces all the things exposing in the system
+const {Querier} = require('../controllers/querier.js');
+
 class Gateway {
 	constructor(nexus){
 		this.nexus = nexus;
@@ -50,14 +52,7 @@ class Gateway {
 	}
 
 	async installQuerier(){
-		return Promise.all(
-			instructions.map(async (rule) => {
-				const ref = rule.name;
-				const settings = rule.settings;
-
-				return this.nexus.configureSynthetic(ref, settings);
-			})
-		);
+		return new Querier(this.nexus);
 	}
 
 	async install(cfg){

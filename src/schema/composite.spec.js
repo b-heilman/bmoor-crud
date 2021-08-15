@@ -56,6 +56,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-3', {
+			isFlat: true,
 			fields: {
 				id: {
 					read: true,
@@ -100,6 +101,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-4', {
+			isFlat: false,
 			fields: {
 				id: {
 					read: true,
@@ -1285,7 +1287,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				isFlat: true,
 				fields: {
 					eins: '.json',
 					zwei: '> $test-2.json',
@@ -1325,14 +1326,13 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				isFlat: false,
 				fields: {
 					eins: '.json',
 					zwei: '> $test-2.json',
-					drei: '> $test-2.title',
-					fier: {
-						value: '> $test-2 > $test-3.name'
-					}
+					drei: {
+						value: '> $test-2.title'
+					},
+					fier: '> $test-2 > $test-3.name'
 				}
 			});
 
@@ -1341,10 +1341,10 @@ describe('src/schema/composite.js', function(){
 			const datum = inflate({
 				'eins': '{"foo":"bar"}',
 				'zwei': '{"hello":"world"}',
-				'drei': 'field-3',
-				'fier': {
-					value: 'field-4'
-				}
+				'drei': {
+					value: 'field-3'
+				},
+				'fier': 'field-4'
 			});
 
 			expect(datum)
@@ -1355,10 +1355,10 @@ describe('src/schema/composite.js', function(){
 				zwei: {
 					hello: 'world'
 				},
-				drei: 'field-3',
-				fier: {
-					value: 'field-4'
-				}
+				drei: {
+					value: 'field-3'
+				},
+				fier: 'field-4'
 			});
 		});
 	});

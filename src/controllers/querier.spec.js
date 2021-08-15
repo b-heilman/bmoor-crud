@@ -149,7 +149,7 @@ describe('src/controller/querier.js', function(){
 						'user': '.name',
 						'stats':  '> $test-stats.name'
 					}
-				}
+				};
 
 				connectorExecute = [{
 					'user': 'user-1',

@@ -344,7 +344,16 @@ describe('src/env/bootstrap.js', function(){
 						},
 						'structure': 'composite-1'
 					}]
-				}]
+				}],
+				querier: {
+					'$schema': 'bmoor-crud:controller',
+					routes: [{
+						'route': {
+							'path': '',
+							'method': 'post'
+						}
+					}]
+				}
 			});
 
 			expect(res.router)

@@ -1,5 +1,4 @@
    
-const error = require('bmoor/src/lib/error.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
 const config = new Config({

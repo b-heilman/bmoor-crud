@@ -1048,7 +1048,6 @@ describe('src/services/document.js', function(){
 			expect(args.method)
 			.to.equal('read');
 
-			console.log(JSON.stringify(args.query.toJSON(), null, 2));
 			expect(args.query.toJSON())
 			.to.deep.equal({
 				models: [{

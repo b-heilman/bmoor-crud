@@ -186,9 +186,12 @@ function buildActions(actions, field){
 	return actions;
 }
 
-function buildInflate(baseInflate, fields, structureSettings={}){
+function buildInflate(baseInflate, fields){
 	const mutator = fields.reduce(
 		(old, field) => {
+			const structureSettings = (field.original ?
+				field.original.structure : field.structure).incomingSettings;
+			
 			if (field.incomingSettings.onInflate){
 				// this means the mapping is handled by the function and is already
 				// being passed in
@@ -246,9 +249,12 @@ function buildInflate(baseInflate, fields, structureSettings={}){
 	}
 }
 
-function buildDeflate(baseDeflate, fields, structureSettings={}){
+function buildDeflate(baseDeflate, fields){
 	const mutator = fields.reduce(
 		(old, field) => {
+			const structureSettings = (field.original ?
+				field.original.structure : field.structure).incomingSettings;
+
 			if (field.incomingSettings.onDeflate){
 				return old;
 			} else {

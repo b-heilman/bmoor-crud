@@ -91,6 +91,9 @@ describe('src/env/gateway.js', function(){
 
 		const gateway = new sut.Gateway(stubbedNexus);
 
+		sinon.stub(gateway, 'installQuerier')
+		.resolves({hello: 'world'});
+
 		const res = await gateway.install(cfg);
 
 		//--- results ---
@@ -131,7 +134,10 @@ describe('src/env/gateway.js', function(){
 			}],
 			synthetics: [{
 				iAm: 'a synthetic'
-			}]
+			}],
+			querier: {
+				hello: 'world'
+			}
 		});
 	});
 
@@ -201,6 +207,9 @@ describe('src/env/gateway.js', function(){
 
 			const gateway = new sut.Gateway(stubbedNexus);
 
+			sinon.stub(gateway, 'installQuerier')
+			.resolves({hello: 'world'});
+
 			const res = await gateway.install(mockery);
 
 			//--- results ---
@@ -241,7 +250,10 @@ describe('src/env/gateway.js', function(){
 				}],
 				synthetics: [{
 					iAm: 'a synthetic'
-				}]
+				}],
+				querier: {
+					hello: 'world'
+				}
 			});
 		});
 	});
