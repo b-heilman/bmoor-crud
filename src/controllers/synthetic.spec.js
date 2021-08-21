@@ -171,7 +171,10 @@ describe('src/controller/synthetic.js', function(){
 
 				expect(args[0])
 				.to.deep.equal({
-					params: {name: 'req-1'},
+					params: {
+						id: 123,
+						name: 'req-1'
+					},
 					joins: [],
 					sort: null,
 					position: {

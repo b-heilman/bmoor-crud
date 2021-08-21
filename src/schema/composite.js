@@ -291,6 +291,10 @@ class Composite extends Structure {
 		};
 		this.context = context;
 
+		this.base = await this.nexus.getCrud(
+			this.incomingSettings.base
+		);
+
 		// doing this is protect from collisions if multiple links are called
 		// in parallel of the same type
 		context.isLinking = new Promise(async (resolve, reject) => {
@@ -682,7 +686,8 @@ class Composite extends Structure {
 	}
 
 	async getKeyQueryByModel(modelName, key/*, ctx={}*/){
-		const query = new Query(this.incomingSettings.base);
+		const baseModel = this.base.structure.name;
+		const query = new Query(baseModel);
 
 		const [model] = await Promise.all([
 			this.nexus.loadModel(modelName),
@@ -694,7 +699,7 @@ class Composite extends Structure {
 		const tables = Object.values(context.tables);
 		if (tables.length > 1){
 			(new Network(this.nexus.mapper)).path(
-				modelName, this.incomingSettings.base, tables.map(table => table.name), 1
+				modelName, baseModel, tables.map(table => table.name), 1
 			).forEach(link => {
 				// a table can be referenced by multiple things, so one table, multiple series...
 				// think an item having a creator and owner
@@ -725,7 +730,8 @@ class Composite extends Structure {
 			});
 		}
 
-		query.addFields(this.incomingSettings.base, [
+		query.addFields(baseModel, [
+			// TODO
 			new QueryField(this.incomingSettings.key, 'key')
 		]);
 
@@ -734,7 +740,8 @@ class Composite extends Structure {
 
 	// this.settings.subs.reference.composite
 	async getKeyQueryBySub(compositeName, key/*, ctx*/){
-		const query = new Query(this.incomingSettings.base);
+		const baseModel = this.base.structure.name;
+		const query = new Query(baseModel);
 
 		await this.link();
 
@@ -753,8 +760,7 @@ class Composite extends Structure {
 
 		let joinFrom = [];
 		if (target){
-			const composite = target.reference.composite;
-			const series = composite.incomingSettings.base;
+			const series = baseModel;
 			const model = await this.nexus.loadModel(series);
 
 			// TODO: so say you have two users, one links to an owner schema, 
@@ -789,7 +795,7 @@ class Composite extends Structure {
 		const tables = Object.values(context.tables);
 		if (tables.length > 1){
 			(new Network(this.nexus.mapper)).branch(
-				joinFrom, this.incomingSettings.base, tables.map(table => table.name), 1
+				joinFrom, baseModel, tables.map(table => table.name), 1
 			).forEach(link => {
 				// a table can be referenced by multiple things, so one table, multiple series...
 				// think an item having a creator and owner
@@ -811,7 +817,8 @@ class Composite extends Structure {
 			});
 		}
 
-		query.addFields(this.incomingSettings.base, [
+		query.addFields(baseModel, [
+			// TODO
 			new QueryField(this.incomingSettings.key, 'key')
 		]);
 

@@ -30,10 +30,6 @@ const normalization = require('./normalization.js');
 
 		await this.structure.link();
 
-		this.base = await this.structure.nexus.getCrud(
-			this.structure.incomingSettings.base
-		);
-
 		this.subs = await Promise.all(this.structure.settings.subs.map(
 			async (sub) => {
 				const reference = sub.reference;
@@ -399,13 +395,13 @@ const normalization = require('./normalization.js');
 		if (hooks.afterPush){
 			// TODO: do I need to make sure the key is there?
 			let key = null;
-			let rootModel = this.structure.incomingSettings.base;
+			let rootModel = this.structure.base.structure.name;
 
 			// the first instance of the root model SHOULD be the primary
 			// object
 			for(let i = 0, c = rtn.length; i < c && key===null; i++){
 				if (rtn[i].model === rootModel){
-					key = this.base.getKey(rtn[i].datum);
+					key = this.structure.base.getKey(rtn[i].datum);
 				}
 			}
 
