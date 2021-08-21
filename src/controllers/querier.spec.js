@@ -144,7 +144,6 @@ describe('src/controller/querier.js', function(){
 
 				context.content = {
 					base: 'test-user',
-					key: 'id',
 					fields: {
 						'user': '.name',
 						'stats':  '> $test-stats.name'

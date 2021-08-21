@@ -329,7 +329,7 @@ describe('src/schema/model.js', function(){
 					await model.configure({
 						fields: {
 							eins: {
-								type: 'json'
+								usage: 'json'
 							}
 						}
 					});
@@ -351,7 +351,7 @@ describe('src/schema/model.js', function(){
 					await model.configure({
 						fields: {
 							eins: {
-								type: 'json'
+								usage: 'json'
 							}
 						}
 					});
@@ -378,7 +378,7 @@ describe('src/schema/model.js', function(){
 								create: true
 							},
 							zwei: {
-								type: 'monitor',
+								usage: 'monitor',
 								cfg: {
 									target: 'eins'
 								}
@@ -405,7 +405,7 @@ describe('src/schema/model.js', function(){
 								create: true
 							},
 							zwei: {
-								type: 'monitor',
+								usage: 'monitor',
 								cfg: {
 									target: 'eins'
 								}
@@ -432,7 +432,7 @@ describe('src/schema/model.js', function(){
 								create: true
 							},
 							zwei: {
-								type: 'monitor',
+								usage: 'monitor',
 								cfg: {
 									target: 'eins'
 								}
@@ -459,7 +459,7 @@ describe('src/schema/model.js', function(){
 								create: true
 							},
 							zwei: {
-								type: 'monitor',
+								usage: 'monitor',
 								cfg: {
 									target: 'eins'
 								}
@@ -486,7 +486,7 @@ describe('src/schema/model.js', function(){
 								create: true
 							},
 							zwei: {
-								type: 'monitor',
+								usage: 'monitor',
 								cfg: {
 									target: 'eins'
 								}

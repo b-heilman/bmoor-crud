@@ -58,6 +58,7 @@ class Field {
 				path: this.storagePath
 			},
 			usage: {
+				//name: this.incomingSettings.usage,
 				type: this.incomingSettings.jsonType,
 				description: this.incomingSettings.description
 			}

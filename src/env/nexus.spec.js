@@ -1135,7 +1135,10 @@ describe('src/env/nexus.js', function(){
 		it('should allow simple install', async function(){
 			await nexus.configureModel('test-item', {
 				fields: {
-					id: true,
+					id: {
+						read: true,
+						key: true
+					},
 					name: true
 				}
 			});
@@ -1181,7 +1184,6 @@ describe('src/env/nexus.js', function(){
 
 			await nexus.configureComposite('comp-1', {
 				base: 'test-item',
-				key: 'id',
 				fields: {
 					'item': '.name',
 					'personName': '> $test-person.name',
@@ -1374,7 +1376,6 @@ describe('src/env/nexus.js', function(){
 
 				await nexus.configureComposite('comp-1', {
 					base: 'test-3-hello',
-					key: 'id',
 					fields: {
 						'hello.name': '.name',
 						'world.name': '> $test-3-world.name'
@@ -1386,7 +1387,6 @@ describe('src/env/nexus.js', function(){
 
 				await nexus.configureComposite('comp-2', {
 					base: 'test-2-foo',
-					key: 'id',
 					fields: {
 						'sub': ['> #comp-1'],
 						'fooName': '.name',
@@ -1415,7 +1415,6 @@ describe('src/env/nexus.js', function(){
 			it('should allow composites to chain calls', async function(){
 				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
-					key: 'id',
 					fields: {
 						'item': '.name',
 						'personName': '> $test-person.name',
@@ -1646,7 +1645,6 @@ describe('src/env/nexus.js', function(){
 			it('should allow composites to skip calls', async function(){
 				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
-					key: 'id',
 					fields: {
 						'item': '.name',
 						'personName': '> $test-person.name',
@@ -1825,7 +1823,6 @@ describe('src/env/nexus.js', function(){
 			it('should allow composites to have the same base', async function(){
 				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
-					key: 'id',
 					fields: {
 						'item': '.name',
 						'personName': '> $test-person.name',
@@ -1838,7 +1835,6 @@ describe('src/env/nexus.js', function(){
 
 				await nexus.configureComposite('comp-3-dupe', {
 					base: 'test-item',
-					key: 'id',
 					fields: {
 						'item': '.name',
 						'personName': '> $test-person.name',

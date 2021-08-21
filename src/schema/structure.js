@@ -31,7 +31,7 @@ const config = new Config({
 	}
 });
 
-const types = new Config({
+const usages = new Config({
 	json: {
 		onInflate: function(tgt, src, setter, getter){
 			const value = getter(src);
@@ -519,9 +519,9 @@ class Structure {
 	}
 
 	defineField(path, settings){
-		if (settings.type){
+		if (settings.usage){
 			// this allows types to define onCreate, onRead, onUpdate, onDelete
-			Object.assign(settings, types.get(settings.type)||{});
+			Object.assign(settings, usages.get(settings.usage)||{});
 		}
 
 		return new Field(path, this, settings);
@@ -806,7 +806,7 @@ class Structure {
 }
 
 module.exports = {
-	types,
+	usages,
 	config,
 	actionExtend,
 	buildActions,

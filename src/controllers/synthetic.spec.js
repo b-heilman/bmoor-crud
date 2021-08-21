@@ -48,7 +48,6 @@ describe('src/controller/synthetic.js', function(){
 
 		nexus.configureComposite('test-ownership', {
 			base: 'test-user',
-			key: 'id',
 			fields: {
 				'id': '.id',
 				'name': '.name'

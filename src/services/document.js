@@ -121,7 +121,7 @@ const normalization = require('./normalization.js');
 		// otherwise it should be a join...
 		const query = {
 			params: {
-				[this.structure.incomingSettings.key]: id
+				[this.structure.baseModel.getKeyField()]: id
 			}
 		};
 
@@ -143,7 +143,7 @@ const normalization = require('./normalization.js');
 		// otherwise it should be a join...
 		const query = {
 			params: {
-				[this.structure.incomingSettings.key]: ids
+				[this.structure.baseModel.getKeyField()]: ids
 			}
 		};
 
@@ -412,7 +412,7 @@ const normalization = require('./normalization.js');
 	}
 
 	async update(id, datum, ctx){
-		set(datum, this.structure.incomingSettings.key, id);
+		set(datum, this.structure.baseModel.getKeyField(), id);
 
 		return this.push(datum, ctx);
 	}

@@ -100,7 +100,6 @@ describe('src/server/scafolding.js', function(){
 			name: 'composite-1',
 			settings: {
 				base: 'service-1',
-				key: 'id',
 				connector: 'http',
 				fields: {
 					'id': '.id',
@@ -240,7 +239,6 @@ describe('src/server/scafolding.js', function(){
 			name: 'composite-2',
 			settings: {
 				base: 'service-1',
-				key: 'id',
 				connector: 'http',
 				fields: {
 					'id': '.id',

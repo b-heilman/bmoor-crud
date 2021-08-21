@@ -93,6 +93,10 @@ class Model extends Structure {
 		return this.build();
 	}
 
+	getKeyField(){
+		return this.settings.key;
+	}
+
 	getKey(delta){
 		if (!delta){
 			throw new Error('Can not getKey of undefined delta');

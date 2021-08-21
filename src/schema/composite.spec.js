@@ -21,7 +21,7 @@ describe('src/schema/composite.js', function(){
 					read: true
 				},
 				json: {
-					type: 'json'
+					usage: 'json'
 				},
 				title: {
 					read: true
@@ -43,7 +43,7 @@ describe('src/schema/composite.js', function(){
 					read: true
 				},
 				json: {
-					type: 'json'
+					usage: 'json'
 				},
 				test1Id: {
 					read: true,
@@ -119,7 +119,8 @@ describe('src/schema/composite.js', function(){
 		await nexus.configureModel('test-5', {
 			fields: {
 				id: {
-					read: true
+					read: true,
+					key: true
 				},
 				name: {
 					read: true
@@ -825,7 +826,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				key: 'id',
 				fields: {
 					eins: '.name',
 					zwei: '> $test-2.name',
@@ -869,7 +869,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				key: 'id',
 				fields: {
 					eins: '.name'
 				},
@@ -887,7 +886,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				key: 'id',
 				fields: {
 					eins: '.name'
 				}
@@ -942,7 +940,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				key: 'id',
 				fields: {
 					eins: '.name',
 					zwei: '> $test-2.name',
@@ -1059,7 +1056,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-5',
-				key: 'id',
 				fields: {
 					eins: '.creator1Id > $creator:test-1.name',
 					zwei: '.creator1Id > $creator:test-1.title',
@@ -1128,7 +1124,6 @@ describe('src/schema/composite.js', function(){
 
 			await sub.configure({
 				base: 'test-4',
-				key: 'id',
 				fields: {
 					eins: '.name',
 					title: '.title'
@@ -1146,7 +1141,6 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				key: 'id',
 				fields: {
 					eins: '.name',
 					title: '.title',
@@ -1369,7 +1363,6 @@ describe('src/schema/composite.js', function(){
 
 			await comp.configure({
 				base: 'test-2',
-				key: 'id',
 				fields: {
 					name: '.name',
 					foo: {
@@ -1412,7 +1405,6 @@ describe('src/schema/composite.js', function(){
 			it('should pull in all the extended fields', async function(){
 				await nexus.configureComposite('base', {
 					base: 'test-1',
-					key: 'id',
 					fields: {
 						name: '.name'
 					}
@@ -1422,7 +1414,6 @@ describe('src/schema/composite.js', function(){
 
 				await comp.configure({
 					base: 'test-2',
-					key: 'id',
 					extends: 'base',
 					fields: {
 						myName: '.name'
@@ -1462,7 +1453,6 @@ describe('src/schema/composite.js', function(){
 			it('should be able to extend an extension', async function(){
 				await nexus.configureComposite('base', {
 					base: 'test-1',
-					key: 'id',
 					fields: {
 						name: '.name'
 					}
@@ -1470,7 +1460,6 @@ describe('src/schema/composite.js', function(){
 
 				await nexus.configureComposite('extends', {
 					base: 'test-2',
-					key: 'id',
 					extends: 'base',
 					fields: {
 						myName: '.name'
@@ -1481,7 +1470,6 @@ describe('src/schema/composite.js', function(){
 
 				await comp.configure({
 					base: 'test-3',
-					key: 'id',
 					extends: 'extends',
 					fields: {
 						reallyMyName: '.name'

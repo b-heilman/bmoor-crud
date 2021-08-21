@@ -190,7 +190,7 @@ async function buildJoins(composite, reference, i){
 			if (tail.model === reference.composite.incomingSettings.base){
 				const model = await composite.nexus.loadModel(tail.model);
 
-				key = model.settings.key;
+				key = model.getKeyField();
 
 				tail.field = key;
 			} else {
@@ -294,6 +294,7 @@ class Composite extends Structure {
 		this.base = await this.nexus.getCrud(
 			this.incomingSettings.base
 		);
+		this.baseModel = this.base.structure;
 
 		// doing this is protect from collisions if multiple links are called
 		// in parallel of the same type
@@ -686,13 +687,13 @@ class Composite extends Structure {
 	}
 
 	async getKeyQueryByModel(modelName, key/*, ctx={}*/){
-		const baseModel = this.base.structure.name;
-		const query = new Query(baseModel);
-
 		const [model] = await Promise.all([
 			this.nexus.loadModel(modelName),
 			this.link()
 		]);
+
+		const baseModel = this.baseModel.name;
+		const query = new Query(baseModel);
 
 		const context = this.context;
 
@@ -712,7 +713,7 @@ class Composite extends Structure {
 					if (link.name === modelName){
 						query.addParams(
 							table.series,
-							[buildParam(model.settings.key, key)]
+							[buildParam(model.getKeyField(), key)]
 						);
 					}
 
@@ -732,7 +733,7 @@ class Composite extends Structure {
 
 		query.addFields(baseModel, [
 			// TODO
-			new QueryField(this.incomingSettings.key, 'key')
+			new QueryField(this.baseModel.getKeyField(), 'key')
 		]);
 
 		return query;
@@ -740,10 +741,10 @@ class Composite extends Structure {
 
 	// this.settings.subs.reference.composite
 	async getKeyQueryBySub(compositeName, key/*, ctx*/){
-		const baseModel = this.base.structure.name;
-		const query = new Query(baseModel);
-
 		await this.link();
+
+		const baseModel = this.baseModel.name;
+		const query = new Query(baseModel);
 
 		const target = this.settings.subs.reduce(
 			(agg, sub) => {
@@ -773,7 +774,7 @@ class Composite extends Structure {
 				
 					query.addParams(
 						join.accessor[join.accessor.length-1].series,
-						[buildParam(model.settings.key, key)]
+						[buildParam(model.getKeyField(), key)]
 					);
 
 					await addAccessorsToQuery([join.root, join.accessor[0]], query, this.nexus);
@@ -818,8 +819,7 @@ class Composite extends Structure {
 		}
 
 		query.addFields(baseModel, [
-			// TODO
-			new QueryField(this.incomingSettings.key, 'key')
+			new QueryField(this.baseModel.getKeyField(), 'key')
 		]);
 
 		return query;

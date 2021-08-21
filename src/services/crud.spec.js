@@ -294,7 +294,7 @@ describe('src/services/crud.js', function(){
 						create: true,
 						read: true,
 						update: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});
@@ -368,7 +368,7 @@ describe('src/services/crud.js', function(){
 						create: true,
 						read: true,
 						update: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});
@@ -461,7 +461,7 @@ describe('src/services/crud.js', function(){
 					},
 					json: {
 						read: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});
@@ -636,7 +636,7 @@ describe('src/services/crud.js', function(){
 					},
 					json: {
 						read: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});
@@ -712,7 +712,7 @@ describe('src/services/crud.js', function(){
 					},
 					json: {
 						read: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});
@@ -1219,7 +1219,7 @@ describe('src/services/crud.js', function(){
 					},
 					json: {
 						update: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});
@@ -1325,7 +1325,7 @@ describe('src/services/crud.js', function(){
 					},
 					json: {
 						update: true,
-						type: 'json'
+						usage: 'json'
 					}
 				}
 			});

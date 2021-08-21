@@ -1048,7 +1048,6 @@ describe('src/env/forge.js', function(){
 					name: 'doc-1',
 					settings: {
 						base: 'service-1',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1058,7 +1057,6 @@ describe('src/env/forge.js', function(){
 					name: 'doc-2',
 					settings: {
 						base: 'service-4',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1068,7 +1066,6 @@ describe('src/env/forge.js', function(){
 					name: 'doc-3',
 					settings: {
 						base: 'service-3',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name',
@@ -1571,7 +1568,6 @@ describe('src/env/forge.js', function(){
 					name: 'doc-1',
 					settings: {
 						base: 'service-1',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1581,7 +1577,6 @@ describe('src/env/forge.js', function(){
 					name: 'doc-2',
 					settings: {
 						base: 'service-4',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1591,7 +1586,6 @@ describe('src/env/forge.js', function(){
 					name: 'doc-3',
 					settings: {
 						base: 'service-3',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name',

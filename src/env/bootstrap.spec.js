@@ -102,7 +102,6 @@ describe('src/env/bootstrap.js', function(){
 					name: 'composite-1',
 					settings: {
 						base: 'service-1',
-						key: 'id',
 						fields: {
 							'id': '.id',
 							'name': '.name',
