@@ -24,21 +24,11 @@ const normalization = require('./normalization.js');
  class Document extends View {
 
  	async link(){
-		if (this.subs){
-			return;
-		}
-
 		await this.structure.link();
 
-		this.subs = await Promise.all(this.structure.settings.subs.map(
+		await Promise.all(this.structure.subs.map(
 			async (sub) => {
-				const reference = sub.reference;
-
-				return {
-					document: await reference.composite.nexus.loadDocument(reference.name),
-					reference,
-					joins: sub.joins
-				};
+				sub.document = await sub.composite.nexus.loadDocument(sub.composite.name);
 			}
 		));
 	}
@@ -70,15 +60,15 @@ const normalization = require('./normalization.js');
 				const clears = [];
 
 				// Loop through each result, and process the sub queries for each
-				await Promise.all(this.subs.map(
-					async (sub) => {
+				await Promise.all(this.structure.subs.map(
+					async ({sub, path, join, composite, document}) => {
 						const query = sub.joins.reduce(
 							(agg, join) => {
 								if (join.clear){
 									clears.push(join.clear);
 								}
 
-								agg[join.path] = get(queryDatum, join.datumPath);
+								agg['.'+join.to] = get(queryDatum, path);
 
 								return agg;
 							}, 
@@ -86,15 +76,14 @@ const normalization = require('./normalization.js');
 						);
 
 						// call the related document... I could do this up higher?
-						const property = sub.reference.property;
-						const res = await sub.document.query({
-							joins: query
+						const res = await document.query({
+							params: query
 						}, ctx);
 						
 						set(
 							queryDatum,
-							property.base,
-							property.isArray ? res : res[0]
+							sub.path,
+							sub.isArray ? res : res[0]
 						);
 					}
 				));
@@ -151,6 +140,7 @@ const normalization = require('./normalization.js');
 	}
 
 	async normalize(incomingDatum, instructions, ctx){
+		console.log('document::normalize', this.structure.name, incomingDatum);
 		if (!ctx){
 			throw new Error('no ctx');
 		}
@@ -161,7 +151,7 @@ const normalization = require('./normalization.js');
 		.reduce(
 			(agg, field) => {
 				const series = field.incomingSettings.series;
-
+				
 				let trans = agg[series];
 				if (!trans){
 					trans = {
@@ -191,7 +181,7 @@ const normalization = require('./normalization.js');
 			Object.keys(transitions)
 			.map(async (series) => {
 				const trans = transitions[series];
-
+				console.log('document::normalize$mappings', series, trans.mappings);
 				const transformer = new Transformer(trans.mappings);
 
 				const service = await this.structure.nexus.loadCrud(trans.model);
@@ -223,6 +213,8 @@ const normalization = require('./normalization.js');
 					action = 'create';
 				}
 
+				references[series] = ref;
+
 				const errors = await service.validate(content, writeType, ctx);
 
 				if (errors.length){
@@ -236,8 +228,8 @@ const normalization = require('./normalization.js');
 					});
 				}
 
-				references[series] = ref;
-
+				console.log('document::normalize$series', series, ref);
+				console.log(content);
 				const newDatum = seriesSession.getDatum(series, ref, action);
 
 				newDatum.setContent(content);
@@ -245,115 +237,111 @@ const normalization = require('./normalization.js');
 				// generate a series of call back methods to be called once
 				// everything is resolved
 				return () => {
-					const connections = this.structure.connections[series];
-
-					if (connections){
-						connections.forEach(connection => {
-							newDatum.setField(
-								connection.local,
-								references[connection.name]
+					const seriesInfo = this.structure.instructions.getSeries(series);
+					
+					if (seriesInfo.incoming){
+						seriesInfo.incoming.forEach(incomingSeries => {
+							const join = this.structure.instructions.getJoin(
+								incomingSeries, series
 							);
-						});	
+
+							if (join.relationship.metadata.direction === 'incoming'){
+								newDatum.setField(
+									join.to,
+									references[incomingSeries]
+								);
+							}
+						});
 					}
+
+					Object.keys(seriesInfo.join).forEach(outgoingSeries => {
+						const join = seriesInfo.join[outgoingSeries];
+
+						if (join.relationship.metadata.direction === 'outgoing'){
+							newDatum.setField(
+								join.from,
+								references[outgoingSeries]
+							);
+						}
+					});
 				};
 			})
 		);
 
-		await Promise.all(cbs.map(cb => cb()));
-
-		/***
-		 * Think I can get ride of all this
-		 ***
-		// I don't like this, but for now I'm gonna put hooks in that allow.
-		// eventually I want this to be a function of getChangeType from model
-		if (this.structure.incomingSettings.getChangeType){
-			changeType = await this.structure.incomingSettings.getChangeType(seriesSession);
-		}
-		***/
-		await Promise.all(this.subs.map(
+		await Promise.all(cbs.map((cb) => cb()));
+		console.log('document::normalize - cp-2');
+		await Promise.all(this.structure.subs.map(
 			sub => {
-				let content = get(incomingDatum, sub.reference.property.base);
+				let content = get(incomingDatum, sub.info.path);
 				
-				if (!sub.reference.property.isArray){
+				if (!sub.info.isArray){
 					content = [content];
 				}
 				
-				const accessor = sub.joins[0].accessor;
-				const root = sub.joins[0].root;
-
+				// loop through all the results
 				return Promise.all(content.map(
 					async (subDatum) => {
+						console.log('document::normalize$subDatum', subDatum);
 						const {
 							seriesSession: subSeries,
 							changeType: subChange
 						} = await sub.document.normalize(subDatum, seriesSession, ctx);
 
 						changeType = compareChanges(changeType, subChange);
-						
-						let found = false;
-						
-						const access = accessor.filter(d => {
-							if (!subSeries.has(d.model)){
-								return true;
-							} else if (!found){
-								found = true;
 
-								return true;
-							} else {
-								return false;
-							}
-						});
+						const mountPath = this.structure.instructions.getMount(sub.composite.name);
 
-						access.reduce(
+						mountPath.reduce(
 							(prev, cur) => {
-								if (cur.relationship){
-									const direction = cur.relationship.metadata.direction;
+								const join = prev.join[cur.series];
 
-									// map one way or another, figure out direction
-									let left = null;
-									let right = null;
-									let field = null;
+								const direction = join.relationship.metadata.direction;
 
-									if (direction === 'incoming'){
-										left = cur.model;
-										right = prev.model;
-										field = cur.relationship.remote;
-									} else { // outgoing
-										left = prev.model;
-										right = cur.model;
-										field = cur.relationship.local;
-									}
+								// TODO: I need to change the normalized schema to use
+								//   series + model.  This can technically cause issues
+								//   I'm pretty sure
+								const curModel = cur.model || 
+									this.structure.nexus.getComposite(cur.composite).baseModel.name;
+								const prevModel = prev.model;
+								
+								let left = null;
+								let right = null;
+								let field = null;
 
-									// what if one of them doesn't exist?
-									const target = subSeries.get(left);
-									let datum = null;
-
-									if (target){
-										datum = target[0];
-									} else {
-										datum = subSeries.stub(left);
-									}
-
-									const source = prev.seriesSession.get(right);
-									let s = null;
-
-									if (source){
-										s = source[0];
-									} else {
-										s = subSeries.stub(right);
-									}
-
-									datum.setField(field, s.getReference());
+								if (direction === 'incoming'){
+									left = curModel;
+									right = prevModel;
+									field = join.relationship.remote;
+								} else { // outgoing
+									left = prevModel;
+									right = curModel;
+									field = join.relationship.local;
 								}
 
-								return {
-									model: cur.model,
-									seriesSession: subSeries
-								};
-							}, 
-							{
-								model: root.model,
-								seriesSession
+								// what if one of them doesn't exist?
+								const target = subSeries.get(left);
+								let datum = null;
+
+								if (target){
+									datum = target[0];
+								} else {
+									console.log('document::normalize$left', left);
+									datum = subSeries.stub(left);
+								}
+
+								const source = subSeries.get(right);
+								let s = null;
+
+								if (source){
+									s = source[0];
+								} else {
+									console.log('document::normalize$right', right);
+									s = subSeries.stub(right);
+								}
+
+								datum.setField(field, s.getReference());
+
+								return cur;
 							}
 						);
 					}
@@ -385,7 +373,7 @@ const normalization = require('./normalization.js');
 		}
 
 		await this.normalize(datum, instructions, ctx);
-
+		
 		const rtn = await normalization.deflate(
 			instructions,
 			this.structure.nexus,

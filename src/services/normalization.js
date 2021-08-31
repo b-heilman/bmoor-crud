@@ -93,6 +93,7 @@ async function install(datum, service, master, mapper, ctx){
 			}
 		} else {
 			action = 'create';
+			
 			rtn = await service.create(content, ctx);
 		}
 	}

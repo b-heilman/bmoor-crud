@@ -77,6 +77,10 @@ class Datum {
 
 class Series extends Map {
 	constructor(series){
+		if (!series){
+			throw new Error('Need to supply valid series');
+		}
+
 		super();
 
 		this.series = series;
@@ -128,6 +132,16 @@ class Session extends Map {
 		
 		this.parent = parent;
 		this.state = Object.create(parent.state);
+	}
+
+	get(series){
+		const rtn = super.get(series);
+
+		if (!rtn && this.parent){
+			return this.parent.get(series);
+		}
+
+		return rtn;
 	}
 
 	setVariable(key, value){

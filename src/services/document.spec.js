@@ -295,11 +295,14 @@ describe('src/services/document.js', function(){
 
 		await nexus.configureComposite('test-composite-item', {
 			base: 'test-item',
+			joins: [
+				'> $test-category'
+			],
 			fields: {
 				'id': '.id',
 				'item': '.name',
-				'categoryId': '> $test-category.id',
-				'categoryName':  '> $test-category.name'
+				'categoryId': '$test-category.id',
+				'categoryName':  '$test-category.name'
 			}
 		});
 
@@ -307,6 +310,7 @@ describe('src/services/document.js', function(){
 
 		await nexus.configureComposite('test-composite-tag', {
 			base: 'test-tag',
+			joins: [],
 			fields: {
 				'name': '.name',
 				'required': '.required'
@@ -351,10 +355,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'>? $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '>? $test-person.name',
-					'categoryName':  '> $test-category.name'
+					'personName': '$test-person.name',
+					'categoryName':  '$test-category.name'
 				}
 			});
 			
@@ -441,10 +449,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'>? $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '>? $test-person.name',
-					'categoryName':  '> $test-category.name'
+					'personName': '$test-person.name',
+					'categoryName':  '$test-category.name'
 				},
 				encode: function(datum){
 					expect(datum)
@@ -537,10 +549,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'> $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personInfo': '> $test-person.json',
-					'categoryInfo':  '> $test-category.json'
+					'personInfo': '$test-person.json',
+					'categoryInfo':  '$test-category.json'
 				}
 			});
 
@@ -625,10 +641,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'> $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personInfo': '> $test-person.json',
-					'categoryInfo':  '> $test-category.json'
+					'personInfo': '$test-person.json',
+					'categoryInfo':  '$test-category.json'
 				}
 			});
 			
@@ -712,11 +732,16 @@ describe('src/services/document.js', function(){
 		it('with work with join and aliases', async function(){
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'> $test-person',
+					'.ownerId > $owner:test-user',
+					'.creatorId > $creator:test-user'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '> $test-person.name',
-					'ownerName': '.ownerId > $owner:test-user.name',
-					'creatorName': '.creatorId > $creator:test-user.name'
+					'personName': '$test-person.name',
+					'ownerName': '$owner.name',
+					'creatorName': '$creator.name'
 				}
 			});
 			
@@ -827,10 +852,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'>? $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '>? $test-person.name',
-					'categoryName':  '> $test-category.name'
+					'personName': '$test-person.name',
+					'categoryName':  '$test-category.name'
 				}
 			});
 			
@@ -913,10 +942,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'>? $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '>? $test-person.name',
-					'categoryName':  '> $test-category.name'
+					'personName': '$test-person.name',
+					'categoryName':  '$test-category.name'
 				}
 			});
 			
@@ -1005,10 +1038,14 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-1', {
 				base: 'test-item',
+				joins: [
+					'>? $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '>? $test-person.name',
-					'categoryName':  '> $test-category.name'
+					'personName': '$test-person.name',
+					'categoryName':  '$test-category.name'
 				}
 			});
 			
@@ -1146,15 +1183,38 @@ describe('src/services/document.js', function(){
 	});
 
 	describe('::link', function(){
+		it('should fail without defined fields', async function(){
+			try {
+				// note: i have schema instead of fields
+				await nexus.configureComposite('test-composite-ut', {
+					base: 'test-family',
+					joins: [
+						'> $test-category > #test-composite-item'
+					],
+					schema: {
+						'id': '.id',
+						'name': '.name',
+						'items': ['#test-composite-item']
+					}
+				});
+
+				expect(true)
+				.to.equal(false);
+			} catch (ex){
+				expect(ex.message)
+				.to.equal('composite test-composite-ut: no fields defined');
+			}
+		});
+
 		it('should fail without defined properties', async function(){
 			try {
 				// note: i have schema instead of fields
 				await nexus.configureComposite('test-composite-ut', {
 					base: 'test-family',
-					schema: {
-						'id': '.id',
-						'name': '.name',
-						'items': ['> $test-category > #test-composite-item']
+					joins: [
+						'> $test-category > #test-composite-item'
+					],
+					fields: {
 					}
 				});
 
@@ -1169,10 +1229,13 @@ describe('src/services/document.js', function(){
 		it('should work with a direct link - without it in the request', async function(){
 			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > #test-composite-item'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'items': ['> $test-category > #test-composite-item']
+					'items': ['#test-composite-item']
 				}
 			});
 			
@@ -1183,25 +1246,31 @@ describe('src/services/document.js', function(){
 			await doc.configure({});
 			await doc.link();
 			
-			expect(doc.subs.length)
+			expect(doc.structure.subs.length)
 			.to.equal(1);
 
-			const join = doc.subs[0].joins[0];
-			expect(join.path)
-			.to.equal('.familyId$test-category.itemId>.id$test-item');
+			const {info, path, composite} = doc.structure.subs[0];
 
-			expect(join.datumPath)
-			.to.equal('id');
+			expect(composite.name)
+			.to.equal('test-composite-item');
+
+			expect(path)
+			.to.equal('sub_0');
+
+			expect(info.path)
+			.to.equal('items');
 		});
 
 		it('should work with a hop off an attached model', async function(){
 			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > $test-item > #test-composite-item'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'categoryName': '> $test-category.name',
-					'tags': ['> $test-category > #test-composite-tag']
+					'items': ['#test-composite-item']
 				}
 			});
 
@@ -1212,21 +1281,35 @@ describe('src/services/document.js', function(){
 			await doc.configure({});
 			await doc.link();
 			
-			const join = doc.subs[0].joins[0];
-			expect(join.path)
-			.to.equal('.categoryId$test-tag');
+			const {info, path, composite} = doc.structure.subs[0];
 
-			expect(join.datumPath)
+			expect(composite.name)
+			.to.equal('test-composite-item');
+
+			expect(path)
 			.to.equal('sub_0');
+
+			expect(info.path)
+			.to.equal('items');
+		});
+
+		it('should correctly define the base fields', async function(){
+			const comp = await nexus.loadComposite('test-composite-tag');
+
+			expect(Object.keys(comp.fields).length)
+			.to.equal(2);
 		});
 
 		it('should work with a jump to the attached schema', async function(){
 			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > #test-composite-tag'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'tags': ['> $test-category > #test-composite-tag']
+					'tags': ['#test-composite-tag']
 				}
 			});
 
@@ -1237,12 +1320,16 @@ describe('src/services/document.js', function(){
 			await doc.configure({});
 			await doc.link();
 			
-			const join = doc.subs[0].joins[0];
-			expect(join.path)
-			.to.equal('.familyId$test-category.id>.categoryId$test-tag');
+			const {info, path, composite} = doc.structure.subs[0];
 
-			expect(join.datumPath)
-			.to.equal('id');
+			expect(composite.name)
+			.to.equal('test-composite-tag');
+
+			expect(path)
+			.to.equal('sub_0');
+
+			expect(info.path)
+			.to.equal('tags');
 		});
 	});
 
@@ -1255,9 +1342,10 @@ describe('src/services/document.js', function(){
 
 			await nexus.configureComposite('test-comp', {
 				base: 'test-item',
+				joins: ['> $test-category'],
 				fields: {
 					'item': '.name',
-					'categoryName':  '> $test-category.name'
+					'categoryName':  '$test-category.name'
 				},
 				dynamics: {
 					a: {
@@ -1351,9 +1439,12 @@ describe('src/services/document.js', function(){
 
 			nexus.configureComposite('test-comp', {
 				base: 'test-item',
+				joins: [
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'categoryName':  '> $test-category.name'
+					'categoryName':  '$test-category.name'
 				}
 			});
 			
@@ -1432,9 +1523,12 @@ describe('src/services/document.js', function(){
 		it('should load decode a object push - 1', async function(){
 			nexus.configureComposite('test-comp', {
 				base: 'test-item',
+				joins: [
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'categoryName':  '> $test-category.name'
+					'categoryName':  '$test-category.name'
 				}
 			});
 
@@ -1489,11 +1583,14 @@ describe('src/services/document.js', function(){
 		it('should load decode a object push - 2', async function(){
 			nexus.configureComposite('test-comp', {
 				base: 'test-item',
+				joins: [
+					'> $test-category'
+				],
 				fields: {
 					'id': '.id',
 					'item': '.name',
-					'categoryId': '> $test-category.id',
-					'categoryName':  '> $test-category.name'
+					'categoryId': '$test-category.id',
+					'categoryName':  '$test-category.name'
 				}
 			});
 
@@ -1542,9 +1639,12 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-item',
+				joins: [
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'categoryName':  '> $test-category.name'
+					'categoryName':  '$test-category.name'
 				}
 			});
 
@@ -1601,11 +1701,14 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-item',
+				joins: [
+					'> $test-category'
+				],
 				fields: {
 					'id': '.id',
 					'item': '.name',
-					'categoryId': '> $test-category.id',
-					'categoryName':  '> $test-category.name'
+					'categoryId': '$test-category.id',
+					'categoryName':  '$test-category.name'
 				}
 			});
 
@@ -1696,6 +1799,7 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-tag',
+				joins: [],
 				fields: {
 					'name': '.name',
 					'required':  '.required'
@@ -1735,6 +1839,7 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-comp', {
 				base: 'test-tag',
+				joins: [],
 				fields: {
 					'name': '.name',
 					'required':  '.required'
@@ -1774,17 +1879,20 @@ describe('src/services/document.js', function(){
 		let families = null;
 		let categories = null;
 
-		it('should work with a direct link', async function(){
+		it.only('should work with a direct link', async function(){
 			items = await nexus.loadCrud('test-item');
 			families = await nexus.loadCrud('test-family');
 			categories = await nexus.loadCrud('test-category');
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > #test-composite-item'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'items': ['> $test-category > #test-composite-item']
+					'items': ['#test-composite-item']
 				}
 			});
 
@@ -1859,6 +1967,9 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
+			console.log(
+				JSON.stringify(stubs.deflateSpy.getCall(0).args[0].toJSON(), null, 2)
+			);
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
@@ -1955,11 +2066,14 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > #test-composite-tag'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'categoryName': '> $test-category.name',
-					'tags': ['> $test-category > #test-composite-tag']
+					'categoryName': '$test-category.name',
+					'tags': ['#test-composite-tag']
 				}
 			});
 
@@ -2088,10 +2202,13 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > #test-composite-tag'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'tags': ['> $test-category > #test-composite-tag']
+					'tags': ['#test-composite-tag']
 				}
 			});
 
@@ -2232,10 +2349,13 @@ describe('src/services/document.js', function(){
 
 			const comp = await nexus.configureComposite('test-composite-ut', {
 				base: 'test-family',
+				joins: [
+					'> $test-category > #test-composite-tag'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'tags': ['> $test-category > #test-composite-tag']
+					'tags': ['#test-composite-tag']
 				}
 			});
 
@@ -2311,6 +2431,7 @@ describe('src/services/document.js', function(){
 		beforeEach(async function(){
 			await nexus.configureComposite('test-material', {
 				base: 'test-material',
+				joins: [],
 				fields: {
 					'id': '.id',
 					'name': '.name'
@@ -2321,6 +2442,7 @@ describe('src/services/document.js', function(){
 			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
 				extends: 'test-material',
+				joins: [],
 				fields: {
 					'pivot': '.id'
 				}
@@ -2330,6 +2452,7 @@ describe('src/services/document.js', function(){
 			await nexus.configureComposite('test-composite-material-2', {
 				base: 'test-item-material',
 				extends: 'test-composite-material',
+				joins: [],
 				fields: {
 					'mask': '.mask'
 				}
@@ -2338,10 +2461,13 @@ describe('src/services/document.js', function(){
 
 			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-item',
+				joins: [
+					'> #test-composite-material-2'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'materials': ['> #test-composite-material-2']
+					'materials': ['#test-composite-material-2']
 				}
 			});
 			await nexus.configureDocument('test-composite-ut', connector);
@@ -2660,6 +2786,7 @@ describe('src/services/document.js', function(){
 			beforeEach(async function(){
 				await nexus.configureComposite('test-material', {
 					base: 'test-material',
+					joins: [],
 					fields: {
 						'id': '.id',
 						'name': '.name'
@@ -2670,6 +2797,7 @@ describe('src/services/document.js', function(){
 				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
 					extends: 'test-material',
+					joins: [],
 					fields: {
 						'pivot': '.id',
 						'tag': '.tag',
@@ -2681,10 +2809,13 @@ describe('src/services/document.js', function(){
 
 				await nexus.configureComposite('test-composite-ut', {
 					base: 'test-item',
+					joins: [
+						'> #test-composite-material'
+					],
 					fields: {
 						'id': '.id',
 						'name': '.name',
-						'materials': ['> #test-composite-material']
+						'materials': ['#test-composite-material']
 					},
 					onChange: async function(type, instructions){
 						return changeCb(type, instructions);
@@ -2817,6 +2948,7 @@ describe('src/services/document.js', function(){
 			beforeEach(async function(){
 				await nexus.configureComposite('test-material', {
 					base: 'test-material',
+					joins: [],
 					fields: {
 						'id': '.id',
 						'name': '.name'
@@ -2826,6 +2958,7 @@ describe('src/services/document.js', function(){
 
 				await nexus.configureComposite('test-item', {
 					base: 'test-item',
+					joins: [],
 					fields: {
 						'id': '.id',
 						'name': '.name'
@@ -2835,6 +2968,7 @@ describe('src/services/document.js', function(){
 
 				await nexus.configureComposite('test-mappings', {
 					base: 'test-item-material',
+					joins: [],
 					fields: {
 						'itemId': '.itemId',
 						'materialId': '.materialId'
@@ -2845,6 +2979,7 @@ describe('src/services/document.js', function(){
 				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
 					extends: 'test-material',
+					joins: [],
 					fields: {
 						'pivot': '.id'
 					}
@@ -2853,10 +2988,13 @@ describe('src/services/document.js', function(){
 
 				await nexus.configureComposite('test-composite-ut', {
 					base: 'test-item',
+					joins: [
+						'> #test-composite-material'
+					],
 					fields: {
 						'id': '.id',
 						'name': '.name',
-						'materials': ['> #test-composite-material']
+						'materials': ['#test-composite-material']
 					},
 					onChange: async function(type, instructions){
 						return changeCb(type, instructions);
@@ -2876,6 +3014,7 @@ describe('src/services/document.js', function(){
 		beforeEach(async function(){
 			await nexus.configureComposite('test-material', {
 				base: 'test-material',
+				joins: [],
 				fields: {
 					'id': '.id',
 					'name': '.name'
@@ -2885,6 +3024,7 @@ describe('src/services/document.js', function(){
 
 			await nexus.configureComposite('test-item', {
 				base: 'test-item',
+				joins: [],
 				fields: {
 					'id': '.id',
 					'name': '.name'
@@ -2894,6 +3034,7 @@ describe('src/services/document.js', function(){
 
 			await nexus.configureComposite('test-mappings', {
 				base: 'test-item-material',
+				joins: [],
 				fields: {
 					'itemId': '.itemId',
 					'materialId': '.materialId'
@@ -2904,6 +3045,7 @@ describe('src/services/document.js', function(){
 			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
 				extends: 'test-material',
+				joins: [],
 				fields: {
 					'pivot': '.id'
 				}
@@ -2922,10 +3064,13 @@ describe('src/services/document.js', function(){
 			});
 			await nexus.configureComposite('test-composite-ut', {
 				base: 'test-item',
+				joins: [
+					'> #test-composite-material'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'materials': ['> #test-composite-material']
+					'materials': ['#test-composite-material']
 				},
 				onChange: stubs.onChange
 			});
@@ -2933,21 +3078,29 @@ describe('src/services/document.js', function(){
 
 			await nexus.configureComposite('test-ownership', {
 				base: 'test-user',
+				joins: [
+					'.id > .ownerId#test-composite-ut'
+				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'items': ['.id > .ownerId#test-composite-ut']
+					'items': ['#test-composite-ut']
 				}
 			});
 
 			// this schema makes no sense in practicality...
 			await nexus.configureComposite('test-god', {
 				base: 'test-user',
+				joins: [
+					'.id > .creatorId#test-item',
+					'.id > .creatorId#test-material',
+					'.id > .creatorId#test-mappings'
+				],
 				fields: {
 					'id': '.id',
-					'items': ['.id > .creatorId#test-item'],
-					'materials': ['.id > .creatorId#test-material'],
-					'mappings': ['.id > .creatorId#test-mappings']
+					'items': ['#test-item'],
+					'materials': ['#test-material'],
+					'mappings': ['#test-mappings']
 				}
 			});
 		});
