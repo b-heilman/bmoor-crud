@@ -1304,14 +1304,15 @@ describe('src/services/document.js', function(){
 			await doc.configure();
 			
 			const res = await doc.query({
+					joins: [
+						'$test-material > $test-item-material > $test-item'
+					],
 					params: {
 						'.name': {
 							'~': '%foo%'
 						},
-						'$test-category.name': 'ok'
-					},
-					joins: {
-						'.name$test-material > $test-item-material > $test-item': 'hello'
+						'$test-category.name': 'ok',
+						'$test-material.name': 'hello'
 					},
 					sort: '.name, -$test-category.name,+$test-person.name'
 				},
@@ -1612,8 +1613,11 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const res = await doc.query({
-				joins: {
-					'$test-user.name > .ownerId$test-item': 'shoup'
+				joins: [
+					'$test-user > .ownerId$test-item'
+				],
+				params: {
+					'$test-user.name': 'shoup'
 				}
 			}, context);
 			
@@ -1705,9 +1709,7 @@ describe('src/services/document.js', function(){
 
 			const res = await doc.query({
 				params: {
-					'$test-category.foo': 'bar'
-				},
-				joins: {
+					'$test-category.foo': 'bar',
 					'$test-category.name': 'foo-bar'
 				}
 			}, context);

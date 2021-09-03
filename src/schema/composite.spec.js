@@ -1253,7 +1253,7 @@ describe('src/schema/composite.js', function(){
 				});
 
 				const query = await lookup.getQuery({
-					joins: {
+					params: {
 						'$test-1.name': 'foo-bar',
 						'$test-3.name': {
 							'eq': 'hello-world'
@@ -1455,9 +1455,12 @@ describe('src/schema/composite.js', function(){
 				});
 				
 				const query = await lookup.getQuery({
-					joins: {
-						'.id$creator:test-1': 123,
-						'.foo$junk:test-6>.id$test-5': {
+					joins: [
+						'$junk:test-6 > .id$test-5'
+					],
+					params: {
+						'$creator.id': 123,
+						'$junk.foo': {
 							gt: 456,
 							lt: 789
 						}

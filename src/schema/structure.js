@@ -618,41 +618,6 @@ class Structure {
 			}
 		);
 
-		// parameters we can querying off of, must already be inside the structure
-		/** structure
-		 * {
-		 * 	[inside series].[inside property]: [inside value]
-		 * }
-		 **/
-		if (settings.params){
-			Object.keys(settings.params).map(
-				field => {
-					let path = null;
-					let series = query.base;
-
-					const param = settings.params[field];
-
-					if (field[0] === '$'){
-						const pos = field.indexOf('.');
-
-						series = field.substr(1, pos-1);
-						path = field.substr(pos+1);
-					} else {
-						if (field[0] === '.'){
-							field = field.substr(1);
-						}
-
-						path = field;
-					}
-
-					query.addParams(
-						series,
-						[buildParam(path, param)]
-					);
-				}
-			);
-		}
-
 		// this is the query property.  It allows you to 'join in' from the outside
 		/** structure
 		 * {
@@ -660,14 +625,11 @@ class Structure {
 		 * }
 		 **/
 		if (settings.joins){
-			await Object.keys(settings.joins || {})
-			.reduce(
+			await settings.joins.reduce(
 				async (prom, path) => {
 					await prom;
 					
 					path = path.trimStart();
-
-					const comparison = settings.joins[path];
 
 					if (path[0] === '.'){
 						/**
@@ -700,15 +662,43 @@ class Structure {
 					
 					const model = this.nexus.getModel(rootAccessor.model); // has to be defined by now
 					query.setSchema(rootAccessor.series, model.schema);
-
-					// So, if you write a query... you shoud use .notation for incoming property
-					// if incase they don't, I allow a failback to field.  It isn't ideal, but it's
-					// flexible.  Use the target incase I decide to change my mind in the future
-					query.addParams(rootAccessor.series, [
-						buildParam(rootAccessor.target||rootAccessor.field, comparison)
-					]);
 				}, 
 				Promise.resolve(true)
+			);
+		}
+
+		// parameters we can querying off of, must already be inside the structure
+		/** structure
+		 * {
+		 * 	[inside series].[inside property]: [inside value]
+		 * }
+		 **/
+		if (settings.params){
+			Object.keys(settings.params).map(
+				field => {
+					let path = null;
+					let series = query.base;
+
+					const param = settings.params[field];
+
+					if (field[0] === '$'){
+						const pos = field.indexOf('.');
+
+						series = field.substr(1, pos-1);
+						path = field.substr(pos+1);
+					} else {
+						if (field[0] === '.'){
+							field = field.substr(1);
+						}
+
+						path = field;
+					}
+
+					query.addParams(
+						series,
+						[buildParam(path, param)]
+					);
+				}
 			);
 		}
 

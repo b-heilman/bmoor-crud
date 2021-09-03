@@ -129,16 +129,17 @@ describe('src/controller/querier.js', function(){
 				const querier = new sut.Querier(nexus);
 
 				context.query = {
+					join: [
+						'$test-group > $test-user'
+					],
 					param: {
-						name: {
+						'name': {
 							'~': 'something%like'
-						}
-					},
-					join: {
-						'.name$test-group > $test-user': 'woot',
+						},
 						'.title': {
 							'~': '%oye'
-						}
+						},
+						'$test-group.name': 'woot'
 					}
 				};
 

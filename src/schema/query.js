@@ -160,6 +160,7 @@ class Query {
 		);
 
 		if (extraRoots.length){
+			console.log(extraRoots);
 			// we can only have one table without links, and that is the base 
 			// so steal links from other nodes
 			extraRoots.forEach(extraLink => {
