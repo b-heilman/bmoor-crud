@@ -76,73 +76,79 @@ class Forge {
 				const doc = await this.nexus.configureDocument(ref, settings);
 
 				// a model which is part of the document has changed
-				Object.keys(doc.structure.context.tables)
-				.map(model => {
-					this.messageBus.addListener(model, 'create',
-						async (key, _, datum, ctx) => {
-							const keys = await doc.getAffectedByModel(model, key, ctx);
+				const models = {};
+				doc.structure.instructions.forEach((series, seriesInfo) => {
+					if (seriesInfo.composite){
+						const subName = seriesInfo.composite;
 
-							return Promise.all(keys.map(
-								key => this.messageBus.debounceEvent(
-									ref, 
-									'push',
-									key,
-									[key, null, null, ctx]
-								)
-							));
+						this.messageBus.addListener(subName, 'push',
+							async (triggerKey, datum, ctx) => {
+								const keys = await doc.getAffectedBySub(subName, triggerKey, ctx);
+								
+								return Promise.all(keys.map(
+									key => this.messageBus.debounceEvent(
+										ref, 
+										'push',
+										key,
+										[key, null, null, ctx]
+									)
+								));
+							}
+						);
+					} else {
+						const model = seriesInfo.model;
+
+						if (models[model]){
+							return;
 						}
-					);
 
-					this.messageBus.addListener(model, 'update',
-						async (key, _, datum, ctx) => {
-							const keys = await doc.getAffectedByModel(model, key, ctx);
-							
-							return Promise.all(keys.map(
-								key => this.messageBus.debounceEvent(
-									ref, 
-									'push',
-									key,
-									[key, null, null, ctx]
-								)
-							));
-						}
-					);
+						models[model] = true;
 
-					this.messageBus.addListener(model, 'delete',
-						async (key, datum, _, ctx) => {
-							const keys = await doc.getAffectedByModel(model, key, ctx);
+						this.messageBus.addListener(model, 'create',
+							async (key, _, datum, ctx) => {
+								const keys = await doc.getAffectedByModel(model, key, ctx);
 
-							return Promise.all(keys.map(
-								key => this.messageBus.debounceEvent(
-									ref, 
-									'push',
-									key,
-									[key, null, null, ctx]
-								)
-							));
-						}
-					);
-				});
+								return Promise.all(keys.map(
+									key => this.messageBus.debounceEvent(
+										ref, 
+										'push',
+										key,
+										[key, null, null, ctx]
+									)
+								));
+							}
+						);
 
-				// a sub document has changed
-				doc.structure.settings.subs
-				.map(sub => {
-					const subName = sub.reference.name;
+						this.messageBus.addListener(model, 'update',
+							async (key, _, datum, ctx) => {
+								const keys = await doc.getAffectedByModel(model, key, ctx);
+								
+								return Promise.all(keys.map(
+									key => this.messageBus.debounceEvent(
+										ref, 
+										'push',
+										key,
+										[key, null, null, ctx]
+									)
+								));
+							}
+						);
 
-					this.messageBus.addListener(subName, 'push',
-						async (triggerKey, datum, ctx) => {
-							const keys = await doc.getAffectedBySub(subName, triggerKey, ctx);
-							
-							return Promise.all(keys.map(
-								key => this.messageBus.debounceEvent(
-									ref, 
-									'push',
-									key,
-									[key, null, null, ctx]
-								)
-							));
-						}
-					);
+						this.messageBus.addListener(model, 'delete',
+							async (key, datum, _, ctx) => {
+								const keys = await doc.getAffectedByModel(model, key, ctx);
+
+								return Promise.all(keys.map(
+									key => this.messageBus.debounceEvent(
+										ref, 
+										'push',
+										key,
+										[key, null, null, ctx]
+									)
+								));
+							}
+						);
+					}
 				});
 
 				// the document itself was just pushed against

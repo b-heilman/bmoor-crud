@@ -1184,10 +1184,14 @@ describe('src/env/nexus.js', function(){
 
 			await nexus.configureComposite('comp-1', {
 				base: 'test-item',
+				joins: [
+					'> $test-person',
+					'> $test-category'
+				],
 				fields: {
 					'item': '.name',
-					'personName': '> $test-person.name',
-					'categoryName':  '> $test-category.name'
+					'personName': '$test-person.name',
+					'categoryName': '$test-category.name'
 				}
 			});
 
@@ -1376,9 +1380,12 @@ describe('src/env/nexus.js', function(){
 
 				await nexus.configureComposite('comp-1', {
 					base: 'test-3-hello',
+					joins: [
+						'> $test-3-world'
+					],
 					fields: {
 						'hello.name': '.name',
-						'world.name': '> $test-3-world.name'
+						'world.name': '$test-3-world.name'
 					}
 				});
 				doc1 = await nexus.configureDocument('comp-1');
@@ -1387,10 +1394,14 @@ describe('src/env/nexus.js', function(){
 
 				await nexus.configureComposite('comp-2', {
 					base: 'test-2-foo',
+					joins: [
+						'> #comp-1',
+						'> $test-2-bar'
+					],
 					fields: {
-						'sub': ['> #comp-1'],
+						'sub': ['#comp-1'],
 						'fooName': '.name',
-						'barName':  '> $test-2-bar.name'
+						'barName':  '$test-2-bar.name'
 					}
 				});
 				doc2 = await nexus.configureDocument('comp-2');
@@ -1398,28 +1409,18 @@ describe('src/env/nexus.js', function(){
 				stubs.doc2 = sinon.spy(doc2, 'query');
 			});
 
-			it('should properly define properties', async function(){
-				expect(Object.keys(doc1.structure.context.tables))
-				.to.deep.equal(['test-3-hello', 'test-3-world']);
-
-				expect(doc1.structure.settings.subs.map(({reference}) => reference.name))
-				.to.deep.equal([]);
-
-				expect(Object.keys(doc2.structure.context.tables))
-				.to.deep.equal(['test-2-foo', 'test-2-bar']);
-
-				expect(doc2.structure.settings.subs.map(({reference}) => reference.name))
-				.to.deep.equal(['comp-1']);
-			});
-
 			it('should allow composites to chain calls', async function(){
 				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
+					joins: [
+						'> $test-person',
+						'> $test-category.fooId > #comp-2'
+					],
 					fields: {
 						'item': '.name',
-						'personName': '> $test-person.name',
-						'categoryName':  '> $test-category.name',
-						'link': '> $test-category.fooId > #comp-2'
+						'personName': '$test-person.name',
+						'categoryName':  '$test-category.name',
+						'link': '#comp-2'
 					}
 				});
 				const doc3 = await nexus.configureDocument('comp-3');
@@ -1520,8 +1521,8 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
-					joins: {
-						'.id$test-2-foo': 456
+					params: {
+						'.id': 456
 					}
 				});
 
@@ -1574,8 +1575,8 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					joins: {
-						'.fooId$test-3-hello': 123
+					params: {
+						'.fooId': 123
 					}
 				});
 
@@ -1645,11 +1646,15 @@ describe('src/env/nexus.js', function(){
 			it('should allow composites to skip calls', async function(){
 				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
+					joins: [
+						'> $test-person',
+						'> $test-category.fooId > $test-2-foo > #comp-1'
+					],
 					fields: {
 						'item': '.name',
-						'personName': '> $test-person.name',
-						'categoryName':  '> $test-category.name',
-						'link': ['> $test-category.fooId > $test-2-foo > #comp-1']
+						'personName': '$test-person.name',
+						'categoryName':  '$test-category.name',
+						'link': ['#comp-1']
 					}
 				});
 
@@ -1713,6 +1718,18 @@ describe('src/env/nexus.js', function(){
 									from: 'itemId'
 								}]
 							}]
+						},
+						{
+							'series': 'test-2-foo',
+							schema: 'test-2-foo',
+							joins: [{
+								name: 'test-category',
+								optional: false,
+								mappings: [{
+									to: 'fooId',
+									from: 'id'
+								}]
+							}]
 						}
 					],
 					fields: [{
@@ -1728,8 +1745,8 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'categoryName'
 					}, {
-						series: 'test-category',
-						'path': 'fooId',
+						series: 'test-2-foo',
+						'path': 'id',
 						'as': 'sub_0'
 					}],
 					params: [{
@@ -1765,18 +1782,6 @@ describe('src/env/nexus.js', function(){
 									from: 'helloId'
 								}]
 							}]
-						},
-						{
-							series: 'test-2-foo',
-							schema: 'test-2-foo',
-							joins: [{
-								name: 'test-3-hello',
-								optional: false,
-								mappings: [{
-									to: 'fooId',
-									from: 'id'
-								}]
-							}]
 						}
 					],
 					fields: [{
@@ -1789,8 +1794,8 @@ describe('src/env/nexus.js', function(){
 						'as': 'world.name'
 					}],
 					params: [{
-						series: 'test-2-foo',
-						path: 'id',
+						series: 'test-3-hello',
+						path: 'fooId',
 						operation: '=',
 						value: 456,
 						settings: {}
@@ -1799,8 +1804,8 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					joins: {
-						'.id$test-2-foo.id>.fooId$test-3-hello': 456
+					params: {
+						'.fooId': 456
 					}
 				});
 
@@ -1823,11 +1828,15 @@ describe('src/env/nexus.js', function(){
 			it('should allow composites to have the same base', async function(){
 				await nexus.configureComposite('comp-3', {
 					base: 'test-item',
+					joins: [
+						'> $test-person',
+						'> $test-category.fooId > $test-2-foo > #comp-1'
+					],
 					fields: {
 						'item': '.name',
-						'personName': '> $test-person.name',
-						'categoryName':  '> $test-category.name',
-						'link': ['> $test-category.fooId > $test-2-foo > #comp-1']
+						'personName': '$test-person.name',
+						'categoryName':  '$test-category.name',
+						'link': ['#comp-1']
 					}
 				});
 
@@ -1835,12 +1844,17 @@ describe('src/env/nexus.js', function(){
 
 				await nexus.configureComposite('comp-3-dupe', {
 					base: 'test-item',
+					joins: [
+						'> $test-person',
+						'> $test-category',
+						'> #comp-3'
+					],
 					fields: {
 						'item': '.name',
-						'personName': '> $test-person.name',
-						'categoryName':  '> $test-category.name',
+						'personName': '$test-person.name',
+						'categoryName':  '$test-category.name',
 						// 'link': ['> $test-category.fooId > $test-2-foo > #comp-1'],
-						'other': '> #comp-3'
+						'other': '#comp-3'
 					}
 				});
 
@@ -1977,6 +1991,18 @@ describe('src/env/nexus.js', function(){
 									from: 'itemId'
 								}]
 							}]
+						},
+						{
+							'series': 'test-2-foo',
+							schema: 'test-2-foo',
+							joins: [{
+								name: 'test-category',
+								optional: false,
+								mappings: [{
+									to: 'fooId',
+									from: 'id'
+								}]
+							}]
 						}
 					],
 					fields: [{
@@ -1992,8 +2018,8 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'categoryName'
 					}, {
-						series: 'test-category',
-						'path': 'fooId',
+						series: 'test-2-foo',
+						'path': 'id',
 						'as': 'sub_0'
 					}],
 					params: [{
@@ -2029,18 +2055,6 @@ describe('src/env/nexus.js', function(){
 									from: 'helloId'
 								}]
 							}]
-						},
-						{
-							series: 'test-2-foo',
-							schema: 'test-2-foo',
-							joins: [{
-								name: 'test-3-hello',
-								optional: false,
-								mappings: [{
-									to: 'fooId',
-									from: 'id'
-								}]
-							}]
 						}
 					],
 					fields: [{
@@ -2053,8 +2067,8 @@ describe('src/env/nexus.js', function(){
 						'as': 'world.name'
 					}],
 					params: [{
-						series: 'test-2-foo',
-						path: 'id',
+						series: 'test-3-hello',
+						path: 'fooId',
 						operation: '=',
 						value: 456,
 						settings: {}
@@ -2063,8 +2077,8 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
-					joins: {
-						'.id$test-2-foo.id>.fooId$test-3-hello': 456
+					params: {
+						'.fooId': 456
 					}
 				});
 

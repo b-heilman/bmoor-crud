@@ -1029,6 +1029,254 @@ describe('src/services/document.js', function(){
 	});
 
 	describe('::query', function(){
+		it('should handle a sub', async function(){
+			connectorExecute = [{
+				'item': 'item-1',
+				'categoryName': 'category-1',
+				'tag': 'tag-1',
+				'mask': 'mask-1',
+				'sub_0': 123
+			}];
+
+			nexus.configureComposite('test-tags', {
+				base: 'test-item-material',
+				joins: [
+				],
+				fields: {
+					'tag': '.tag',
+					'mask': '.mask'
+				}
+			});
+
+			await nexus.configureDocument('test-tags');
+
+			nexus.configureComposite('test-1', {
+				base: 'test-item',
+				joins: [
+					'> $test-category',
+					'> #test-tags'
+				],
+				fields: {
+					'item': '.name',
+					'categoryName':  '$test-category.name',
+					'tags': ['#test-tags']
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+			
+			const res = await doc.query({}, context);
+			
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item',
+					schema: 'test-item',
+					joins: []
+				}, {
+					series: 'test-category',
+					schema: 'test-category',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-item',
+					path: 'name',
+					as: 'item'
+				}, {
+					series: 'test-item',
+					path: 'id',
+					as: 'sub_0'
+				}, {
+					series: 'test-category',
+					path: 'name',
+					as: 'categoryName'
+				}],
+				params: []
+			});
+
+			const args2 = stubs.execute.getCall(1).args[0];
+
+			expect(args2.method)
+			.to.equal('read');
+
+			expect(args2.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item-material',
+					schema: 'test-item-material',
+					joins: []
+				}],
+				fields: [{
+					series: 'test-item-material',
+					path: 'tag',
+					as: 'tag'
+				}, {
+					series: 'test-item-material',
+					path: 'mask',
+					as: 'mask'
+				}],
+				params: [{
+					series: 'test-item-material',
+					path: 'itemId',
+					operation: '=',
+					settings: {},
+					value: 123
+				}]
+			});
+
+			expect(res)
+			.to.deep.equal([{
+				item: 'item-1',
+				categoryName: 'category-1',
+				tags: [{
+					tag: 'tag-1',
+					mask: 'mask-1'
+				}]
+			}]);
+		});
+
+		it('should handle a sub with a pivot', async function(){
+			connectorExecute = [{
+				'item': 'item-1',
+				'categoryName': 'category-1',
+				'name': 'name-1',
+				'sub_0': 123
+			}];
+
+			nexus.configureComposite('test-stuff', {
+				base: 'test-material',
+				joins: [],
+				fields: {
+					'name': '.name'
+				}
+			});
+
+			await nexus.configureDocument('test-stuff');
+
+			nexus.configureComposite('test-1', {
+				base: 'test-item',
+				joins: [
+					'> $test-category',
+					'> $test-item-material > #test-stuff'
+				],
+				fields: {
+					'item': '.name',
+					'categoryName':  '$test-category.name',
+					'stuff': ['#test-stuff']
+				}
+			});
+			
+			const comp = await nexus.loadComposite('test-1');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+			
+			const res = await doc.query({}, context);
+			
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			console.log('document.spec.js =>', JSON.stringify(args.query.toJSON(), null, 2));
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-item',
+					schema: 'test-item',
+					joins: []
+				}, {
+					series: 'test-category',
+					schema: 'test-category',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}, {
+					series: 'test-item-material',
+					schema: 'test-item-material',
+					joins: [{
+						name: 'test-item',
+						optional: false,
+						mappings: [{
+							from: 'itemId',
+							to: 'id'
+						}]
+					}]
+				}],
+				fields: [{
+					series: 'test-item',
+					path: 'name',
+					as: 'item'
+				}, {
+					series: 'test-category',
+					path: 'name',
+					as: 'categoryName'
+				}, {
+					series: 'test-item-material',
+					path: 'materialId',
+					as: 'sub_0'
+				}],
+				params: []
+			});
+
+			const args2 = stubs.execute.getCall(1).args[0];
+
+			expect(args2.method)
+			.to.equal('read');
+
+			expect(args2.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-material',
+					schema: 'test-material',
+					joins: []
+				}],
+				fields: [{
+					series: 'test-material',
+					path: 'name',
+					as: 'name'
+				}],
+				params: [{
+					series: 'test-material',
+					path: 'id',
+					operation: '=',
+					settings: {},
+					value: 123
+				}]
+			});
+
+			expect(res)
+			.to.deep.equal([{
+				item: 'item-1',
+				categoryName: 'category-1',
+				stuff: [{
+					name: 'name-1'
+				}]
+			}]);
+		});
+		
 		it('should handle a full query', async function(){
 			connectorExecute = [{
 				'item': 'item-1',
@@ -1540,29 +1788,14 @@ describe('src/services/document.js', function(){
 			await doc.link();
 
 			const instructions = doc.buildNormalizedSchema();
-			const res = await doc.normalize(
+			await doc.normalize(
 				{
 					item: 'item-1',
 					categoryName: 'category-1'
 				},
-				instructions,
+				instructions.getSession(),
 				context
 			);
-
-			expect(res.instructions.toJSON())
-			.to.deep.equal({
-				'test-item': [{
-					$ref: 'test-item:1',
-					$type: 'create',
-					name: 'item-1'
-				}],
-				'test-category': [{
-					$ref: 'test-category:1',
-					$type: 'create',
-					name: 'category-1',
-					itemId: 'test-item:1'
-				}]
-			});
 
 			expect(instructions.toJSON())
 			.to.deep.equal({
@@ -1601,18 +1834,19 @@ describe('src/services/document.js', function(){
 			await doc.configure(connector);
 			await doc.link();
 
-			const res = await doc.normalize(
+			const instructions = doc.buildNormalizedSchema();
+			await doc.normalize(
 				{
 					id: 123,
 					item: 'item-1',
 					categoryId: 456,
 					categoryName: 'category-1'
 				},
-				doc.buildNormalizedSchema(),
+				instructions.getSession(),
 				context
 			);
 
-			expect(res.instructions.toJSON())
+			expect(instructions.toJSON())
 			.to.deep.equal({
 				'test-item': [{
 					$ref: 123,
@@ -1663,7 +1897,6 @@ describe('src/services/document.js', function(){
 			const doc = new sut.Document(comp);
 			
 			await doc.configure(connector);
-			await doc.link();
 
 			const res = await doc.push(
 				{
@@ -1879,7 +2112,7 @@ describe('src/services/document.js', function(){
 		let families = null;
 		let categories = null;
 
-		it.only('should work with a direct link', async function(){
+		it('should work with a direct link', async function(){
 			items = await nexus.loadCrud('test-item');
 			families = await nexus.loadCrud('test-family');
 			categories = await nexus.loadCrud('test-category');
@@ -1967,9 +2200,6 @@ describe('src/services/document.js', function(){
 				}]
 			}, context);
 
-			console.log(
-				JSON.stringify(stubs.deflateSpy.getCall(0).args[0].toJSON(), null, 2)
-			);
 			expect(stubs.deflateSpy.getCall(0).args[0].toJSON())
 			.to.deep.equal({
 				'test-family': [{
@@ -2139,7 +2369,6 @@ describe('src/services/document.js', function(){
 				'test-category': [{
 					$ref: 'test-category:1',
 					$type: 'create',
-					id: undefined,
 					name: 'category-name-1',
 					familyId: 12
 				}],
@@ -2276,10 +2505,6 @@ describe('src/services/document.js', function(){
 					$ref: 'test-category:1',
 					$type: 'create',
 					familyId: 12
-				},{
-					$ref: 'test-category:2',
-					$type: 'create',
-					familyId: 12
 				}],
 				'test-tag': [{
 					$ref: 'test-tag:1',
@@ -2291,7 +2516,7 @@ describe('src/services/document.js', function(){
 					$ref: 'test-tag:2',
 					$type: 'create',
 					name: 'tag-name-2',
-					categoryId: 'test-category:2',
+					categoryId: 'test-category:1',
 					required: 'req-2'
 				}]
 			});
@@ -2304,13 +2529,6 @@ describe('src/services/document.js', function(){
 					datum: {
 						id: 'family-1',
 						name: 'family-updated'
-					}
-				}, {
-					model: 'test-category',
-					action: 'create',
-					datum: {
-						id: 'cat-1',
-						name: 'category-created'
 					}
 				}, {
 					model: 'test-category',
@@ -2459,7 +2677,7 @@ describe('src/services/document.js', function(){
 			});
 			await nexus.configureDocument('test-composite-material-2', connector);
 
-			await nexus.configureComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ti', {
 				base: 'test-item',
 				joins: [
 					'> #test-composite-material-2'
@@ -2470,7 +2688,7 @@ describe('src/services/document.js', function(){
 					'materials': ['#test-composite-material-2']
 				}
 			});
-			await nexus.configureDocument('test-composite-ut', connector);
+			await nexus.configureDocument('test-composite-ti', connector);
 		});
 
 		it('should work when creating brand new', async function(){
@@ -2478,7 +2696,7 @@ describe('src/services/document.js', function(){
 			itemMaterials = await nexus.loadCrud('test-item-material');
 			materials = await nexus.loadCrud('test-material');
 
-			comp = await nexus.loadComposite('test-composite-ut');
+			comp = await nexus.loadComposite('test-composite-ti');
 			
 			stubs.itemCreate = sinon.stub(items, 'create')
 			.resolves({
@@ -2593,7 +2811,7 @@ describe('src/services/document.js', function(){
 			itemMaterials = await nexus.loadCrud('test-item-material');
 			materials = await nexus.loadCrud('test-material');
 
-			comp = await nexus.loadComposite('test-composite-ut');
+			comp = await nexus.loadComposite('test-composite-ti');
 
 			// updates require us to stub read
 			stubs.itemRead = sinon.stub(items, 'read')
@@ -2807,7 +3025,7 @@ describe('src/services/document.js', function(){
 				});
 				await nexus.configureDocument('test-composite-material', connector);
 
-				await nexus.configureComposite('test-composite-ut', {
+				await nexus.configureComposite('test-composite-ti2', {
 					base: 'test-item',
 					joins: [
 						'> #test-composite-material'
@@ -2821,7 +3039,7 @@ describe('src/services/document.js', function(){
 						return changeCb(type, instructions);
 					}
 				});
-				doc = await nexus.configureDocument('test-composite-ut', connector);
+				doc = await nexus.configureDocument('test-composite-ti2', connector);
 			});
 
 			it('should work with a major type change', async function(){
@@ -2986,7 +3204,7 @@ describe('src/services/document.js', function(){
 				});
 				await nexus.configureDocument('test-composite-material', connector);
 
-				await nexus.configureComposite('test-composite-ut', {
+				await nexus.configureComposite('test-composite-ti3', {
 					base: 'test-item',
 					joins: [
 						'> #test-composite-material'
@@ -3001,7 +3219,7 @@ describe('src/services/document.js', function(){
 					}
 				});
 
-				doc = await nexus.configureDocument('test-composite-ut', connector);
+				doc = await nexus.configureDocument('test-composite-ti3', connector);
 			});
 		});
 	});
@@ -3054,7 +3272,7 @@ describe('src/services/document.js', function(){
 
 			stubs.onChange = sinon.stub()
 			.callsFake(function(type, series){
-				const datum = series.get('test-item')[0];
+				const datum = series.getSeries('test-item')[0];
 
 				if (type === changeTypes.major){
 					datum.setField('name', datum.getField('name')+'.1');
@@ -3062,7 +3280,7 @@ describe('src/services/document.js', function(){
 					datum.setField('name', datum.getField('name')+'.2');
 				}
 			});
-			await nexus.configureComposite('test-composite-ut', {
+			await nexus.configureComposite('test-composite-ti3', {
 				base: 'test-item',
 				joins: [
 					'> #test-composite-material'
@@ -3074,17 +3292,17 @@ describe('src/services/document.js', function(){
 				},
 				onChange: stubs.onChange
 			});
-			await nexus.configureDocument('test-composite-ut', connector);
+			await nexus.configureDocument('test-composite-ti3', connector);
 
 			await nexus.configureComposite('test-ownership', {
 				base: 'test-user',
 				joins: [
-					'.id > .ownerId#test-composite-ut'
+					'.id > .ownerId#test-composite-ti3'
 				],
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'items': ['#test-composite-ut']
+					'items': ['#test-composite-ti3']
 				}
 			});
 
@@ -3216,21 +3434,21 @@ describe('src/services/document.js', function(){
 					'$type': 'update',
 					'id': 'item-id-1',
 					'name': 'item-name-10.1',
-					'creatorId': 'user-id-1'
+					'ownerId': 'user-id-1'
 				},
 				{
 					'$ref': 'item-id-2',
 					'$type': 'update',
 					'id': 'item-id-2',
 					'name': 'undefined.1',
-					'creatorId': 'user-id-1'
+					'ownerId': 'user-id-1'
 				},
 				{
 					'$ref': 'item-id-3',
 					'$type': 'update',
 					'id': 'item-id-3',
 					'name': 'item-name-30.1',
-					'creatorId': 'user-id-1'
+					'ownerId': 'user-id-1'
 				}],
 				'test-material': [{
 					'$ref': 'material-1',
@@ -3273,32 +3491,32 @@ describe('src/services/document.js', function(){
 				}]
 			});
 
-			let series = null;
+			let session = null;
 
 			//-------------
 			expect(stubs.onChange.getCall(0).args[0])
 			.to.equal(changeTypes.major);
 
-			series = stubs.onChange.getCall(0).args[1];
+			session = stubs.onChange.getCall(0).args[1];
 			
-			expect(series.get('test-item').length)
+			expect(session.getSeries('test-item').length)
 			.to.equal(1);
 
 			//-------------
 			expect(stubs.onChange.getCall(1).args[0])
 			.to.equal(changeTypes.major);
 
-			series = stubs.onChange.getCall(1).args[1];
+			session = stubs.onChange.getCall(1).args[1];
 
-			expect(series.get('test-item').length)
+			expect(session.getSeries('test-item').length)
 			.to.equal(1);
 
 			//-------------
 			expect(stubs.onChange.getCall(2).args[0])
 			.to.equal(changeTypes.major);
 
-			series = stubs.onChange.getCall(2).args[1];
-			expect(series.get('test-item').length)
+			session = stubs.onChange.getCall(2).args[1];
+			expect(session.getSeries('test-item').length)
 			.to.equal(1);
 		});
 

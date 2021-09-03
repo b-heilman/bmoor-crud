@@ -102,10 +102,11 @@ describe('src/env/bootstrap.js', function(){
 					name: 'composite-1',
 					settings: {
 						base: 'service-1',
+						joins: ['> $service-2'],
 						fields: {
 							'id': '.id',
 							'name': '.name',
-							'other': '> $service-2.name'
+							'other': '$service-2.name'
 						}
 					}
 				}],

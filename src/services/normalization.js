@@ -29,7 +29,7 @@ async function ensure(mapper, modelName, payload, ctx){
 }
 
 async function install(datum, service, master, mapper, ctx){
-	let ref = datum.getReference();
+	let ref = datum.getReference().getHash();
 	let rtn = null;
 	let action = null;
 

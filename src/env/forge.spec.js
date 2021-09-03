@@ -1048,6 +1048,7 @@ describe('src/env/forge.js', function(){
 					name: 'doc-1',
 					settings: {
 						base: 'service-1',
+						joins: [],
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1057,6 +1058,7 @@ describe('src/env/forge.js', function(){
 					name: 'doc-2',
 					settings: {
 						base: 'service-4',
+						joins: [],
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1066,12 +1068,17 @@ describe('src/env/forge.js', function(){
 					name: 'doc-3',
 					settings: {
 						base: 'service-3',
+						joins: [
+							'> $service-1',
+							'> $service-2',
+							'> #doc-2'
+						],
 						fields: {
 							'id': '.id',
 							'name': '.name',
-							service1Name: '> $service-1.name',
-							service2Name: '> $service-2.name',
-							links: ['> #doc-2']
+							service1Name: '$service-1.name',
+							service2Name: '$service-2.name',
+							links: ['#doc-2']
 						}
 					}
 				}],
@@ -1568,6 +1575,7 @@ describe('src/env/forge.js', function(){
 					name: 'doc-1',
 					settings: {
 						base: 'service-1',
+						joins: [],
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1577,6 +1585,7 @@ describe('src/env/forge.js', function(){
 					name: 'doc-2',
 					settings: {
 						base: 'service-4',
+						joins: [],
 						fields: {
 							'id': '.id',
 							'name': '.name'
@@ -1586,12 +1595,17 @@ describe('src/env/forge.js', function(){
 					name: 'doc-3',
 					settings: {
 						base: 'service-3',
+						joins: [
+							'> $service-1',
+							'> $service-2',
+							'> #doc-2'
+						],
 						fields: {
 							'id': '.id',
 							'name': '.name',
-							service1Name: '> $service-1.name',
-							service2Name: '> $service-2.name',
-							links: ['> #doc-2']
+							service1Name: '$service-1.name',
+							service2Name: '$service-2.name',
+							links: ['#doc-2']
 						}
 					}
 				}],

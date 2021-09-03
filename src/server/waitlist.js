@@ -24,6 +24,7 @@ class Waitlist {
 		return rtn;
 	}
 
+	// TODO: await and resolve should have the same invoke structure
 	async await(modelName, ref){
 		const waiting = this.getModel(modelName);
 

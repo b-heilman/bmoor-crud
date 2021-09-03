@@ -61,8 +61,8 @@ const normalization = require('./normalization.js');
 
 				// Loop through each result, and process the sub queries for each
 				await Promise.all(this.structure.subs.map(
-					async ({sub, path, join, composite, document}) => {
-						const query = sub.joins.reduce(
+					async ({info, path, joins, composite, document}) => {
+						const query = joins.reduce(
 							(agg, join) => {
 								if (join.clear){
 									clears.push(join.clear);
@@ -82,8 +82,8 @@ const normalization = require('./normalization.js');
 						
 						set(
 							queryDatum,
-							sub.path,
-							sub.isArray ? res : res[0]
+							info.path,
+							info.isArray ? res : res[0]
 						);
 					}
 				));
@@ -139,49 +139,48 @@ const normalization = require('./normalization.js');
 		return this.query(query, ctx);
 	}
 
-	async normalize(incomingDatum, instructions, ctx){
-		console.log('document::normalize', this.structure.name, incomingDatum);
+	async normalize(incomingDatum, parentSession, ctx){
 		if (!ctx){
 			throw new Error('no ctx');
 		}
 
 		await this.link();
 
+		const seriesSession = parentSession.getChildSession();
 		const transitions = this.structure.fields
 		.reduce(
 			(agg, field) => {
-				const series = field.incomingSettings.series;
-				
-				let trans = agg[series];
-				if (!trans){
-					trans = {
-						model: field.structure.name,
-						mappings: []
-					};
-					agg[series] = trans;
-				}
+				// variable is defined in composite, it lets us know this field
+				// is only defined to join to another sub
+				if (!field.incomingSettings.synthetic){
+					const series = field.incomingSettings.series;
+					
+					let trans = agg[series];
+					if (!trans){
+						trans = {
+							model: field.structure.name,
+							mappings: []
+						};
+						agg[series] = trans;
+					}
 
-				trans.mappings.push({
-					from: field.path,
-					to: field.storagePath
-				});
+					trans.mappings.push({
+						from: field.path,
+						to: field.storagePath
+					});
+				}
 
 				return agg;
 			},
 			{}
 		);
 
-		const references = {};
-
 		let changeType = config.get('changeTypes.none');
-
-		const seriesSession = instructions.getSession();
 
 		const cbs = await Promise.all(
 			Object.keys(transitions)
 			.map(async (series) => {
 				const trans = transitions[series];
-				console.log('document::normalize$mappings', series, trans.mappings);
 				const transformer = new Transformer(trans.mappings);
 
 				const service = await this.structure.nexus.loadCrud(trans.model);
@@ -213,8 +212,6 @@ const normalization = require('./normalization.js');
 					action = 'create';
 				}
 
-				references[series] = ref;
-
 				const errors = await service.validate(content, writeType, ctx);
 
 				if (errors.length){
@@ -228,48 +225,38 @@ const normalization = require('./normalization.js');
 					});
 				}
 
-				console.log('document::normalize$series', series, ref);
-				console.log(content);
-				const newDatum = seriesSession.getDatum(series, ref, action);
-
-				newDatum.setContent(content);
+				const newDatum = seriesSession.defineDatum(
+					series, ref, action, content
+				);
 
 				// generate a series of call back methods to be called once
 				// everything is resolved
 				return () => {
-					const seriesInfo = this.structure.instructions.getSeries(series);
+					const links = this.structure.instructions.getOutgoingLinks(series);
 					
-					if (seriesInfo.incoming){
-						seriesInfo.incoming.forEach(incomingSeries => {
-							const join = this.structure.instructions.getJoin(
-								incomingSeries, series
-							);
+					// link to everything inside the known space... inside the 
+					// current datum
+					links.forEach(link => {
+						const target = seriesSession.findLink(link.series);
+						let datum =  null;
 
-							if (join.relationship.metadata.direction === 'incoming'){
-								newDatum.setField(
-									join.to,
-									references[incomingSeries]
-								);
-							}
-						});
-					}
-
-					Object.keys(seriesInfo.join).forEach(outgoingSeries => {
-						const join = seriesInfo.join[outgoingSeries];
-
-						if (join.relationship.metadata.direction === 'outgoing'){
-							newDatum.setField(
-								join.from,
-								references[outgoingSeries]
-							);
+						if (target){
+							datum = target;
+						} else {
+							datum = seriesSession.getStub(target);
 						}
+
+						newDatum.setField(
+							link.local,
+							target.getReference().getHash()
+						);
 					});
 				};
 			})
 		);
 
 		await Promise.all(cbs.map((cb) => cb()));
-		console.log('document::normalize - cp-2');
+		
 		await Promise.all(this.structure.subs.map(
 			sub => {
 				let content = get(incomingDatum, sub.info.path);
@@ -281,9 +268,8 @@ const normalization = require('./normalization.js');
 				// loop through all the results
 				return Promise.all(content.map(
 					async (subDatum) => {
-						console.log('document::normalize$subDatum', subDatum);
 						const {
-							seriesSession: subSeries,
+							seriesSession: subSession,
 							changeType: subChange
 						} = await sub.document.normalize(subDatum, seriesSession, ctx);
 
@@ -296,10 +282,6 @@ const normalization = require('./normalization.js');
 								const join = prev.join[cur.series];
 
 								const direction = join.relationship.metadata.direction;
-
-								// TODO: I need to change the normalized schema to use
-								//   series + model.  This can technically cause issues
-								//   I'm pretty sure
 								const curModel = cur.model || 
 									this.structure.nexus.getComposite(cur.composite).baseModel.name;
 								const prevModel = prev.model;
@@ -319,27 +301,25 @@ const normalization = require('./normalization.js');
 								}
 
 								// what if one of them doesn't exist?
-								const target = subSeries.get(left);
+								const target = subSession.findLink(left);
 								let datum = null;
 
 								if (target){
-									datum = target[0];
+									datum = target;
 								} else {
-									console.log('document::normalize$left', left);
-									datum = subSeries.stub(left);
+									datum = subSession.getStub(left);
 								}
 
-								const source = subSeries.get(right);
+								const source = subSession.findLink(right);
 								let s = null;
 
 								if (source){
-									s = source[0];
+									s = source;
 								} else {
-									console.log('document::normalize$right', right);
-									s = subSeries.stub(right);
+									s = subSession.getStub(right);
 								}
 
-								datum.setField(field, s.getReference());
+								datum.setField(field, s.getReference().getHash());
 
 								return cur;
 							}
@@ -355,7 +335,6 @@ const normalization = require('./normalization.js');
 		
 		return {
 			seriesSession,
-			instructions,
 			changeType
 		};
 	}
@@ -372,7 +351,7 @@ const normalization = require('./normalization.js');
 			await hooks.beforePush(datum, ctx, this);
 		}
 
-		await this.normalize(datum, instructions, ctx);
+		await this.normalize(datum, instructions.getSession(), ctx);
 		
 		const rtn = await normalization.deflate(
 			instructions,

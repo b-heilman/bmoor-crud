@@ -55,11 +55,11 @@ class Mapper {
 		return null;
 	}
 
-	getRelationship(fromName, toName, field=null){
+	getRelationship(fromName, toName, fromField=null, toField=null){
 		const link = this.getLink(fromName);
 
 		if (link){
-			return link.getConnection(toName, field);
+			return link.getConnection(toName, fromField, toField);
 		}
 
 		return null;

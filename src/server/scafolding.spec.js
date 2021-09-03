@@ -100,11 +100,14 @@ describe('src/server/scafolding.js', function(){
 			name: 'composite-1',
 			settings: {
 				base: 'service-1',
+				joins: [
+					'> $service-2'
+				],
 				connector: 'http',
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'other': '> $service-2.name'
+					'other': '$service-2.name'
 				}
 			}
 		}]);
@@ -239,11 +242,14 @@ describe('src/server/scafolding.js', function(){
 			name: 'composite-2',
 			settings: {
 				base: 'service-1',
+				joins: [
+					'> $service-3'
+				],
 				connector: 'http',
 				fields: {
 					'id': '.id',
 					'name': '.name',
-					'other': '> $service-3.name'
+					'other': '$service-3.name'
 				}
 			}
 		});

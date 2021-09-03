@@ -5,44 +5,57 @@ const {get, set} = require('bmoor/src/core.js');
 // into a series of service calls
 
 class DatumRef {
-	constructor(value=null){
-		this.value = value;
+	constructor(hash=null){
+		this.hash = hash;
 	}
 
-	setValue(value){
-		this.value = value;
+	hasHash(){
+		return !!this.hash;
 	}
 
-	getValue(){
-		return this.value;
+	setHash(hash){
+		this.hash = hash;
+	}
+
+	getHash(){
+		return this.hash;
 	}
 
 	toJson(){
-		return this.value;
+		return this.hash;
 	}
 }
 
 class Datum {
-	constructor(ref, action){
+	constructor(ref){
 		this.ref = ref;
-		this.action = action;
-		this._content = null;
+		this.content = null;
 	}
 
 	setContent(content){
-		this._content = Object.assign({}, content);
+		this.content = Object.assign({}, content);
+
+		return this;
 	}
 
 	getContent(){
-		return this._content;
+		return this.content;
 	}
 
 	setField(field, value){
-		set(this._content, field, value);
+		set(this.content, field, value);
+
+		return this;
 	}
 
 	getField(field){
-		return get(this._content, field);
+		return get(this.content, field);
+	}
+
+	setAction(action){
+		this.action = action;
+
+		return this;
 	}
 
 	getAction(){
@@ -50,16 +63,16 @@ class Datum {
 	}
 
 	getReference(){
-		return this.ref.value;
+		return this.ref;
 	}
 
 	writeTo(tgt = {}){
-		return Object.keys(this._content)
+		return Object.keys(this.content)
 		.reduce(
 			(rtn, path) => {
-				const d = this._content[path];
+				const d = this.content[path];
 
-				rtn[path] = d instanceof DatumRef ? d.value : d;
+				rtn[path] = d instanceof DatumRef ? d.getHash() : d;
 
 				return rtn;
 			},
@@ -69,45 +82,35 @@ class Datum {
 
 	toJSON(){
 		return this.writeTo({
-			$ref: this.ref.value,
+			$ref: this.ref.getHash(),
 			$type: this.action
 		});
 	}
 }
 
 class Series extends Map {
-	constructor(series){
-		if (!series){
-			throw new Error('Need to supply valid series');
-		}
-
+	constructor(name){
 		super();
 
-		this.series = series;
+		this.name = name;
 	}
 
-	getDatum(ref, action){
-		if (!ref.value){
-			ref.setValue(this.series+':'+(this.size+1));
+	addDatum(datum){
+		this.set(datum.ref.getHash(), datum);
+
+		return datum;
+	}
+
+	ensureDatum(ref){
+		if (!ref.hasHash()){
+			ref.setHash(this.name+':'+(this.size+1));
 		}
 
-		// the concept if someone builds a smart series, they can
-		// attach DatumRefs in places and we will update inline
-		if (this.has(ref.value)){
-			return this.get(ref.value);
+		const hash = ref.getHash();
+		if (this.has(hash)){
+			return this.get(hash);
 		} else {
-			const datum = new Datum(ref, action);
-
-			this.set(ref.value, datum);
-
-			return datum;
-		}
-		
-	}
-
-	process(index, cb){
-		if (this.has(index)){
-			return this.get(index).map(cb);
+			return this.addDatum(new Datum(ref));
 		}
 	}
 
@@ -126,74 +129,76 @@ class Series extends Map {
 	}
 }
 
-class Session extends Map {
-	constructor(parent){
-		super();
+class Session {
+	constructor(normalized, parent = null){
+		this.series = {};
 		
 		this.parent = parent;
-		this.state = Object.create(parent.state);
+		this.children = [];
+		this.normalized = normalized;
 	}
 
-	get(series){
-		const rtn = super.get(series);
+	getChildSession(){
+		const child = new Session(this.normalized, this);
+
+		this.children.push(child);
+
+		return child;
+	}
+
+	_addDatum(series, datum){
+		const seriesGroup = this.series[series];
+
+		if (seriesGroup){
+			seriesGroup.push(datum);
+		} else {
+			this.series[series] = [datum];
+		}
+
+		if (this.parent){
+			this.parent._addDatum(series, datum);
+		}
+
+		return datum;
+	}
+
+	defineDatum(series, ref=new DatumRef(), action='create', content={}){
+		return this._addDatum(series,
+			this.normalized.ensureSeries(series)
+			.ensureDatum(ref)
+			.setAction(action)
+			.setContent(content)
+		);
+	}
+
+	getStub(series){
+		return this._addDatum(series,
+			this.normalized.getStub(series)
+		);
+	}
+
+	getSeries(series){
+		const rtn = this.series[series];
 
 		if (!rtn && this.parent){
-			return this.parent.get(series);
+			return this.parent.getSeries(series);
 		}
 
 		return rtn;
 	}
 
-	setVariable(key, value){
-		this.state[key] = value;
-	}
+	findLink(series){
+		let rtn = this.getSeries(series);
 
-	getVariable(key){
-		return this.state[key];
-	}
-	
-	add(series, datum){
-		if (this.has(series)){
-			this.get(series).push(datum);
-		} else {
-			this.set(series, [datum]);
+		if (!rtn){
+			return null;
 		}
 
-		return datum;
-	}
+		if (rtn.length > 1){
+			throw new Error('found too many links');
+		}
 
-	getDatum(series, ref, action){
-		return this.add(
-			series,
-			this.parent.getDatum(series, ref, action)
-		);
-	}
-
-	setDatum(series, ref, action, content){
-		const datum = this.add(
-			series,
-			this.parent.getDatum(series, ref, action)
-		);
-
-		datum.setContent(content);
-
-		return datum;
-	}
-
-	stub(series){
-		const datum = this.getDatum(
-			series,
-			new DatumRef(),
-			'create'
-		);
-
-		datum.setContent({});
-
-		return datum;
-	}
-
-	getSession(){
-		return new Session(this);
+		return rtn[0];
 	}
 }
 
@@ -201,30 +206,27 @@ class Normalized extends Map {
 	constructor(nexus){
 		super();
 
-		this.state = {};
 		this.nexus = nexus;
+		this.modelIndex = {};
 	}
 
-	setVariable(key, value){
-		this.state[key] = value;
-	}
-
-	getVariable(key){
-		return this.state[key];
-	}
-
-	getDatum(series, ref, action){
-		if (this.has(series)){
-			return this.get(series).getDatum(ref, action);
+	ensureSeries(seriesName){
+		if (this.has(seriesName)){
+			return this.get(seriesName);
 		} else {
-			const map = new Series(series);
+			const series = new Series(seriesName);
 
-			this.set(series, map);
+			this.set(seriesName, series);
 
-			const datum = map.getDatum(ref, action);
-
-			return datum;
+			return series;
 		}
+	}
+
+	getStub(series){
+		return this.ensureSeries(series)
+		.ensureDatum(new DatumRef())
+		.setAction('create')
+		.setContent({});
 	}
 
 	getSession(){
@@ -237,18 +239,37 @@ class Normalized extends Map {
 				(datum) => {
 					const {$ref: ref, $type: action, ...content} = datum;
 
-					this.getDatum(series, new DatumRef(ref), action)
-						.setContent(content);
+					this.ensureSeries(series)
+					.ensureDatum(new DatumRef(ref))
+					.setAction(action)
+					.setContent(content);
 				}
 			)
 		);
 	}
 
+	async lookupModels(fn){
+		const agg = {};
+
+		for (let series of this.values()) {
+			agg[series.name] = await fn(series.name);
+		}
+
+		this.modelIndex = agg;
+	}
+
 	toJSON(){
 		const agg = {};
 
-		for (let [index, series] of this.entries()) {
-			agg[index] = series.toJSON();
+		for (let series of this.values()) {
+			const model = this.modelIndex[series.name] || series.name;
+			const existing = agg[model];
+
+			if (existing){
+				agg[model] = existing.concat(series.toJSON());
+			} else {
+				agg[model] = series.toJSON();
+			}
 		}
 
 		return agg;
@@ -259,8 +280,10 @@ class Normalized extends Map {
 
 		for (let [index, series] of this.entries()) {
 			for (let datum of series.values()){
-				schema.getDatum(index, datum.ref, datum.action)
-					.setContent(datum.writeTo({}));
+				schema.ensureSeries(index)
+				.ensureDatum(datum.ref)
+				.setAction(datum.action)
+				.setContent(datum.writeTo({}));
 			}
 		}
 

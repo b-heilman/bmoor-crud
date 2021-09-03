@@ -144,9 +144,12 @@ describe('src/controller/querier.js', function(){
 
 				context.content = {
 					base: 'test-user',
+					joins: [
+						'> $test-stats'
+					],
 					fields: {
 						'user': '.name',
-						'stats':  '> $test-stats.name'
+						'stats':  '$test-stats.name'
 					}
 				};
 

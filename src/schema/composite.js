@@ -244,9 +244,11 @@ class CompositeInstructions {
 
 			fn(seriesName, seriesInfo);
 
-			toProcess = toProcess.concat(Object.keys(
-				seriesInfo.join
-			));
+			if (seriesInfo.join){
+				toProcess = toProcess.concat(Object.keys(
+					seriesInfo.join
+				));
+			}
 		}
 	}
 
@@ -311,6 +313,50 @@ class CompositeInstructions {
 			}
 		});
 	}
+
+	// TODO: I should do something that calculates the relationships for join
+	getOutgoingLinks(series){
+		const rtn = [];
+		const seriesInfo = this.getSeries(series);
+
+		if (seriesInfo.incoming){
+			seriesInfo.incoming.forEach(incomingSeries => {
+				const join = this.getJoin(
+					incomingSeries, series
+				);
+
+				const direction = join.relationship.metadata.direction;
+				const vector = join.relationship.name;
+				if ((vector === series && direction === 'incoming') ||
+					(vector !== series && direction === 'outgoing')
+				){
+					rtn.push({
+						local: join.to,
+						remote: join.from,
+						series: incomingSeries
+					});
+				}
+			});
+		}
+
+		Object.keys(seriesInfo.join).forEach(outgoingSeries => {
+			const join = seriesInfo.join[outgoingSeries];
+
+			const direction = join.relationship.metadata.direction;
+			const vector = join.relationship.name;
+			if ((vector === series && direction === 'incoming') ||
+				(vector !== series && direction === 'outgoing')
+			){
+				rtn.push({
+					local: join.from,
+					remote: join.to,
+					series: outgoingSeries
+				});
+			}
+		});
+
+		return rtn;
+	}
 }
 
 function buildCalculations(schema, base){
@@ -332,6 +378,11 @@ function buildCalculations(schema, base){
 }
 
 async function computeJoin(composite, join, fromModel, toModel){
+	await Promise.all([
+		composite.nexus.loadModel(fromModel),
+		composite.nexus.loadModel(toModel)
+	]);
+
 	if (join.to){
 		// the current pointer knows the target property, it gets priority
 		const relationship = composite.nexus.mapper.getRelationship(
@@ -349,9 +400,14 @@ async function computeJoin(composite, join, fromModel, toModel){
 			});
 		}
 
-		join.to = relationship.local; // should match cur.target
-		join.from = relationship.remote;
-		join.relationship = relationship;
+		const actualRelationship = composite.nexus.mapper.getRelationship(
+			fromModel, toModel, relationship.remote, relationship.local
+		);
+
+		
+		join.to = actualRelationship.remote; // should match cur.target
+		join.from = actualRelationship.local;
+		join.relationship = actualRelationship;
 	} else if (join.from){
 		const relationship = composite.nexus.mapper.getRelationship(
 			fromModel, toModel, join.from
@@ -426,33 +482,11 @@ class Composite extends Structure {
 
 				// this needs to be get variables, and get variables guarentees where to find
 				// the variable
-				const field = await this.addField(property.path, {
+				await this.addField(property.path, {
 					model: accessor.model,
 					extends: accessor.field,
 					series
 				});
-
-				const tables = this.context.tables;
-				if (!tables[series]){
-					const refs = this.context.refs;
-
-					// create two indexes, one to reduce duplicates, one to use later
-					const table = {
-						name: field.structure.name,
-						series: series,
-						schema: field.structure.schema,
-						fields: [],
-						query: null
-					};
-
-					tables[series] = table;
-
-					if (!refs[table.name]){
-						refs[table.name] = [];
-					}
-
-					refs[table.name].push(table);
-				}
 			}
 		));
 
@@ -501,7 +535,8 @@ class Composite extends Structure {
 					field = await this.addField(ref, {
 						model: tail.model, 
 						series: incomingSeries,
-						extends: join.from
+						extends: join.from,
+						synthetic: true
 					});
 
 					join.clear = ref;
@@ -510,7 +545,9 @@ class Composite extends Structure {
 				return {
 					info: sub,
 					path: field.path,
-					join,
+					joins: [
+						join
+					],
 					connection: tail,
 					composite: await this.nexus.loadComposite(include.series)
 				};
@@ -524,16 +561,9 @@ class Composite extends Structure {
 			return;
 		}
 
-		if (this.context){
-			return this.context.isLinking;
+		if (this._isLinking){
+			return this._isLinking;
 		}
-
-		const context = {
-			refs: {},
-			names: {},
-			tables: {}
-		};
-		this.context = context;
 
 		this.base = await this.nexus.getCrud(
 			this.incomingSettings.base
@@ -542,7 +572,7 @@ class Composite extends Structure {
 
 		// doing this is protect from collisions if multiple links are called
 		// in parallel of the same type
-		context.isLinking = new Promise(async (resolve, reject) => {
+		this._isLinking = new Promise(async (resolve, reject) => {
 			try {
 				const settings = this.incomingSettings;
 			
@@ -613,7 +643,7 @@ class Composite extends Structure {
 			}
 		});
 		
-		return context.isLinking;
+		return this._isLinking;
 	}
 
 	async build(){
@@ -652,7 +682,6 @@ class Composite extends Structure {
 			});
 		}
 
-		this.context = null;
 		this.instructions = new CompositeInstructions(
 			settings.base,
 			settings.joins,
@@ -715,9 +744,11 @@ class Composite extends Structure {
 		// let's overload the other field's settings
 		const fieldSettings = {
 			series: settings.series,
-			reference: settings.reference
+			reference: settings.reference,
+			synthetic: settings.synthetic
 		};
 
+		// this is basically: new Field(path, this, settings);
 		return settings.extends.extend(path, fieldSettings);
 	}
 
@@ -772,35 +803,34 @@ class Composite extends Structure {
 
 		await this.link();
 
-		const context = this.context;
-
-		Object.keys(context.tables)
-		.forEach(
-			(series) => {
-				const table = context.tables[series];
-
-				query.setSchema(series, table.schema);
-			}
-		);
-
 		this.instructions.forEach((series, seriesInfo) => {
+			if (seriesInfo.composite){
+				return;
+			}
+
+			query.setSchema(series, this.nexus.getModel(seriesInfo.model).schema);
+
 			const joinsTo = seriesInfo.join;
+			
 			if (joinsTo){
 				const todo = Object.keys(joinsTo);
 				if (todo.length){
-					query.addJoins(series, todo.map(
-						(nextSeries) => {
-							const join = joinsTo[nextSeries];
+					query.addJoins(series, todo.filter(
+							nextSeries => !this.instructions.getSeries(nextSeries).composite
+						).map(
+							(nextSeries) => {
+								const join = joinsTo[nextSeries];
 
-							const subSeries = this.instructions.getSeries(nextSeries);
+								const subSeries = this.instructions.getSeries(nextSeries);
 
-							return new QueryJoin(
-								nextSeries, 
-								[{from: join.from, to: join.to}], 
-								subSeries.optional
-							);
-						}
-					));
+								return new QueryJoin(
+									nextSeries, 
+									[{from: join.from, to: join.to}], 
+									subSeries.optional
+								);
+							}
+						)
+					);
 				}
 			}
 		});

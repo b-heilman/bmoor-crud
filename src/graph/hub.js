@@ -105,7 +105,7 @@ class Hub {
 		}
 	}
 
-	getConnection(name, viaField=null){
+	getConnection(name, viaField=null, toField=null){
 		const connector = this.connectors[name];
 
 		if (connector){
@@ -116,7 +116,9 @@ class Hub {
 					}
 					
 					if (link.local === viaField){
-						return link;
+						if (!toField || link.remote === toField){
+							return link;
+						}
 					}
 					
 					return agg;
