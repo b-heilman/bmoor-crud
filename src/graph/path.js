@@ -86,10 +86,15 @@ const parsings = new Config({
 				};
 			}
 		},
-		close: function(master, pos){
+		close: function(master, pos, state){
 			const ch = master[pos];
 
 			if (isCharacter.test(ch) || ch === '-'){
+				return false;
+			}
+
+			if (ch===':'){
+				state.series = true;
 				return false;
 			}
 
@@ -98,8 +103,15 @@ const parsings = new Config({
 				end: pos-1
 			};
 		},
-		toToken: function(content){
-			return new Token('child', content);
+		toToken: function(content, state){
+			let model = content;
+			let series = null;
+			
+			if (state.series){
+				[series, model] = content.split(':');
+			}
+
+			return new Token('child', model, {series});
 		}
 	},
 
@@ -195,7 +207,9 @@ const composites = new Config({
 	incomingChild: {
 		tokens: ['accessor', 'child'],
 		factory: function(tokens){
-			return new Compound('incoming-child', tokens);
+			return new Compound('incoming-child', tokens, 
+				{series: tokens[1].metadata.series}
+			);
 		}
 	}
 });

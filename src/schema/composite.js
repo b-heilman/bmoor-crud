@@ -549,7 +549,7 @@ class Composite extends Structure {
 						join
 					],
 					connection: tail,
-					composite: await this.nexus.loadComposite(include.series)
+					composite
 				};
 			}
 		));

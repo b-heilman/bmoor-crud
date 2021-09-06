@@ -103,13 +103,15 @@ describe('src/schema/composite.js', function(){
 
 		it('should work with an alias', function(){
 			const ci = new CompositeInstructions('m-1', [
-				'$m-1 > $alias-2:m-2 > $alias:m-3'
+				'$m-1 > $alias-2:m-2 > #alias:sub-1',
+				'$alias-2:m-2 > #alias-3:sub-1'
 			], {
 				field1: '$m-1.field',
 				field2: '$alias-2.field',
 				field3: {
-					value: '$alias.field'
-				}
+					value: '#alias'
+				},
+				alias: '#alias-3'
 			});
 
 			expect(ci.index)
@@ -135,16 +137,26 @@ describe('src/schema/composite.js', function(){
 						'alias': {
 							from: null,
 							to: null
+						},
+						'alias-3': {
+							from: null,
+							to: null
 						}
 					}
 				},
 				'alias': {
 					series: 'alias',
 					structural: false,
-					model: 'm-3',
+					composite: 'sub-1',
 					incoming: ['alias-2'],
-					optional: false,
-					join: {}
+					optional: false
+				},
+				'alias-3': {
+					series: 'alias-3',
+					structural: false,
+					composite: 'sub-1',
+					incoming: ['alias-2'],
+					optional: false
 				}
 			});
 
@@ -177,20 +189,37 @@ describe('src/schema/composite.js', function(){
 				},
 				statement: '$alias-2.field',
 				mountPoint: 'field2'
-			}, {
-				type: 'access',
+			}]);
+
+			expect(ci.subs)
+			.to.deep.equal([{
+				type: 'include',
 				isArray: false,
 				path: 'field3.value',
 				action: {
-					loader: 'access',
-					model: 'm-3',
-					field: 'field',
+					loader: 'include',
+					model: undefined,
+					field: null,
 					target: null,
 					optional: false,
 					series: 'alias'
 				},
-				statement: '$alias.field',
+				statement: '#alias',
 				mountPoint: 'field3.value'
+			}, {
+				type: 'include',
+				isArray: false,
+				path: 'alias',
+				action: {
+					loader: 'include',
+					model: undefined,
+					field: null,
+					target: null,
+					optional: false,
+					series: 'alias-3'
+				},
+				statement: '#alias-3',
+				mountPoint: 'alias'
 			}]);
 		});
 
@@ -716,6 +745,7 @@ describe('src/schema/composite.js', function(){
 						read: true
 					},
 					json: {
+						read: true,
 						usage: 'json'
 					},
 					title: {
@@ -772,6 +802,30 @@ describe('src/schema/composite.js', function(){
 					}
 				}
 			});
+
+			await nexus.configureModel('test-3-1', {
+				isFlat: true,
+				fields: {
+					id: {
+						read: true,
+						key: true
+					},
+					name: {
+						read: true
+					},
+					title: {
+						read: true
+					},
+					test2Id: {
+						read: true,
+						link: {
+							name: 'test-2',
+							field: 'id'
+						}
+					}
+				}
+			});
+
 
 			await nexus.configureModel('test-pivot', {
 				fields: {
@@ -904,15 +958,43 @@ describe('src/schema/composite.js', function(){
 						}
 					});
 
-					await nexus.configureComposite('foo-bar-2', {
+					const lookup = await nexus.configureComposite('foo-bar-2', {
 						base: 'test-1',
 						joins: [
-							'> #foo-bar-1'
+							'> #alias:foo-bar-1',
+							'> #alias-2:foo-bar-1'
 						],
 						fields: {
 							json: '.json',
-							other: '#foo-bar-1'
+							foo: '#alias',
+							bar: '#alias-2'
 						}
+					});
+
+					// getQuery
+					const query = await lookup.getQuery();
+
+					expect(query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'test-1',
+							schema: 'test-1',
+							joins: []
+						}],
+						fields: [{
+							series: 'test-1',
+							as: 'json',
+							path: 'json'
+						}, {
+							series: 'test-1',
+							as: 'sub_0',
+							path: 'id'
+						}, {
+							series: 'test-1',
+							as: 'sub_1',
+							path: 'id'
+						}],
+						params: []
 					});
 				});
 			});
@@ -1374,13 +1456,15 @@ describe('src/schema/composite.js', function(){
 				await lookup.configure({
 					base: 'test-1',
 					joins: [
-						'> $test-2 > $test-3'
+						'> $test-2 > $test-3',
+						'$test-2 > $test-3-1'
 					],
 					fields: {
 						eins: '.name',
 						zwei: '$test-2.name',
 						drei: '$test-2.title',
-						fier: '$test-3.name'
+						fier: '$test-3.name',
+						other: '$test-3-1.name'
 					}
 				});
 
@@ -1414,6 +1498,17 @@ describe('src/schema/composite.js', function(){
 								to: 'id'
 							}]
 						}]
+					}, {
+						series: 'test-3-1',
+						schema: 'test-3-1',
+						joins: [{
+							name: 'test-2',
+							optional: false,
+							mappings: [{
+								from: 'test2Id',
+								to: 'id'
+							}]
+						}]
 					}],
 					fields: [{
 						series: 'test-1',
@@ -1430,6 +1525,10 @@ describe('src/schema/composite.js', function(){
 					}, {
 						series: 'test-3',
 						as: 'fier',
+						path: 'name'
+					}, {
+						series: 'test-3-1',
+						as: 'other',
 						path: 'name'
 					}],
 					params: []

@@ -1156,7 +1156,8 @@ describe('src/services/document.js', function(){
 				'item': 'item-1',
 				'categoryName': 'category-1',
 				'name': 'name-1',
-				'sub_0': 123
+				'sub_0': 123,
+				'sub_1': 456
 			}];
 
 			nexus.configureComposite('test-stuff', {
@@ -1173,12 +1174,14 @@ describe('src/services/document.js', function(){
 				base: 'test-item',
 				joins: [
 					'> $test-category',
-					'> $test-item-material > #test-stuff'
+					'> $test-item-material > #alias:test-stuff',
+					'> $test-item-material > #alias-2:test-stuff'
 				],
 				fields: {
 					'item': '.name',
 					'categoryName':  '$test-category.name',
-					'stuff': ['#test-stuff']
+					'stuff': ['#alias'],
+					'moreStuff': ['#alias-2']
 				}
 			});
 			
@@ -1195,7 +1198,6 @@ describe('src/services/document.js', function(){
 			expect(args.method)
 			.to.equal('read');
 
-			console.log('document.spec.js =>', JSON.stringify(args.query.toJSON(), null, 2));
 			expect(args.query.toJSON())
 			.to.deep.equal({
 				models: [{
@@ -1237,6 +1239,10 @@ describe('src/services/document.js', function(){
 					series: 'test-item-material',
 					path: 'materialId',
 					as: 'sub_0'
+				}, {
+					series: 'test-item-material',
+					path: 'materialId',
+					as: 'sub_1'
 				}],
 				params: []
 			});
@@ -1267,11 +1273,40 @@ describe('src/services/document.js', function(){
 				}]
 			});
 
+			const args3 = stubs.execute.getCall(2).args[0];
+
+			expect(args3.method)
+			.to.equal('read');
+
+			expect(args3.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					series: 'test-material',
+					schema: 'test-material',
+					joins: []
+				}],
+				fields: [{
+					series: 'test-material',
+					path: 'name',
+					as: 'name'
+				}],
+				params: [{
+					series: 'test-material',
+					path: 'id',
+					operation: '=',
+					settings: {},
+					value: 456
+				}]
+			});
+
 			expect(res)
 			.to.deep.equal([{
 				item: 'item-1',
 				categoryName: 'category-1',
 				stuff: [{
+					name: 'name-1'
+				}],
+				moreStuff: [{
 					name: 'name-1'
 				}]
 			}]);

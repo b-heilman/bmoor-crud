@@ -309,7 +309,7 @@ function buildDeflate(baseDeflate, fields){
 }
 
 function buildParam(field, v){
-	if (typeof(v) === 'object'){
+	if (v && typeof(v) === 'object'){
 		if (Array.isArray(v)){
 			return new QueryParam(field, v, '=');
 		} else {
@@ -318,6 +318,7 @@ function buildParam(field, v){
 			);
 		}
 	} else {
+		
 		return new QueryParam(field, v, '=');
 	}
 }

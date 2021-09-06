@@ -42,6 +42,18 @@ describe('src/graph/path.js', function(){
 				}]);
 			});
 
+			it('should properly parse a simple include with alias', function(){
+				expect((new sut.Path('#hello:foo-bar')).access)
+				.to.deep.equal([{
+					loader: 'include',
+					series: 'hello',
+					model: 'foo-bar',
+					field: null,
+					target: null,
+					optional: false
+				}]);
+			});
+
 			it('should properly parse a target with simple access', function(){
 				expect((new sut.Path('.dupe$foo-bar.field')).access)
 				.to.deep.equal([{
@@ -83,6 +95,18 @@ describe('src/graph/path.js', function(){
 				.to.deep.equal([{
 					loader: 'include',
 					series: 'foo-bar',
+					model: 'foo-bar',
+					field: null,
+					target: 'hello-world',
+					optional: false
+				}]);
+			});
+
+			it('should properly parse a target with include and alias', function(){
+				expect((new sut.Path('.hello-world#hello:foo-bar')).access)
+				.to.deep.equal([{
+					loader: 'include',
+					series: 'hello',
 					model: 'foo-bar',
 					field: null,
 					target: 'hello-world',
