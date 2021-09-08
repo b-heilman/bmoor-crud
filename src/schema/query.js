@@ -79,6 +79,7 @@ class Query {
 
 		if (!rtn){
 			rtn = {
+				series,
 				schema: series,
 				fields: [],
 				params: [],
@@ -147,13 +148,7 @@ class Query {
 	getInOrder(){
 		const ordered = [];
 
-		let toProcess = Object.keys(this.models)
-		.map(series => {
-			return {
-				series,
-				...this.models[series]
-			};
-		});
+		let toProcess = Object.values(this.models);
 
 		const extraRoots = toProcess.filter(
 			link => !Object.values(link.joins).length && link.series !== this.base
