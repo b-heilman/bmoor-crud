@@ -21,7 +21,7 @@ describe('src/schema/composite.js', function(){
 				'm-1': {
 					series: 'm-1',
 					model: 'm-1',
-					structural: false,
+					isNeeded: true,
 					join: {
 						'm-2': {
 							from: null,
@@ -34,7 +34,7 @@ describe('src/schema/composite.js', function(){
 					model: 'm-2',
 					optional: false,
 					incoming: ['m-1'],
-					structural: false,
+					isNeeded: true,
 					join: {
 						'm-3': {
 							from: null,
@@ -47,7 +47,7 @@ describe('src/schema/composite.js', function(){
 					model: 'm-3',
 					optional: false,
 					incoming: ['m-2'],
-					structural: false,
+					isNeeded: true,
 					join: {}
 				}
 			});
@@ -118,7 +118,7 @@ describe('src/schema/composite.js', function(){
 			.to.deep.equal({
 				'm-1': {
 					series: 'm-1',
-					structural: false,
+					isNeeded: true,
 					model: 'm-1',
 					join: {
 						'alias-2': {
@@ -129,7 +129,7 @@ describe('src/schema/composite.js', function(){
 				},
 				'alias-2': {
 					series: 'alias-2',
-					structural: false,
+					isNeeded: true,
 					model: 'm-2',
 					optional: false,
 					incoming: ['m-1'],
@@ -146,14 +146,14 @@ describe('src/schema/composite.js', function(){
 				},
 				'alias': {
 					series: 'alias',
-					structural: false,
+					isNeeded: false,
 					composite: 'sub-1',
 					incoming: ['alias-2'],
 					optional: false
 				},
 				'alias-3': {
 					series: 'alias-3',
-					structural: false,
+					isNeeded: false,
 					composite: 'sub-1',
 					incoming: ['alias-2'],
 					optional: false
@@ -237,7 +237,7 @@ describe('src/schema/composite.js', function(){
 				'm-1': {
 					model: 'm-1',
 					series: 'm-1',
-					structural: false,
+					isNeeded: true,
 					join: {
 						'm-2': {
 							from: null,
@@ -248,7 +248,7 @@ describe('src/schema/composite.js', function(){
 				'm-2': {
 					model: 'm-2',
 					series: 'm-2',
-					structural: false,
+					isNeeded: true,
 					optional: true,
 					incoming: ['m-1'],
 					join: {
@@ -261,7 +261,7 @@ describe('src/schema/composite.js', function(){
 				'alias': {
 					model: 'm-3',
 					series: 'alias',
-					structural: false,
+					isNeeded: true,
 					optional: true,
 					incoming: ['m-2'],
 					join: {}
@@ -328,7 +328,7 @@ describe('src/schema/composite.js', function(){
 				'm-1': {
 					model: 'm-1',
 					series: 'm-1',
-					structural: false,
+					isNeeded: true,
 					join: {
 						'm-2': {
 							from: null,
@@ -339,7 +339,7 @@ describe('src/schema/composite.js', function(){
 				'm-2': {
 					model: 'm-2',
 					series: 'm-2',
-					structural: false,
+					isNeeded: true,
 					optional: false,
 					incoming: ['m-1'],
 					join: {
@@ -352,7 +352,7 @@ describe('src/schema/composite.js', function(){
 				'doc': {
 					composite: 'doc',
 					series: 'doc',
-					structural: false,
+					isNeeded: false,
 					optional: false,
 					incoming: ['m-2']
 				}
@@ -436,7 +436,7 @@ describe('src/schema/composite.js', function(){
 				'm-1': {
 					model: 'm-1',
 					series: 'm-1',
-					structural: false,
+					isNeeded: true,
 					join: {
 						'm-2': {
 							from: null,
@@ -455,7 +455,7 @@ describe('src/schema/composite.js', function(){
 				'm-2': {
 					model: 'm-2',
 					series: 'm-2',
-					structural: false,
+					isNeeded: true,
 					optional: true,
 					incoming: ['m-1'],
 					join: {
@@ -468,7 +468,7 @@ describe('src/schema/composite.js', function(){
 				'alias': {
 					model: 'm-3',
 					series: 'alias',
-					structural: false,
+					isNeeded: true,
 					optional: true,
 					incoming: ['m-2'],
 					join: {}
@@ -476,7 +476,7 @@ describe('src/schema/composite.js', function(){
 				'm-4': {
 					model: 'm-4',
 					series: 'm-4',
-					structural: true,
+					isNeeded: true,
 					optional: false,
 					incoming: ['m-1'],
 					join: {
@@ -489,7 +489,7 @@ describe('src/schema/composite.js', function(){
 				'm-5': {
 					model: 'm-5',
 					series: 'm-5',
-					structural: false,
+					isNeeded: true,
 					optional: false,
 					incoming: ['m-4', 'm-6'],
 					join: {}
@@ -497,7 +497,7 @@ describe('src/schema/composite.js', function(){
 				'm-6': {
 					model: 'm-6',
 					series: 'm-6',
-					structural: true,
+					isNeeded: true,
 					optional: false,
 					incoming: ['m-1'],
 					join: {
@@ -533,7 +533,7 @@ describe('src/schema/composite.js', function(){
 				'm-10': {
 					model: 'm-10',
 					series: 'm-10',
-					structural: false,
+					isNeeded: true,
 					join: {
 						'm-6': {
 							from: null,
@@ -548,7 +548,7 @@ describe('src/schema/composite.js', function(){
 				'm-1': {
 					model: 'm-1',
 					series: 'm-1',
-					structural: true,
+					isNeeded: true,
 					optional: false,
 					incoming: ['m-10'],
 					join: {
@@ -569,7 +569,7 @@ describe('src/schema/composite.js', function(){
 				'm-2': {
 					model: 'm-2',
 					series: 'm-2',
-					structural: true,
+					isNeeded: true,
 					optional: true,
 					incoming: ['m-1'],
 					join: {
@@ -582,7 +582,7 @@ describe('src/schema/composite.js', function(){
 				'm-3': {
 					model: 'm-3',
 					series: 'm-3',
-					structural: false,
+					isNeeded: true,
 					optional: true,
 					incoming: ['m-2'],
 					join: {}
@@ -590,7 +590,7 @@ describe('src/schema/composite.js', function(){
 				'm-4': {
 					model: 'm-4',
 					series: 'm-4',
-					structural: true,
+					isNeeded: false,
 					optional: false,
 					incoming: ['m-1'],
 					join: {
@@ -603,7 +603,7 @@ describe('src/schema/composite.js', function(){
 				'm-6': {
 					model: 'm-6',
 					series: 'm-6',
-					structural: false,
+					isNeeded: true,
 					optional: false,
 					incoming: ['m-10','m-1'],
 					join: {
@@ -616,7 +616,7 @@ describe('src/schema/composite.js', function(){
 				'm-5': {
 					model: 'm-5',
 					series: 'm-5',
-					structural: true,
+					isNeeded: false,
 					optional: false,
 					incoming: ['m-4', 'm-6'],
 					join: {}
@@ -697,7 +697,8 @@ describe('src/schema/composite.js', function(){
 		it('should correctly find the mount path', function(){
 			const ci = new CompositeInstructions('m-1', [
 				'> $m-2 > $m-3',
-				'> $m-20 > $m-21 > $m-3'
+				'> $m-20 > $m-21 > $m-3',
+				'> $m-20 > $m-10 > $m-11'
 			], {
 				field2: '$m-2.field',
 				field3: '$m-3.field',
@@ -706,25 +707,26 @@ describe('src/schema/composite.js', function(){
 
 			expect(ci.getMount('m-3').map(r => r.series))
 			.to.deep.equal([
-				'm-20',
-				'm-21',
-				'm-2',
 				'm-3'
 			]);
 
 			// check for duplication bug
 			expect(ci.getMount('m-3').map(r => r.series))
 			.to.deep.equal([
-				'm-20',
-				'm-21',
-				'm-2',
 				'm-3'
 			]);
 
+			// it's a central mount point, so it's needed due to m-3
 			expect(ci.getMount('m-21').map(r => r.series))
 			.to.deep.equal([
-				'm-20',
 				'm-21'
+			]);
+
+			expect(ci.getMount('m-11').map(r => r.series))
+			.to.deep.equal([
+				'm-20',
+				'm-10',
+				'm-11'
 			]);
 		});
 	});
@@ -923,6 +925,62 @@ describe('src/schema/composite.js', function(){
 
 			describe('via nexus', function(){
 				it('should allow a child composite', async function(){
+					await nexus.configureComposite('hello-world-1', {
+						base: 'test-2',
+						joins: [
+						],
+						fields: {
+							version: '$test-2.name'
+						}
+					});
+
+					const lookup = await nexus.configureComposite('hello-world-2', {
+						base: 'test-3',
+						joins: [
+							'> #hello-world-1'
+						],
+						fields: {
+							name: '.name',
+							version: '#hello-world-1'
+						}
+					});
+
+					const query = await lookup.getQuery();
+
+					expect(query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'test-3',
+							schema: 'test-3',
+							joins: []
+						}],
+						fields: [{
+							series: 'test-3',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'test-3',
+							as: 'sub_0',
+							path: 'test2Id'
+						}],
+						params: []
+					});
+
+					const subs = lookup.subs;
+
+					expect(lookup.subs.length)
+					.to.equal(1);
+
+					expect(subs[0].mounts)
+					.to.deep.equal([{
+						path: 'sub_0',
+						clear: true,
+						param: '$test-2.id',
+						joinPath: ''
+					}]);
+				});
+
+				it('should allow a child composite with a step', async function(){
 					await nexus.configureComposite('foo-bar-1', {
 						base: 'test-1',
 						joins: [
@@ -934,7 +992,7 @@ describe('src/schema/composite.js', function(){
 						}
 					});
 
-					await nexus.configureComposite('foo-bar-2', {
+					const lookup = await nexus.configureComposite('foo-bar-2', {
 						base: 'test-3',
 						joins: [
 							'> $test-2 > #foo-bar-1'
@@ -944,6 +1002,40 @@ describe('src/schema/composite.js', function(){
 							version: '#foo-bar-1'
 						}
 					});
+
+					const query = await lookup.getQuery();
+
+					expect(query.toJSON())
+					.to.deep.equal({
+						models: [{
+							series: 'test-3',
+							schema: 'test-3',
+							joins: []
+						}],
+						fields: [{
+							series: 'test-3',
+							as: 'name',
+							path: 'name'
+						}, {
+							series: 'test-3',
+							as: 'sub_0',
+							path: 'test2Id'
+						}],
+						params: []
+					});
+
+					const subs = lookup.subs;
+
+					expect(lookup.subs.length)
+					.to.equal(1);
+
+					expect(subs[0].mounts)
+					.to.deep.equal([{
+						path: 'sub_0',
+						clear: true,
+						param: '$test-2.id',
+						joinPath: '$test-2.test1Id>.id$test-1'
+					}]);
 				});
 
 				it('should allow a child composite, from same base', async function(){
@@ -971,7 +1063,6 @@ describe('src/schema/composite.js', function(){
 						}
 					});
 
-					// getQuery
 					const query = await lookup.getQuery();
 
 					expect(query.toJSON())

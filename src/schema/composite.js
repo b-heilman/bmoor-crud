@@ -72,7 +72,7 @@ class CompositeInstructions {
 							agg[cur.series] = {
 								series: cur.series,
 								composite: cur.model,
-								structural: true,
+								isNeeded: false,
 								optional: cur.optional,
 								incoming: [series]
 							};
@@ -80,7 +80,7 @@ class CompositeInstructions {
 							agg[cur.series] = {
 								series: cur.series,
 								model: cur.model,
-								structural: true,
+								isNeeded: false,
 								optional: cur.optional,
 								incoming: [series], // this is backwards
 								join: {}
@@ -97,7 +97,7 @@ class CompositeInstructions {
 				[baseModel]: {
 					model: baseModel,
 					series: baseModel,
-					structural: true,
+					isNeeded: true,
 					join: {}
 				}
 			}
@@ -131,13 +131,8 @@ class CompositeInstructions {
 
 				const path = mount.substring(0, isArray ? mount.length-3 : mount.length);
 
-				// These will all use the series name, and not the model, so I need
-				// to update all of the actions to have the correct model, incase they
-				// are using a series instead of just the base model name
 				const join = this.index[action.series];
-				if  (join){
-					join.structural = false;
-				} else {
+				if  (!join){
 					throw create(`requesting field not joined ${action.series}`, {
 						code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
 						context: {
@@ -160,6 +155,23 @@ class CompositeInstructions {
 		).reduce(
 			(agg, info) => {
 				if (info.type === 'access'){
+					let toProcess = [info.action.series];
+
+					while(toProcess.length){
+						const curSeries = toProcess.shift();
+						const cur = this.getSeries(curSeries);
+
+						// I only need to go up the chain until I find
+						// another isNeeded
+						if (!cur.isNeeded){
+							cur.isNeeded = true;
+
+							if (cur.incoming){
+								toProcess = toProcess.concat(cur.incoming);
+							}
+						}
+					}
+
 					agg.fields.push(info);
 				} else if (info.type === 'include'){
 					agg.subs.push(info);
@@ -191,7 +203,7 @@ class CompositeInstructions {
 				this.index[parent.model] = {
 					model: parent.model,
 					series: parent.model,
-					structural: true,
+					isNeeded: true,
 					optional: false,
 					incoming: [this.model],
 					join: {}
@@ -286,10 +298,8 @@ class CompositeInstructions {
 	}
 
 	getMount(doc){
-		const begin = this.getSeries(doc);
-
-		const trace = [begin];
-		let toProcess = begin.incoming.slice(0);
+		const trace = [];
+		let toProcess = [doc];
 
 		while(toProcess.length){
 			const curSeries = toProcess.shift();
@@ -297,7 +307,7 @@ class CompositeInstructions {
 
 			trace.push(cur);
 
-			if (cur.incoming && cur.structural){
+			if (cur.incoming && !cur.isNeeded){
 				toProcess = toProcess.concat(cur.incoming);
 			}
 		}
@@ -507,34 +517,23 @@ class Composite extends Structure {
 					});
 				}
 
-				const info = this.instructions.getSeries(include.series);
-				const composite = await this.nexus.loadComposite(info.composite);
 				// I'm making this only work with one link right now, but 
 				// multiple could work
-				const incomingSeries = info.incoming[0];
-				const tail = this.instructions.getSeries(incomingSeries);
-				const join = tail.join[include.series];
+				const mountPath = this.instructions.getMount(include.series);
+				const tail = mountPath.shift();
+				const mountPoint = mountPath[0];
 
-				if (tail.model === composite.baseModel.name){
-					const model = await composite.nexus.loadModel(tail.model);
+				// this is calculated when linking, which runs before this
+				// method is called
+				const join = tail.join[mountPoint.series];
 
-					const key = model.getKeyField();
-
-					join.to = key;
-					join.from = key;
-				} else {
-					await computeJoin(
-						this, join, tail.model, composite.baseModel.name
-					);
-				}
-
-				let field = (await composite.nexus.loadModel(tail.model)).getField(join.from);
+				let field = (await this.nexus.loadModel(tail.model)).getField(join.from);
 				if (!this.hasField(field)){
 					const ref = `sub_${i}`;
 					
 					field = await this.addField(ref, {
 						model: tail.model, 
-						series: incomingSeries,
+						series: tail.series,
 						extends: join.from,
 						synthetic: true
 					});
@@ -542,13 +541,35 @@ class Composite extends Structure {
 					join.clear = ref;
 				}
 
+				const info = this.instructions.getSeries(include.series);
+				const composite = await this.nexus.loadComposite(info.composite);
+
+				// TODO: this should get a series name right?
+				let joinPath = '';
+				mountPath.reduce(
+					(prev, cur) => {
+						const innerJoin = prev.join[cur.series];
+
+						joinPath += '$'+ prev.model+'.'+innerJoin.from+'>.'+innerJoin.to;
+					
+						return cur;
+					}
+				);
+
+				if (joinPath){
+					joinPath += '$'+composite.baseModel.name;
+				}
+
+				const paramModel = mountPoint.model || composite.baseModel.name;
+
 				return {
 					info: sub,
-					path: field.path,
-					joins: [
-						join
-					],
-					connection: tail,
+					mounts: [{
+						path: field.path,
+						clear: !!join.clear,
+						param: '$'+paramModel+'.'+join.to,
+						joinPath
+					}],
 					composite
 				};
 			}
@@ -605,7 +626,9 @@ class Composite extends Structure {
 				}
 
 				// let's go through all the properties and figure out what is a field and 
-				// a foreign reference
+				// a foreign reference.  It's ok to precalculate the joins even if
+				// the fields won't be in the actual query, because I use the joins
+				// other places if needed
 				await Promise.all(this.instructions.getAllSeries().map(
 					async (series) => {
 						const info = this.instructions.getSeries(series);
@@ -625,14 +648,26 @@ class Composite extends Structure {
 										this, join, info.model, nextInfo.model
 									);
 								} else {
-									// if it's a sub, it just needs to join to the closest
-									// model, so don't bother here
+									const composite = await this.nexus.loadComposite(nextInfo.composite);
+
+									if (info.model === composite.baseModel.name){
+										const model = await composite.nexus.loadModel(info.model);
+
+										const key = model.getKeyField();
+
+										join.to = key;
+										join.from = key;
+									} else {
+										await computeJoin(
+											this, join, info.model, composite.baseModel.name
+										);
+									}
 								}
 							}
 						));
 					}
 				));
-
+				
 				await this.linkFields();
 
 				this.subs = await this.linkSubs();
@@ -804,7 +839,7 @@ class Composite extends Structure {
 		await this.link();
 
 		this.instructions.forEach((series, seriesInfo) => {
-			if (seriesInfo.composite){
+			if (!seriesInfo.isNeeded){
 				return;
 			}
 
@@ -816,7 +851,7 @@ class Composite extends Structure {
 				const todo = Object.keys(joinsTo);
 				if (todo.length){
 					query.addJoins(series, todo.filter(
-							nextSeries => !this.instructions.getSeries(nextSeries).composite
+							nextSeries => this.instructions.getSeries(nextSeries).isNeeded
 						).map(
 							(nextSeries) => {
 								const join = joinsTo[nextSeries];
@@ -864,7 +899,7 @@ class Composite extends Structure {
 
 				query.setSchema(series, model.schema);
 			} else {
-				// I can do this because there should be only on sub in
+				// I can do this because there should be only one sub in
 				// the chain
 
 				// add the composite's model and request the key

@@ -163,13 +163,17 @@ class Query {
 			// we can only have one table without links, and that is the base 
 			// so steal links from other nodes
 			extraRoots.forEach(extraLink => {
-				const join = Object.values(extraLink.links)[0];
+				while(!Object.values(extraLink.joins).length){
+					const join = Object.values(extraLink.links)[0];
 
-				extraLink.joins[join.name] = join;
+					extraLink.joins[join.name] = join;
 
-				const otherSeries = this.getSeries(join.name);
+					const otherSeries = this.getSeries(join.name);
 
-				delete otherSeries.joins[extraLink.series];
+					delete otherSeries.joins[extraLink.series];
+
+					extraLink = otherSeries;
+				}
 			});
 		}
 

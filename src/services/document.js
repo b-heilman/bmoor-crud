@@ -61,24 +61,29 @@ const normalization = require('./normalization.js');
 
 				// Loop through each result, and process the sub queries for each
 				await Promise.all(this.structure.subs.map(
-					async ({info, path, joins, composite, document}) => {
-						const query = joins.reduce(
-							(agg, join) => {
-								if (join.clear){
-									clears.push(join.clear);
+					async ({info, mounts, document}) => {
+						const query = mounts.reduce(
+							(agg, {path, clear, param, joinPath}) => {
+								agg.params[param] = get(queryDatum, path);
+
+								if (joinPath){
+									agg.joins.push(joinPath);
 								}
 
-								agg['.'+join.to] = get(queryDatum, path);
+								if (clear){
+									clears.push(path);
+								}
 
 								return agg;
-							}, 
-							{}
+							},
+							{
+								params: {},
+								joins: []
+							}
 						);
 
 						// call the related document... I could do this up higher?
-						const res = await document.query({
-							params: query
-						}, ctx);
+						const res = await document.query(query, ctx);
 						
 						set(
 							queryDatum,

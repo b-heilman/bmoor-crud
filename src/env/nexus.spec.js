@@ -1521,8 +1521,9 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc2.getCall(0).args[0])
 				.to.deep.equal({
+					joins: [],
 					params: {
-						'.id': 456
+						'$test-2-foo.id': 456
 					}
 				});
 
@@ -1575,8 +1576,9 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
+					joins: [],
 					params: {
-						'.fooId': 123
+						'$test-3-hello.fooId': 123
 					}
 				});
 
@@ -1718,18 +1720,6 @@ describe('src/env/nexus.js', function(){
 									from: 'itemId'
 								}]
 							}]
-						},
-						{
-							'series': 'test-2-foo',
-							schema: 'test-2-foo',
-							joins: [{
-								name: 'test-category',
-								optional: false,
-								mappings: [{
-									to: 'fooId',
-									from: 'id'
-								}]
-							}]
 						}
 					],
 					fields: [{
@@ -1745,8 +1735,8 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'categoryName'
 					}, {
-						series: 'test-2-foo',
-						'path': 'id',
+						series: 'test-category',
+						'path': 'fooId',
 						'as': 'sub_0'
 					}],
 					params: [{
@@ -1770,8 +1760,7 @@ describe('src/env/nexus.js', function(){
 							'series': 'test-3-hello',
 							schema: 'test-3-hello',
 							joins: []
-						},
-						{
+						}, {
 							'series': 'test-3-world',
 							schema: 'test-3-world',
 							joins: [{
@@ -1780,6 +1769,17 @@ describe('src/env/nexus.js', function(){
 								mappings: [{
 									to: 'id',
 									from: 'helloId'
+								}]
+							}]
+						}, {
+							'series': 'test-2-foo',
+							schema: 'test-2-foo',
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'fooId',
+									from: 'id'
 								}]
 							}]
 						}
@@ -1794,8 +1794,8 @@ describe('src/env/nexus.js', function(){
 						'as': 'world.name'
 					}],
 					params: [{
-						series: 'test-3-hello',
-						path: 'fooId',
+						series: 'test-2-foo',
+						path: 'id',
 						operation: '=',
 						value: 456,
 						settings: {}
@@ -1804,8 +1804,11 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
+					joins: [
+						'$test-2-foo.id>.fooId$test-3-hello'
+					],
 					params: {
-						'.fooId': 456
+						'$test-2-foo.id': 456
 					}
 				});
 
@@ -1991,18 +1994,6 @@ describe('src/env/nexus.js', function(){
 									from: 'itemId'
 								}]
 							}]
-						},
-						{
-							'series': 'test-2-foo',
-							schema: 'test-2-foo',
-							joins: [{
-								name: 'test-category',
-								optional: false,
-								mappings: [{
-									to: 'fooId',
-									from: 'id'
-								}]
-							}]
 						}
 					],
 					fields: [{
@@ -2018,8 +2009,8 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'categoryName'
 					}, {
-						series: 'test-2-foo',
-						'path': 'id',
+						series: 'test-category',
+						'path': 'fooId',
 						'as': 'sub_0'
 					}],
 					params: [{
@@ -2043,8 +2034,7 @@ describe('src/env/nexus.js', function(){
 							'series': 'test-3-hello',
 							schema: 'test-3-hello',
 							joins: []
-						},
-						{
+						}, {
 							'series': 'test-3-world',
 							schema: 'test-3-world',
 							joins: [{
@@ -2053,6 +2043,17 @@ describe('src/env/nexus.js', function(){
 								mappings: [{
 									to: 'id',
 									from: 'helloId'
+								}]
+							}]
+						}, {
+							'series': 'test-2-foo',
+							schema: 'test-2-foo',
+							joins: [{
+								name: 'test-3-hello',
+								optional: false,
+								mappings: [{
+									to: 'fooId',
+									from: 'id'
 								}]
 							}]
 						}
@@ -2067,8 +2068,8 @@ describe('src/env/nexus.js', function(){
 						'as': 'world.name'
 					}],
 					params: [{
-						series: 'test-3-hello',
-						path: 'fooId',
+						series: 'test-2-foo',
+						path: 'id',
 						operation: '=',
 						value: 456,
 						settings: {}
@@ -2077,8 +2078,11 @@ describe('src/env/nexus.js', function(){
 
 				expect(stubs.doc1.getCall(0).args[0])
 				.to.deep.equal({
+					joins: [
+						'$test-2-foo.id>.fooId$test-3-hello'
+					],
 					params: {
-						'.fooId': 456
+						'$test-2-foo.id': 456
 					}
 				});
 

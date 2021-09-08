@@ -1215,34 +1215,23 @@ describe('src/services/document.js', function(){
 							to: 'id'
 						}]
 					}]
-				}, {
-					series: 'test-item-material',
-					schema: 'test-item-material',
-					joins: [{
-						name: 'test-item',
-						optional: false,
-						mappings: [{
-							from: 'itemId',
-							to: 'id'
-						}]
-					}]
 				}],
 				fields: [{
 					series: 'test-item',
 					path: 'name',
 					as: 'item'
 				}, {
+					series: 'test-item',
+					path: 'id',
+					as: 'sub_0'
+				}, {
+					series: 'test-item',
+					path: 'id',
+					as: 'sub_1'
+				}, {
 					series: 'test-category',
 					path: 'name',
 					as: 'categoryName'
-				}, {
-					series: 'test-item-material',
-					path: 'materialId',
-					as: 'sub_0'
-				}, {
-					series: 'test-item-material',
-					path: 'materialId',
-					as: 'sub_1'
 				}],
 				params: []
 			});
@@ -1258,6 +1247,17 @@ describe('src/services/document.js', function(){
 					series: 'test-material',
 					schema: 'test-material',
 					joins: []
+				}, {
+					series: 'test-item-material',
+					schema: 'test-item-material',
+					joins: [{
+						name: 'test-material',
+						optional: false,
+						mappings: [{
+							from: 'materialId',
+							to: 'id'
+						}]
+					}]
 				}],
 				fields: [{
 					series: 'test-material',
@@ -1265,8 +1265,8 @@ describe('src/services/document.js', function(){
 					as: 'name'
 				}],
 				params: [{
-					series: 'test-material',
-					path: 'id',
+					series: 'test-item-material',
+					path: 'itemId',
 					operation: '=',
 					settings: {},
 					value: 123
@@ -1284,6 +1284,17 @@ describe('src/services/document.js', function(){
 					series: 'test-material',
 					schema: 'test-material',
 					joins: []
+				}, {
+					series: 'test-item-material',
+					schema: 'test-item-material',
+					joins: [{
+						name: 'test-material',
+						optional: false,
+						mappings: [{
+							from: 'materialId',
+							to: 'id'
+						}]
+					}]
 				}],
 				fields: [{
 					series: 'test-material',
@@ -1291,8 +1302,8 @@ describe('src/services/document.js', function(){
 					as: 'name'
 				}],
 				params: [{
-					series: 'test-material',
-					path: 'id',
+					series: 'test-item-material',
+					path: 'itemId',
 					operation: '=',
 					settings: {},
 					value: 456
@@ -1533,13 +1544,22 @@ describe('src/services/document.js', function(){
 			expect(doc.structure.subs.length)
 			.to.equal(1);
 
-			const {info, path, composite} = doc.structure.subs[0];
+			const {info, mounts, document} = doc.structure.subs[0];
 
-			expect(composite.name)
+			expect(document.structure.name)
 			.to.equal('test-composite-item');
 
-			expect(path)
-			.to.equal('sub_0');
+			expect(mounts.length)
+			.to.equal(1);
+
+			expect(mounts[0].path)
+			.to.equal('id');
+
+			expect(mounts[0].param)
+			.to.equal('$test-category.familyId');
+
+			expect(mounts[0].joinPath)
+			.to.equal('$test-category.itemId>.id$test-item');
 
 			expect(info.path)
 			.to.equal('items');
@@ -1565,13 +1585,22 @@ describe('src/services/document.js', function(){
 			await doc.configure({});
 			await doc.link();
 			
-			const {info, path, composite} = doc.structure.subs[0];
+			const {info, mounts, document} = doc.structure.subs[0];
 
-			expect(composite.name)
+			expect(document.structure.name)
 			.to.equal('test-composite-item');
 
-			expect(path)
-			.to.equal('sub_0');
+			expect(mounts.length)
+			.to.equal(1);
+
+			expect(mounts[0].path)
+			.to.equal('id');
+
+			expect(mounts[0].param)
+			.to.equal('$test-category.familyId');
+
+			expect(mounts[0].joinPath)
+			.to.equal('$test-category.itemId>.id$test-item.id>.id$test-item');
 
 			expect(info.path)
 			.to.equal('items');
@@ -1604,13 +1633,22 @@ describe('src/services/document.js', function(){
 			await doc.configure({});
 			await doc.link();
 			
-			const {info, path, composite} = doc.structure.subs[0];
+			const {info, mounts, document} = doc.structure.subs[0];
 
-			expect(composite.name)
+			expect(document.structure.name)
 			.to.equal('test-composite-tag');
 
-			expect(path)
-			.to.equal('sub_0');
+			expect(mounts.length)
+			.to.equal(1);
+
+			expect(mounts[0].path)
+			.to.equal('id');
+
+			expect(mounts[0].param)
+			.to.equal('$test-category.familyId');
+
+			expect(mounts[0].joinPath)
+			.to.equal('$test-category.id>.categoryId$test-tag');
 
 			expect(info.path)
 			.to.equal('tags');
