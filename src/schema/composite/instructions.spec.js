@@ -878,7 +878,6 @@ describe('src/schema/composite/instructions.js', function(){
 
 			ci3.inline('sub-2', ci2);
 
-			console.log('=>', JSON.stringify(ci3.index, null, '\t'));
 			expect(ci3.index)
 			.to.deep.equal({
 				'm-20': {
