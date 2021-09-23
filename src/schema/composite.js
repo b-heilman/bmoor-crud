@@ -5,369 +5,8 @@ const {makeSetter} = require('bmoor/src/core.js');
 
 const {Structure, buildParam} = require('./structure.js');
 
-const {pathToAccessors} = require('../graph/path.js');
 const {Query, QueryJoin, QueryField} = require('./query.js');
-
-function instructionIndexMerge(target, incoming){
-	Object.keys(incoming).forEach(key => {
-		const existing = target[key];
-		const additional = incoming[key];
-
-		if (existing){
-			Object.assign(existing.join, additional.join);
-
-			if (additional.incoming){
-				existing.incoming = existing.incoming.concat(
-					additional.incoming
-				);
-			}
-		} else {
-			target[key] = additional;
-		}
-	});
-
-	return target;
-}
-
-// used to parse appart the paths that can be fed into a composite schema
-class CompositeInstructions {
-	constructor(baseModel, joinSchema, fieldSchema){
-		this.model = baseModel;
-
-		this.index = joinSchema.reduce(
-			(agg, path) => {
-				path = path.replace(/\s/g,'');
-
-				if (path[0] !== '$'){
-					path = '$'+baseModel + path;
-				}
-
-				const accessors = pathToAccessors(path);
-				let last = accessors.shift();
-				while (accessors.length){
-					let cur = accessors.shift();
-					
-					const {series, field} = last;
-
-					const base = agg[series];
-					if (!base){
-						throw create(`can not connect to ${series}`, {
-							code: 'BMOOR_CRUD_COMPOSITE_MISSING_SERIES',
-							context: {
-								path
-							}
-						});
-					}
-
-					// this is a two way linked list, this if forward
-					base.join[cur.series] = {
-						from: field,
-						to: cur.target
-					};
-
-					if (agg[cur.series]){
-						agg[cur.series].incoming.push(series);
-					} else {
-						if (cur.loader === 'include'){
-							agg[cur.series] = {
-								series: cur.series,
-								composite: cur.model,
-								isNeeded: false,
-								optional: cur.optional,
-								incoming: [series]
-							};
-						} else {
-							agg[cur.series] = {
-								series: cur.series,
-								model: cur.model,
-								isNeeded: false,
-								optional: cur.optional,
-								incoming: [series], // this is backwards
-								join: {}
-							};
-						}
-					}
-
-					last = cur;
-				}
-
-				return agg;
-			},
-			{
-				[baseModel]: {
-					model: baseModel,
-					series: baseModel,
-					isNeeded: true,
-					join: {}
-				}
-			}
-		);
-
-		// break this into
-		// [path]: [accessor]
-		const imploded = implode(fieldSchema);
-		const {fields, subs} = Object.keys(imploded).map(
-			(mount) => {
-				let statement = imploded[mount];
-
-				statement = statement.replace(/\s/g,'');
-
-				if (statement[0] === '.'){
-					statement = '$'+baseModel + statement;
-				}
-
-				// if it's an = statement, the properties can't be short hand
-				const action = pathToAccessors(statement)[0]; // this is an array of action tokens
-				if (!action){
-					throw create(`unable to parse ${statement}`, {
-						code: 'BMOOR_CRUD_COMPOSITE_PARSE_STATEMENT',
-						context: {
-							statement
-						}
-					});
-				}
-
-				const isArray = mount.indexOf('[0]') !== -1;
-
-				const path = mount.substring(0, isArray ? mount.length-3 : mount.length);
-
-				const join = this.index[action.series];
-				if  (!join){
-					throw create(`requesting field not joined ${action.series}`, {
-						code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
-						context: {
-							statement
-						}
-					});
-				}
-
-				action.model = join.model;
-
-				return {
-					type: action.loader,
-					action,
-					statement,
-					path,
-					isArray,
-					mountPoint: mount
-				};
-			}
-		).reduce(
-			(agg, info) => {
-				if (info.type === 'access'){
-					let toProcess = [info.action.series];
-
-					while(toProcess.length){
-						const curSeries = toProcess.shift();
-						const cur = this.getSeries(curSeries);
-
-						// I only need to go up the chain until I find
-						// another isNeeded
-						if (!cur.isNeeded){
-							cur.isNeeded = true;
-
-							if (cur.incoming){
-								toProcess = toProcess.concat(cur.incoming);
-							}
-						}
-					}
-
-					agg.fields.push(info);
-				} else if (info.type === 'include'){
-					agg.subs.push(info);
-				} else {
-					throw create(`unknown type ${info.type}`, {
-						code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN',
-						context: {
-							info
-						}
-					});
-				}
-
-				return agg;
-			},
-			{
-				fields: [],
-				subs: []
-			}
-		);
-
-		this.subs = subs;
-		this.fields = fields;
-		this.variables = {};
-	}
-
-	extend(parent){
-		if (this.model !== parent.model){
-			if (!this.index[parent.model]){
-				this.index[parent.model] = {
-					model: parent.model,
-					series: parent.model,
-					isNeeded: true,
-					optional: false,
-					incoming: [this.model],
-					join: {}
-				};
-
-				this.index[this.model].join[parent.model] = {
-					from: null,
-					to: null
-				};
-			}
-		}
-
-		this.index = instructionIndexMerge(this.index, parent.index);
-
-		this.subs = this.subs.concat(parent.subs);
-		this.fields = this.fields.concat(parent.fields);
-	}
-
-	getAllSeries(){
-		return Object.keys(this.index);
-	}
-
-	getSeries(series){
-		return this.index[series];
-	}
-
-	getJoin(from, to){
-		return this.index[from].join[to];
-	}
-
-	getIncoming(to){
-		return this.getSeries(to).incoming;
-	}
-
-	forEach(fn){
-		const processed = {};
-
-		let toProcess = [this.model];
-
-		while(toProcess.length){
-			const seriesName = toProcess.shift();
-			
-			if (processed[seriesName]){
-				return;
-			} else {
-				processed[seriesName] = true;
-			}
-			
-			const seriesInfo = this.getSeries(seriesName);
-
-			fn(seriesName, seriesInfo);
-
-			if (seriesInfo.join){
-				toProcess = toProcess.concat(Object.keys(
-					seriesInfo.join
-				));
-			}
-		}
-	}
-
-	getSeriesByModel(model){
-		return Object.keys(this.index)
-		.filter(series => this.index[series].model === model);
-	}
-
-	// returns back all the models going back to the root
-	getTrace(...to){
-		const trace = [];
-		let toProcess = to;
-
-		while(toProcess.length){
-			const curSeries = toProcess.shift();
-			const cur = this.getSeries(curSeries);
-
-			trace.push(cur);
-
-			if (cur.incoming){
-				toProcess = toProcess.concat(cur.incoming);
-			}
-		}
-
-		const found = {};
-		return trace.reverse()
-		.filter(cur => {
-			if (found[cur.series]){
-				return false;
-			} else {
-				found[cur.series] = true;
-				return true;
-			}
-		});
-	}
-
-	getMount(doc){
-		const trace = [];
-		let toProcess = [doc];
-
-		while(toProcess.length){
-			const curSeries = toProcess.shift();
-			const cur = this.getSeries(curSeries);
-
-			trace.push(cur);
-
-			if (cur.incoming && !cur.isNeeded){
-				toProcess = toProcess.concat(cur.incoming);
-			}
-		}
-
-		const found = {};
-		return trace.reverse()
-		.filter(cur => {
-			if (found[cur.series]){
-				return false;
-			} else {
-				found[cur.series] = true;
-				return true;
-			}
-		});
-	}
-
-	// TODO: I should do something that calculates the relationships for join
-	getOutgoingLinks(series){
-		const rtn = [];
-		const seriesInfo = this.getSeries(series);
-
-		if (seriesInfo.incoming){
-			seriesInfo.incoming.forEach(incomingSeries => {
-				const join = this.getJoin(
-					incomingSeries, series
-				);
-
-				const direction = join.relationship.metadata.direction;
-				const vector = join.relationship.name;
-				if ((vector === series && direction === 'incoming') ||
-					(vector !== series && direction === 'outgoing')
-				){
-					rtn.push({
-						local: join.to,
-						remote: join.from,
-						series: incomingSeries
-					});
-				}
-			});
-		}
-
-		Object.keys(seriesInfo.join).forEach(outgoingSeries => {
-			const join = seriesInfo.join[outgoingSeries];
-
-			const direction = join.relationship.metadata.direction;
-			const vector = join.relationship.name;
-			if ((vector === series && direction === 'incoming') ||
-				(vector !== series && direction === 'outgoing')
-			){
-				rtn.push({
-					local: join.from,
-					remote: join.to,
-					series: outgoingSeries
-				});
-			}
-		});
-
-		return rtn;
-	}
-}
+const {Instructions} = require('./composite/instructions.js');
 
 function buildCalculations(schema, base){
 	const dynamics = implode(schema);
@@ -393,7 +32,9 @@ async function computeJoin(composite, join, fromModel, toModel){
 		composite.nexus.loadModel(toModel)
 	]);
 
-	if (join.to){
+	if (fromModel === toModel){
+		// this is ok... right?  Nothing to do?
+	} else if (join.to){
 		// the current pointer knows the target property, it gets priority
 		const relationship = composite.nexus.mapper.getRelationship(
 			toModel, fromModel, join.to
@@ -682,6 +323,10 @@ class Composite extends Structure {
 	}
 
 	async build(){
+		if (this.incomingSettings.optimize){
+			await this.flatten();
+		}
+
 		await this.link();
 
 		await super.build();
@@ -717,7 +362,7 @@ class Composite extends Structure {
 			});
 		}
 
-		this.instructions = new CompositeInstructions(
+		this.instructions = new Instructions(
 			settings.base,
 			settings.joins,
 			settings.fields
@@ -747,6 +392,25 @@ class Composite extends Structure {
 		return rtn;  
 	}
 
+	async flatten(){
+		let pos = 0;
+
+		while(pos < this.instructions.subs.length){
+			const sub = this.instructions.subs[pos];
+
+			if (sub.isArray){
+				pos++;
+			} else {
+				// the series is removed, so no need to iterate
+				const series = this.instructions.getSeries(sub.action.series);
+				const composite = await this.nexus.loadComposite(series.composite);
+
+				this.instructions.inline(sub.action.series, composite.instructions);
+			}
+		}
+	}
+
+	// TODO: probably should remove at this point
 	hasStructure(structureName){
 		let found = null;
 
@@ -1014,6 +678,5 @@ class Composite extends Structure {
 }
 
 module.exports = {
-	CompositeInstructions,
 	Composite
 };
