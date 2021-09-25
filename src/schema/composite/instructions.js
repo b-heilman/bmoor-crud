@@ -17,6 +17,14 @@ function instructionIndexMerge(target, source){
 					additional.incoming
 				);
 			}
+		} else if (additional.composite){
+			target[key] = {
+				series: additional.series,
+				composite: additional.composite,
+				isNeeded: additional.isNeeded,
+				optional: additional.optional,
+				incoming: additional.incoming.slice(0)
+			};
 		} else {
 			target[key] = {
 				model: additional.model,
