@@ -1,6 +1,6 @@
 {
   "name": "bmoor-crud",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "author": "Brian Heilman <das.ist.junk@gmail.com>",
   "description": "A way of managing models and routes",
   "license": "MIT",
@@ -10,7 +10,7 @@
   },
   "main": "src/index.js",
   "dependencies": {
-    "bmoor": "^0.9.7",
+    "bmoor": "^0.9.8",
     "bmoor-data": "^0.10.3",
     "bmoor-schema": "^0.8.1",
     "knex": "^0.95.2",

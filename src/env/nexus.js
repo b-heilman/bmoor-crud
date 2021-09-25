@@ -142,6 +142,10 @@ class Nexus {
 	}
 
 	async loadModel(ref){
+		if (!ref){
+			throw new Error('invalid model requested: '+ref);
+		}
+
 		return loadTarget(this, 'model', ref);
 	}
 
@@ -198,6 +202,10 @@ class Nexus {
 	}
 
 	async loadComposite(ref){
+		if (!ref){
+			throw new Error('invalid composite requested: '+ref);
+		}
+
 		return loadTarget(this, 'composite', ref);
 	}
 

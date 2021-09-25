@@ -1,7 +1,7 @@
 
 const expect = require('chai').expect;
 
-const {Nexus} = require('../env/nexus.js');
+const {Nexus, config: nexusConfig} = require('../env/nexus.js');
 const {config} = require('./structure.js');
 const {Composite} = require('./composite.js');
 
@@ -9,6 +9,8 @@ describe('src/schema/composite.js', function(){
 	let nexus = null;
 
 	beforeEach(async function(){
+		nexusConfig.set('timeout', 500);
+
 		nexus = new Nexus();
 
 		await nexus.configureModel('test-1', {
@@ -1983,6 +1985,72 @@ describe('src/schema/composite.js', function(){
 					'params': []
 				});
 			});
+		});
+	});
+
+	describe('error management', function(){
+		it('should fail if it tries to load a model that does not exist', async function(){
+			const comp = new Composite('failure', nexus);
+
+			let failed = false;
+			try {
+				await comp.configure({
+					base: 'test-2',
+					optimize: true,
+					joins: [
+						'> $boom'
+					],
+					fields: {
+						reallyMyName: '.name',
+						stuff: '$boom.field'
+					}
+				});
+
+				await comp.build();
+			} catch(ex){
+				failed = true;
+				
+				expect(ex.message.indexOf('configured.model.boom'))
+				.to.not.equal(-1);
+
+				expect(ex.context.composite)
+				.to.equal('failure');
+			}
+
+			expect(failed)
+			.to.equal(true);
+		});
+
+		it('should fail if it tries to load a composite that does not exist', async function(){
+			const comp = new Composite('failure', nexus);
+
+			let failed = false;
+			try {
+				await comp.configure({
+					base: 'test-2',
+					optimize: true,
+					joins: [
+						'> #boom'
+					],
+					fields: {
+						reallyMyName: '.name',
+						stuff: '#boom'
+					}
+				});
+
+				await comp.build();
+			} catch(ex){
+				failed = true;
+				
+				expect(ex.message.indexOf('configured.composite.boom'))
+				.to.not.equal(-1);
+
+				expect(ex.context.composite)
+				.to.equal('failure');
+			}
+
+			expect(failed)
+			.to.equal(true);
 		});
 	});
 });

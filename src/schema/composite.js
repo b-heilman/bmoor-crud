@@ -1,6 +1,6 @@
 
 const {implode} = require('bmoor/src/object.js');
-const {create} = require('bmoor/src/lib/error.js');
+const {create, addTrace} = require('bmoor/src/lib/error.js');
 const {makeSetter} = require('bmoor/src/core.js');
 
 const {Structure, buildParam} = require('./structure.js');
@@ -260,10 +260,10 @@ class Composite extends Structure {
 				}
 
 				if (this.instructions.fields.length === 0){
-					reject(create(`composite ${this.name}: no properties found`, {
+					throw create(`composite ${this.name}: no properties found`, {
 						code: 'BMOOR_CRUD_COMPOSITE_NO_PROPERTIES',
 						context: settings
-					}));
+					});
 				}
 
 				// let's go through all the properties and figure out what is a field and 
@@ -323,13 +323,24 @@ class Composite extends Structure {
 	}
 
 	async build(){
-		if (this.incomingSettings.optimize){
-			await this.flatten();
+		try {
+			if (this.incomingSettings.optimize){
+				await this.flatten();
+			}
+
+			await this.link();
+
+			await super.build();
+		} catch(ex){
+			addTrace(ex, {
+				code: 'BMOOR_CRUD_COMPOSITE_BUILD',
+				context: {
+					composite: this.name
+				}
+			});
+
+			throw ex;
 		}
-
-		await this.link();
-
-		await super.build();
 	}
 	/***
 	 * {
