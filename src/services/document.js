@@ -394,33 +394,31 @@ const normalization = require('./normalization.js');
 	}
 
 	async getAffectedByModel(modelName, key, ctx){
-		const res = await super.read(
-			{
-				query: await this.structure.getKeyQueryByModel(
-					modelName,
-					key,
-					ctx
-				)
-			}, 
-			ctx
-		);
+		const stmt = {
+			method: 'read',
+			query: await this.structure.getKeyQueryByModel(
+				modelName,
+				key,
+				ctx
+			)
+		};
 
-		return res.map(response => response.key);
+		return (await this.structure.execute(stmt, ctx))
+		.map(response => response.key);
 	}
 
 	async getAffectedBySub(subName, key, ctx){
-		const res = await super.read(
-			{
-				query: await this.structure.getKeyQueryBySub(
-					subName,
-					key,
-					ctx
-				)
-			}, 
-			ctx
-		);
+		const stmt = {
+			method: 'read',
+			query: await this.structure.getKeyQueryBySeries(
+				subName,
+				key,
+				ctx
+			)
+		};
 
-		return res.map(response => response.key);
+		return (await this.structure.execute(stmt, ctx))
+		.map(response => response.key);
 	}
 }
 

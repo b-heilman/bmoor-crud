@@ -319,6 +319,19 @@ describe('src/services/document.js', function(){
 
 		await nexus.configureDocument('test-composite-tag', connector);
 
+		await nexus.configureComposite('test-composite-tag-uber', {
+			base: 'test-category',
+			joins: [
+				'> #test-composite-tag'
+			],
+			fields: {
+				'name': '.name',
+				tags: ['#test-composite-tag']
+			}
+		});
+
+		await nexus.configureDocument('test-composite-tag-uber', connector);
+
 		await nexus.configureModel('test-user-family-pivot', {
 			fields: {
 				id: {
@@ -342,6 +355,200 @@ describe('src/services/document.js', function(){
 					}
 				}
 			}
+		});
+	});
+
+	describe('::getAffectedByModel', function(){
+		it('should properly run the query on an included model', async function(){
+			const doc = await nexus.loadDocument('test-composite-item');
+
+			connectorExecute = [{
+				key: 123
+			}, {
+				key: 456
+			}];
+
+			const res = await doc.getAffectedByModel('test-category', 987, {});
+
+			expect(res)
+			.to.deep.equal([123,456]);
+
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					'series': 'test-item',
+					'schema': 'test-item',
+					'joins': []
+				}, {
+					'series': 'test-category',
+					'schema': 'test-category',
+					'joins': [
+						{
+							'name': 'test-item',
+							'mappings': [
+								{
+									'from': 'itemId',
+									'to': 'id'
+								}
+							],
+							'optional': false
+						}
+					]
+				}],
+				'fields': [{
+					'series': 'test-item',
+					'path': 'id',
+					'as': 'key'
+				}],
+				'params': [{
+					'series': 'test-category',
+					'path': 'id',
+					'operation': '=',
+					'value': 987,
+					'settings': {}
+				}]
+			});
+		});
+
+		it('should properly run the query on the base model', async function(){
+			const doc = await nexus.loadDocument('test-composite-item');
+
+			connectorExecute = [{
+				key: 123
+			}, {
+				key: 456
+			}];
+
+			const res = await doc.getAffectedByModel('test-item', 987, {});
+
+			expect(res)
+			.to.deep.equal([123,456]);
+
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					'series': 'test-item',
+					'schema': 'test-item',
+					'joins': []
+				}],
+				'fields': [{
+					'series': 'test-item',
+					'path': 'id',
+					'as': 'key'
+				}],
+				'params': [{
+					'series': 'test-item',
+					'path': 'id',
+					'operation': '=',
+					'value': 987,
+					'settings': {}
+				}]
+			});
+		});
+
+		xit('should properly run the query on a model not inside', async function(){
+			// this should fail, but instead it results in an all call
+			const doc = await nexus.loadDocument('test-composite-item');
+
+			connectorExecute = [{
+				key: 123
+			}, {
+				key: 456
+			}];
+
+			const res = await doc.getAffectedByModel('test-junk', 987, {});
+
+			expect(res)
+			.to.deep.equal([123,456]);
+
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				models: [{
+					'series': 'test-item',
+					'schema': 'test-item',
+					'joins': []
+				}],
+				'fields': [{
+					'series': 'test-item',
+					'path': 'id',
+					'as': 'key'
+				}],
+				'params': []
+			});
+		});
+	});
+
+	describe('::getAffectedBySub', function(){
+		it('should properly run the query', async function(){
+			const doc = await nexus.loadDocument('test-composite-tag-uber');
+
+			connectorExecute = [{
+				key: 123
+			}, {
+				key: 456
+			}];
+
+			const res = await doc.getAffectedBySub('test-composite-tag', 987, {});
+
+			expect(res)
+			.to.deep.equal([123,456]);
+
+			const args = stubs.execute.getCall(0).args[0];
+
+			expect(args.method)
+			.to.equal('read');
+
+			expect(args.query.toJSON())
+			.to.deep.equal({
+				'models': [{
+					'series': 'test-category',
+					'schema': 'test-category',
+					'joins': []
+				},
+				{
+					'series': 'test-composite-tag',
+					'schema': 'test-tag',
+					'joins': [
+						{
+							'name': 'test-category',
+							'mappings': [
+								{
+									'from': 'categoryId',
+									'to': 'id'
+								}
+							],
+							'optional': false
+						}
+					]
+				}],
+				'fields': [{
+					'series': 'test-category',
+					'path': 'id',
+					'as': 'key'
+				}],
+				'params': [{
+					'series': 'test-composite-tag',
+					'path': 'id',
+					'operation': '=',
+					'value': 987,
+					'settings': {}
+				}]
+			});
 		});
 	});
 
