@@ -5,14 +5,16 @@ const {hook} = require('../services/hook.js');
 const {secure} = require('../services/secure.js');
 const {Mapper} = require('../graph/mapper.js');
 
-const {Model} = require('../schema/model.js');
 const {Crud} = require('../services/crud.js');
-const {Composite} = require('../schema/composite.js');
+const {Model} = require('../schema/model.js');
+const {Source} = require('../services/source.js');
 const {Document} = require('../services/document.js');
+const {Composite} = require('../schema/composite.js');
 
 const config = new Config({
 	timeout: 2000,
 	constructors: {
+		source: Source,
 		model: Model,
 		crud: Crud,
 		composite: Composite,
@@ -25,38 +27,44 @@ const config = new Config({
 	}
 });
 
-const waiting = [];
+const waiting = {};
 async function ensure(prom, label){
-	waiting.push(label);
+	if (waiting[label]){
+		waiting[label].count++;
+	} else {
+		const promise = new Promise((resolve, reject) => {
+			const timeout = config.get('timeout');
 
-	return new Promise((resolve, reject) => {
-		const timeout = config.get('timeout');
+			const clear = setTimeout(function(){
+				console.log(
+					'timeout detected nexus stack', 
+					JSON.stringify(waiting, null, 2)
+				);
 
-		const clear = setTimeout(function(){
-			console.log(
-				'timeout detected nexus stack', 
-				JSON.stringify(waiting, null, 2)
-			);
+				reject(new Error('lookup timed out: '+label));
+			}, timeout);
 
-			reject(new Error('lookup timed out: '+label));
-		}, timeout);
+			prom.then(
+				success => {
+					delete waiting[label];
 
-		prom.then(
-			success => {
-				const index = waiting.indexOf(label);
-				if (index > -1) {
-					waiting.splice(index, 1);
+					clearTimeout(clear);
+					resolve(success);
+				},
+				failure => {
+					clearTimeout(clear);
+					reject(failure);
 				}
+			);
+		});
 
-				clearTimeout(clear);
-				resolve(success);
-			},
-			failure => {
-				clearTimeout(clear);
-				reject(failure);
-			}
-		);
-	});
+		waiting[label] = {
+			count: 1,
+			promise
+		};
+	}
+
+	return waiting[label].promise;
 }
 
 function getDefined(nexus, type, constructors, ref, args){
@@ -127,6 +135,38 @@ class Nexus {
 			this.ether.promised(path, res => res),
 			path
 		);
+	}
+
+	async setConnector(ref, factory){
+		await this.setConfigured('connector', ref, factory);
+
+		return factory;
+	}
+
+	async loadConnector(ref){
+		if (!ref){
+			throw new Error('invalid connector requested: '+ref);
+		}
+
+		return loadTarget(this, 'connector', ref);
+	}
+
+	getSource(ref){
+		return getDefined(this, 'source', this.constructors, ref, [ref, this]);
+	}
+
+	async configureSource(ref, settings){
+		const source = await setSettings(this, 'source', this.getSource(ref), settings, ref);
+
+		return source;
+	}
+
+	async loadSource(ref){
+		if (!ref){
+			throw new Error('invalid source requested: '+ref);
+		}
+
+		return loadTarget(this, 'source', ref);
 	}
 
 	getModel(ref){
@@ -260,17 +300,6 @@ class Nexus {
 
 	async configureSynthetic(ref, settings){
 		return setSettings(this, 'synthetic', this.getSynthetic(ref), settings, ref);
-	}
-
-	async execute(connector, settings, stmt){
-		const factory = this.connectors.get(connector);
-		const executor = factory(settings);
-		
-		return executor.execute(stmt);
-	}
-
-	toJSON(){
-		console.trace();
 	}
 }
 

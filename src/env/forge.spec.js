@@ -2,8 +2,6 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Config} = require('bmoor/src/lib/config.js');
-
 const {Bus} = require('../server/bus.js');
 const {Nexus} = require('./nexus.js');
 const {Context} = require('../server/context.js');
@@ -16,20 +14,45 @@ describe('src/env/forge.js', function(){
 	let nexus = null;
 	let forge = null;
 
-	let connectors = null;
-	let interface1 = null;
-	let interface2 = null;
+	let interfaceResults1 = null;
+	let interfaceResults2 = null;
 
-	beforeEach(function(){
-		connectors = new Config({
-			interface1: () => interface1,
-			interface2: () => interface2
-		});
-
-		stubs = {};
+	beforeEach(async function(){
+		stubs = {
+			execute1: sinon.stub()
+			.callsFake(async function(){
+				return interfaceResults1;
+			}),
+			execute2: sinon.stub()
+			.callsFake(async function(){
+				return interfaceResults2;
+			})
+		};
 
 		bus = new Bus();
-		nexus = new Nexus(null, connectors);
+		nexus = new Nexus();
+
+		await nexus.setConnector(
+			'test-c-1', 
+			async () => ({
+				execute: async (...args) => stubs.execute1(...args)
+			})
+		);
+
+		await nexus.setConnector(
+			'test-c-2', 
+			async () => ({
+				execute: async (...args) => stubs.execute2(...args)
+			})
+		);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test-c-1'
+		});
+
+		await nexus.configureSource('test-2', {
+			connector: 'test-c-2'
+		});
 
 		forge = new sut.Forge(nexus, bus);		
 	});
@@ -52,16 +75,13 @@ describe('src/env/forge.js', function(){
 		beforeEach(async function(){
 			ctx = new Context({method: ''});
 
-			interface1 = {};
-			interface2 = {};
-
 			service1 = nexus.getCrud('service-1');
 			service2 = nexus.getCrud('service-2');
 
 			await forge.installCruds([{
 				name: 'service-1',
 				settings: {
-					connector: 'interface1',
+					source: 'test-1',
 					fields: {
 						id: {
 							key: true,
@@ -74,7 +94,7 @@ describe('src/env/forge.js', function(){
 			}, {
 				name: 'service-2',
 				settings: {
-					connector: 'interface2',
+					source: 'test-2',
 					fields: {
 						id: {
 							key: true,
@@ -89,10 +109,10 @@ describe('src/env/forge.js', function(){
 
 		describe('::configureCrud', function(){
 			it('should allow for the subscription of afterCreate events', async function(){
-				interface1.execute = () => Promise.resolve([{
+				interfaceResults1 = [{
 					foo: 'bar',
 					id: 10
-				}]);
+				}];
 
 				bus.broadcast.on('service-1.create', function(key, was, datum, myCtx){
 					expect(key)
@@ -131,10 +151,10 @@ describe('src/env/forge.js', function(){
 			});
 
 			it('should allow for the subscription of afterUpdate events', async function(){
-				interface1.execute = () => Promise.resolve([{
+				interfaceResults1 = [{
 					id: 20,
 					foo: 'bar'
-				}]);
+				}];
 
 				bus.broadcast.on('service-1.update', function(key, was, datum, myCtx){
 					expect(key)
@@ -179,9 +199,9 @@ describe('src/env/forge.js', function(){
 			});
 
 			it('should allow for the subscription of afterDelete events', async function(){
-				interface1.execute = () => Promise.resolve([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				bus.broadcast.on('service-1.delete', function(key, datum, _, myCtx){
 					expect(key)
@@ -325,15 +345,15 @@ describe('src/env/forge.js', function(){
 
 		describe('::configureCrud should play nice with ::subscribe', function(){
 			it('should work for create', async function(){
-				interface1.execute = () => Promise.resolve([{
+				interfaceResults1 = [{
 					id: 30,
 					foo: 'bar'
-				}]);
+				}];
 
-				interface2.execute = () => Promise.resolve([{
+				interfaceResults2 = [{
 					id: 31,
 					hello: 'world'
-				}]);
+				}];
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -379,15 +399,15 @@ describe('src/env/forge.js', function(){
 			});
 
 			it('should work for update', async function(){
-				interface1.execute = () => Promise.resolve([{
+				interfaceResults1 = [{
 					foo: 'bar',
 					id: 40
-				}]);
+				}];
 
-				interface2.execute = () => Promise.resolve([{
+				interfaceResults2 = [{
 					hello: 'world',
 					id: 41
-				}]);
+				}];
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -436,15 +456,15 @@ describe('src/env/forge.js', function(){
 			});
 
 			it('should work for delete', async function(){
-				interface1.execute = () => Promise.resolve([{
+				interfaceResults1 = [{
 					id: 100,
 					foo: 'bar'
-				}]);
+				}];
 
-				interface2.execute = () => Promise.resolve([{
+				interfaceResults2 = [{
 					id: 101,
 					hello: 'world'
-				}]);
+				}];
 
 				await forge.subscribe('service-2', [{
 					model: 'service-1',
@@ -499,7 +519,7 @@ describe('src/env/forge.js', function(){
 			ctx = new Context({method: ''});
 
 			nexus.configureModel('service-1', {
-				connector: 'interface1',
+				source: 'test-1',
 				fields: {
 					eins: {
 						create: true,
@@ -516,9 +536,9 @@ describe('src/env/forge.js', function(){
 				}
 			});
 
-			interface1 = {
-				execute: sinon.stub().resolves([{foo: 'bar'}])
-			};
+			interfaceResults1 = [{
+				foo: 'bar'
+			}];
 
 			service1 = await nexus.configureCrud('service-1');
 
@@ -539,9 +559,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = stubs.execute1.getCall(0).args;
 
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -558,9 +578,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(1).args;
+					const args = stubs.execute1.getCall(1).args;
 					
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -582,7 +602,7 @@ describe('src/env/forge.js', function(){
 							}
 						}, ctx);
 
-						const args = interface1.execute.getCall(0).args;
+						const args = stubs.execute1.getCall(0).args;
 
 						expect(args[0].query)
 						.to.deep.equal({
@@ -604,13 +624,12 @@ describe('src/env/forge.js', function(){
 						}
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args[0];
+					const args = stubs.execute1.getCall(0).args[0];
 
-					expect(args.method)
-					.to.equal('read');
-
-					expect(args.query.toJSON())
+					expect(args)
 					.to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
 						models: [{
 							series: 'service-1',
 							schema: 'service-1',
@@ -625,6 +644,7 @@ describe('src/env/forge.js', function(){
 							path: 'drei',
 							as: 'drei'
 						}],
+						filters: [],
 						params: [{
 							series: 'service-1',
 							path: 'eins',
@@ -651,9 +671,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = stubs.execute1.getCall(0).args;
 
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -671,9 +691,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(1).args;
+					const args = stubs.execute1.getCall(1).args;
 					
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -693,13 +713,12 @@ describe('src/env/forge.js', function(){
 						}
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args[0];
+					const args = stubs.execute1.getCall(0).args[0];
 					
-					expect(args.method)
-					.to.equal('read');
-
-					expect(args.query.toJSON())
+					expect(args)
 					.to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
 						models: [{
 							series: 'service-1',
 							schema: 'service-1',
@@ -714,6 +733,7 @@ describe('src/env/forge.js', function(){
 							path: 'drei',
 							as: 'drei'
 						}],
+						filters: [],
 						params: [{
 							series: 'service-1',
 							path: 'eins',
@@ -762,9 +782,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = stubs.execute1.getCall(0).args;
 
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -782,9 +802,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = stubs.execute1.getCall(0).args;
 
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -803,9 +823,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(1).args;
+					const args = stubs.execute1.getCall(1).args;
 					
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2,
@@ -823,9 +843,9 @@ describe('src/env/forge.js', function(){
 						fier: 4
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args;
+					const args = stubs.execute1.getCall(0).args;
 
-					expect(args[0].payload)
+					expect(args[0].models[0].payload)
 					.to.deep.equal({
 						eins: 1,
 						zwei: 2
@@ -846,13 +866,12 @@ describe('src/env/forge.js', function(){
 						}
 					}, ctx);
 
-					const args = interface1.execute.getCall(0).args[0];
+					const args = stubs.execute1.getCall(0).args[0];
 					
-					expect(args.method)
-					.to.equal('read');
-
-					expect(args.query.toJSON())
+					expect(args)
 					.to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
 						models: [{
 							series: 'service-1',
 							schema: 'service-1',
@@ -867,6 +886,7 @@ describe('src/env/forge.js', function(){
 							path: 'drei',
 							as: 'drei'
 						}],
+						filters: [],
 						params: [{
 							series: 'service-1',
 							path: 'eins',
@@ -910,9 +930,9 @@ describe('src/env/forge.js', function(){
 							}
 						}, ctx);
 
-						const args = interface1.execute.getCall(0).args;
+						const args = stubs.execute1.getCall(0).args;
 
-						expect(args[0].payload)
+						expect(args[0].models[0].payload)
 						.to.deep.equal({
 							eins: 1,
 							zwei: 2
@@ -948,18 +968,11 @@ describe('src/env/forge.js', function(){
 				permissions
 			});
 
-			connectors.set(
-				'http', 
-				() => ({
-					execute: stubs.execute
-				})
-			);
-
 			const cfg = new Config({
 				cruds: [{
 					name: 'service-1',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -977,7 +990,7 @@ describe('src/env/forge.js', function(){
 				}, {
 					name: 'service-2',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -992,7 +1005,7 @@ describe('src/env/forge.js', function(){
 				}, {
 					name: 'service-3',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -1023,7 +1036,7 @@ describe('src/env/forge.js', function(){
 				}, {
 					name: 'service-4',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -1139,10 +1152,10 @@ describe('src/env/forge.js', function(){
 
 		describe('the service', function(){
 			it('should correctly run create', async function(){
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					name: 'something',
 					junk: 'value'
-				}]);
+				}];
 
 				const res = await service.create(
 					{foo:'bar2', eins: 1}, 
@@ -1158,9 +1171,9 @@ describe('src/env/forge.js', function(){
 			it('should correctly run read', async function(){
 				permissions['can-read'] = true;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				const res = await service.read(1, ctx);
 
@@ -1171,9 +1184,9 @@ describe('src/env/forge.js', function(){
 			it('should fail to run read without correct permissions', async function(){
 				permissions['can-read'] = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				let failed = false;
 				try {
@@ -1195,9 +1208,9 @@ describe('src/env/forge.js', function(){
 			it('should correctly run update', async function(){
 				permissions['can-read'] = true;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				const res = await service.update(12, {eins: 1}, ctx);
 
@@ -1208,9 +1221,9 @@ describe('src/env/forge.js', function(){
 			it('should fail to run update without correct permissions', async function(){
 				permissions['can-read'] = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				let failed = false;
 				try {
@@ -1232,9 +1245,9 @@ describe('src/env/forge.js', function(){
 			it('should correctly run delete', async function(){
 				permissions['can-read'] = true;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				const res = await service.delete(12, ctx);
 
@@ -1245,9 +1258,9 @@ describe('src/env/forge.js', function(){
 			it('should fail to run delete without correct permissions', async function(){
 				permissions['can-read'] = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = [{
 					foo: 'bar'
-				}]);
+				}];
 
 				let failed = false;
 				try {
@@ -1274,7 +1287,7 @@ describe('src/env/forge.js', function(){
 
 		it('should properly apply the hooks', async function(){
 			it('should correctly run create', async function(){
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1291,7 +1304,7 @@ describe('src/env/forge.js', function(){
 		it('should properly apply the effects', async function(){
 			permissions['can-read'] = true;
 
-			stubs.execute.resolves([{
+			interfaceResults1 = ([{
 				foo: 'bar'
 			}]);
 			//--------- for the update
@@ -1335,7 +1348,7 @@ describe('src/env/forge.js', function(){
 				let doc2Called = false;
 				let doc3Called = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1395,7 +1408,7 @@ describe('src/env/forge.js', function(){
 				let doc2Called = false;
 				let doc3Called = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1473,20 +1486,13 @@ describe('src/env/forge.js', function(){
 				permissions
 			});
 
-			connectors.set(
-				'http', 
-				() => ({
-					execute: stubs.execute
-				})
-			);
-
 			stubs.effect = sinon.stub();
 			
 			const cfg = new Config({
 				cruds: [{
 					name: 'service-1',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -1504,7 +1510,7 @@ describe('src/env/forge.js', function(){
 				}, {
 					name: 'service-2',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -1519,7 +1525,7 @@ describe('src/env/forge.js', function(){
 				}, {
 					name: 'service-3',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -1550,7 +1556,7 @@ describe('src/env/forge.js', function(){
 				}, {
 					name: 'service-4',
 					settings: {
-						connector: 'http',
+						source: 'test-1',
 						fields: {
 							id: {
 								create: false,
@@ -1666,7 +1672,7 @@ describe('src/env/forge.js', function(){
 
 		describe('the service', function(){
 			it('should correctly run create', async function(){
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					name: 'something',
 					junk: 'value'
 				}]);
@@ -1685,7 +1691,7 @@ describe('src/env/forge.js', function(){
 			it('should correctly run read', async function(){
 				permissions['can-read'] = true;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1698,7 +1704,7 @@ describe('src/env/forge.js', function(){
 			it('should fail to run read without correct permissions', async function(){
 				permissions['can-read'] = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1722,7 +1728,7 @@ describe('src/env/forge.js', function(){
 			it('should correctly run update', async function(){
 				permissions['can-read'] = true;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1735,7 +1741,7 @@ describe('src/env/forge.js', function(){
 			it('should fail to run update without correct permissions', async function(){
 				permissions['can-read'] = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1759,7 +1765,7 @@ describe('src/env/forge.js', function(){
 			it('should correctly run delete', async function(){
 				permissions['can-read'] = true;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1772,7 +1778,7 @@ describe('src/env/forge.js', function(){
 			it('should fail to run delete without correct permissions', async function(){
 				permissions['can-read'] = false;
 
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1801,7 +1807,7 @@ describe('src/env/forge.js', function(){
 
 		it('should properly apply the hooks', async function(){
 			it('should correctly run create', async function(){
-				stubs.execute.resolves([{
+				interfaceResults1 = ([{
 					foo: 'bar'
 				}]);
 
@@ -1818,7 +1824,7 @@ describe('src/env/forge.js', function(){
 		it('should properly apply the effects', async function(){
 			permissions['can-read'] = true;
 
-			stubs.execute.resolves([{
+			interfaceResults1 = ([{
 				foo: 'bar'
 			}]);
 			//--------- for the update

@@ -2,8 +2,6 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
 
-const {Config} = require('bmoor/src/lib/config.js');
-
 const {Context} = require('../server/context.js');
 
 describe('src/env/nexus.js', function(){
@@ -13,18 +11,31 @@ describe('src/env/nexus.js', function(){
 	let stubs = null;
 	let ctx = null;
 
-	let connector1 = null;
+	let connectorResult = null;
 
-	beforeEach(function(){
+	beforeEach(async function(){
 		stubs = {};
 
 		ctx = new Context();
-		nexus = new Nexus(
-			null, 
-			new Config({
-				stub: () => connector1
+
+		nexus = new Nexus();
+
+		stubs = {
+			execute: sinon.stub()
+			.callsFake(async function(){
+				return connectorResult;
 			})
-		);
+		};
+
+		const connector = {
+			execute: async (...args) => stubs.execute(...args)
+		};
+
+		await nexus.setConnector('test', async () => connector);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
+		});
 	});
 
 	afterEach(function(){
@@ -39,7 +50,7 @@ describe('src/env/nexus.js', function(){
 	describe('::configureModel', function(){
 		it('should properly define a model', async function(){
 			const model = await nexus.configureModel('test-10', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					eins: {
 						create: false,
@@ -74,7 +85,7 @@ describe('src/env/nexus.js', function(){
 
 		it('should assist in defining links', async function(){
 			await nexus.configureModel('test-l-1', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					eins: {
 						create: false,
@@ -94,7 +105,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-l-2', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						create: false,
@@ -121,7 +132,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-l-3', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						create: false,
@@ -134,7 +145,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-l-4', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						create: false,
@@ -186,7 +197,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			nexus.configureModel('test-11', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					eins: {
 						create: false,
@@ -222,7 +233,7 @@ describe('src/env/nexus.js', function(){
 
 		it('should resolve if the model was already defined', async function(){
 			nexus.configureModel('test-12', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					eins: {
 						create: false,
@@ -262,18 +273,16 @@ describe('src/env/nexus.js', function(){
 		let service = null;
 
 		beforeEach(function(){
-			connector1 = {
-				execute: () => Promise.resolve([{
-					id: 'something-1',
-					value: 'v-1'
-				}])
-			};
+			connectorResult = [{
+				id: 'something-1',
+				value: 'v-1'
+			}];
 		});
 
 		describe('model defined first', function(){
 			beforeEach(async function(){
 				nexus.configureModel('test-13', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						value: true
@@ -306,7 +315,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-13.5', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						value: true
@@ -335,18 +344,16 @@ describe('src/env/nexus.js', function(){
 		let service = null;
 
 		beforeEach(function(){
-			connector1 = {
-				execute: () => Promise.resolve([{
-					id: 'something-1',
-					value: 'v-1'
-				}])
-			};
+			connectorResult = [{
+				id: 'something-1',
+				value: 'v-1'
+			}];
 		});
 		
 		describe('if loaded before installed', function(){
 			beforeEach(async function(){
 				nexus.configureModel('test-14', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						value: true
@@ -379,7 +386,7 @@ describe('src/env/nexus.js', function(){
 		describe('if loaded after installed', function(){
 			beforeEach(async function(){
 				nexus.configureModel('test-15', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						value: true
@@ -412,17 +419,15 @@ describe('src/env/nexus.js', function(){
 		let service = null;
 
 		beforeEach(function(){
-			connector1 = {
-				execute: () => Promise.resolve([{
-					id: 'something-1',
-					value: 'v-1'
-				}])
-			};
+			connectorResult = [{
+				id: 'something-1',
+				value: 'v-1'
+			}];
 		});
 
 		beforeEach(async function(){
 			nexus.configureModel('test-16', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: true,
 					value: true
@@ -469,17 +474,15 @@ describe('src/env/nexus.js', function(){
 		let service = null;
 
 		beforeEach(function(){
-			connector1 = {
-				execute: () => Promise.resolve([{
-					id: 'something-1',
-					value: 'v-1'
-				}])
-			};
+			connectorResult =[{
+				id: 'something-1',
+				value: 'v-1'
+			}];
 		});
 
 		beforeEach(async function(){
 			nexus.configureModel('test-17', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: true,
 					value: true
@@ -527,17 +530,15 @@ describe('src/env/nexus.js', function(){
 		let service = null;
 
 		beforeEach(function(){
-			connector1 = {
-				execute: () => Promise.resolve([{
-					eins: 'something-1',
-					zwei: 'v-1'
-				}])
-			};
+			connectorResult = [{
+				eins: 'something-1',
+				zwei: 'v-1'
+			}];
 		});
 
 		beforeEach(async function(){
 			nexus.configureModel('test-17', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					eins: {
 						create: false,
@@ -1121,19 +1122,10 @@ describe('src/env/nexus.js', function(){
 	});
 
 	describe('::configureDocument', function(){
-	
-		beforeEach(function(){
-			stubs = {
-				execute: sinon.stub()
-			};
-
-			connector1 = {
-				execute: stubs.execute
-			};
-		});
 
 		it('should allow simple install', async function(){
 			await nexus.configureModel('test-item', {
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true,
@@ -1144,7 +1136,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-person', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: true,
 					name: true,
@@ -1160,7 +1152,7 @@ describe('src/env/nexus.js', function(){
 			});
 
 			await nexus.configureModel('test-category', {
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: true,
 					name: true,
@@ -1200,12 +1192,12 @@ describe('src/env/nexus.js', function(){
 			const res = await doc.read(1, {});
 
 			const args = stubs.execute.getCall(0).args[0];
-			expect(args.method)
-			.to.equal('read');
 
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
-				'models': [
+				sourceName: 'test-1',
+				method: 'read',
+				models: [
 					{
 						'series': 'test-item',
 						schema: 'test-item',
@@ -1249,6 +1241,7 @@ describe('src/env/nexus.js', function(){
 					'path': 'name',
 					as: 'categoryName'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -1272,7 +1265,7 @@ describe('src/env/nexus.js', function(){
 
 			beforeEach(async function(){
 				await nexus.configureModel('test-item', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: {
 							read: true,
@@ -1283,7 +1276,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-person', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						name: true,
@@ -1299,7 +1292,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-category', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						name: true,
@@ -1323,7 +1316,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-2-foo', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						name: true
@@ -1331,7 +1324,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-2-bar', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						name: true,
@@ -1347,7 +1340,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-3-hello', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						name: true,
@@ -1363,7 +1356,7 @@ describe('src/env/nexus.js', function(){
 				});
 
 				await nexus.configureModel('test-3-world', {
-					connector: 'stub',
+					source: 'test-1',
 					fields: {
 						id: true,
 						name: true,
@@ -1457,11 +1450,10 @@ describe('src/env/nexus.js', function(){
 
 				const args0 = stubs.execute.getCall(0).args[0];
 
-				expect(args0.method)
-				.to.equal('read');
-
-				expect(args0.query.toJSON())
+				expect(args0)
 				.to.deep.equal({
+					sourceName: 'test-1',
+					method: 'read',
 					'models': [
 						{
 							'series': 'test-item',
@@ -1510,6 +1502,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'fooId',
 						as: 'sub_0'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-item',
 						path: 'id',
@@ -1528,11 +1521,10 @@ describe('src/env/nexus.js', function(){
 				});
 
 				const args1 = stubs.execute.getCall(1).args[0];
-				expect(args1.method)
-				.to.equal('read');
-
-				expect(args1.query.toJSON())
+				expect(args1)
 				.to.deep.equal({
+					sourceName: 'test-1',
+					method: 'read',
 					'models': [
 						{
 							'series': 'test-2-foo',
@@ -1565,6 +1557,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'barName'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-2-foo',
 						path: 'id',
@@ -1583,12 +1576,11 @@ describe('src/env/nexus.js', function(){
 				});
 
 				const args2 = stubs.execute.getCall(2).args[0];
-				expect(args2.method)
-				.to.equal('read');
-
-				expect(args2.query.toJSON())
+				expect(args2)
 				.to.deep.equal({
-					'models': [
+					sourceName: 'test-1',
+					method: 'read',
+					models: [
 						{
 							'series': 'test-3-hello',
 							schema: 'test-3-hello',
@@ -1616,6 +1608,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'world.name'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-3-hello',
 						path: 'fooId',
@@ -1686,12 +1679,11 @@ describe('src/env/nexus.js', function(){
 
 				const args1 = stubs.execute.getCall(0).args[0];
 
-				expect(args1.method)
-				.to.equal('read');
-				
-				expect(args1.query.toJSON())
+				expect(args1)
 				.to.deep.equal({
-					'models': [
+					sourceName: 'test-1',
+					method: 'read',
+					models: [
 						{
 							'series': 'test-item',
 							schema: 'test-item',
@@ -1739,6 +1731,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'fooId',
 						'as': 'sub_0'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-item',
 						path: 'id',
@@ -1753,9 +1746,11 @@ describe('src/env/nexus.js', function(){
 				expect(args2.method)
 				.to.equal('read');
 				
-				expect(args2.query.toJSON())
+				expect(args2)
 				.to.deep.equal({
-					'models': [
+					sourceName: 'test-1',
+					method: 'read',
+					models: [
 						{
 							'series': 'test-3-hello',
 							schema: 'test-3-hello',
@@ -1793,6 +1788,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'world.name'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-2-foo',
 						path: 'id',
@@ -1896,12 +1892,11 @@ describe('src/env/nexus.js', function(){
 
 				const args1 = stubs.execute.getCall(0).args[0];
 
-				expect(args1.method)
-				.to.equal('read');
-				
-				expect(args1.query.toJSON())
+				expect(args1)
 				.to.deep.equal({
-					'models': [
+					sourceName: 'test-1',
+					method: 'read',
+					models: [
 						{
 							'series': 'test-item',
 							schema: 'test-item',
@@ -1949,6 +1944,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'categoryName'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-item',
 						path: 'id',
@@ -1960,12 +1956,11 @@ describe('src/env/nexus.js', function(){
 
 				const args2 = stubs.execute.getCall(1).args[0];
 
-				expect(args2.method)
-				.to.equal('read');
-				
-				expect(args2.query.toJSON())
+				expect(args2)
 				.to.deep.equal({
-					'models': [
+					method: 'read',
+					sourceName: 'test-1',
+					models: [
 						{
 							'series': 'test-item',
 							schema: 'test-item',
@@ -2013,6 +2008,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'fooId',
 						'as': 'sub_0'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-item',
 						path: 'id',
@@ -2024,12 +2020,11 @@ describe('src/env/nexus.js', function(){
 
 				const args3 = stubs.execute.getCall(2).args[0];
 				
-				expect(args3.method)
-				.to.equal('read');
-				
-				expect(args3.query.toJSON())
+				expect(args3)
 				.to.deep.equal({
-					'models': [
+					sourceName: 'test-1',
+					method: 'read',
+					models: [
 						{
 							'series': 'test-3-hello',
 							schema: 'test-3-hello',
@@ -2067,6 +2062,7 @@ describe('src/env/nexus.js', function(){
 						'path': 'name',
 						'as': 'world.name'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-2-foo',
 						path: 'id',

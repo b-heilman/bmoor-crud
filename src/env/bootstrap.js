@@ -81,7 +81,7 @@ class Bootstrap {
 	constructor(cfg = config){
 		this.bus = new Bus();
 		this.config = cfg;
-		this.nexus = new Nexus(cfg.sub('constructors'), cfg.sub('connectors'));
+		this.nexus = new Nexus(cfg.sub('constructors'));
 		this.forge = new Forge(this.nexus, this.bus);
 		this.gateway = new Gateway(this.nexus);
 	}
@@ -97,6 +97,26 @@ class Bootstrap {
 	}
 
 	async loadCrud(directories, preload){
+		const connectors = this.config.sub('connectors');
+		await Promise.all(
+			connectors.keys().map(
+				async (name) => this.nexus.setConnector(
+					name, 
+					connectors.get(name)
+				)
+			)
+		);
+
+		const sources = this.config.sub('sources');
+		await Promise.all(
+			sources.keys().map(
+				async (name) => this.nexus.configureSource(
+					name,
+					sources.get(name)
+				)
+			)
+		);
+
 		const [models, composites, decorators, hooks, security, effects] = await Promise.all([
 			this.load('models', directories),
 			this.load('composites', directories),

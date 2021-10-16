@@ -1,14 +1,13 @@
 
 const {get, set, del} =  require('bmoor/src/core.js');
 const {create} = require('bmoor/src/lib/error.js');
-
 const {Transformer} = require('bmoor-schema/src/Transformer.js');
 
 const {compareChanges, config} = require('../schema/structure.js');
-
-const {View} = require('../services/view.js');
-
 const {Normalized, DatumRef} = require('../schema/normalized.js');
+
+const {View} = require('./view.js');
+const {Executor} = require('./executor.js');
 const normalization = require('./normalization.js');
 
 /***
@@ -44,13 +43,11 @@ const normalization = require('./normalization.js');
 			await this._beforeQuery(settings.params, ctx);
 		}
 
-		const res = await super.read(
-			{
-				query: await this.structure.getQuery(
-					settings,
-					ctx
-				)
-			}, 
+		const res = await super.query(
+			await this.structure.getQuery(
+				settings,
+				ctx
+			),
 			ctx
 		);
 		
@@ -119,6 +116,7 @@ const normalization = require('./normalization.js');
 			}
 		};
 
+		console.log('read ->');
 		return (
 			await this.query(query, ctx)
 		)[0];
@@ -394,30 +392,30 @@ const normalization = require('./normalization.js');
 	}
 
 	async getAffectedByModel(modelName, key, ctx){
-		const stmt = {
-			method: 'read',
-			query: await this.structure.getKeyQueryByModel(
+		const exe = new Executor(
+			this.structure.name+':byModel',
+			await this.structure.getKeyQueryByModel(
 				modelName,
 				key,
 				ctx
 			)
-		};
+		);
 
-		return (await this.structure.execute(stmt, ctx))
+		return (await this.run(exe, ctx))
 		.map(response => response.key);
 	}
 
 	async getAffectedBySub(subName, key, ctx){
-		const stmt = {
-			method: 'read',
-			query: await this.structure.getKeyQueryBySeries(
+		const exe = new Executor(
+			this.structure.name+':byModel',
+			await this.structure.getKeyQueryBySeries(
 				subName,
 				key,
 				ctx
 			)
-		};
+		);
 
-		return (await this.structure.execute(stmt, ctx))
+		return (await this.run(exe, ctx))
 		.map(response => response.key);
 	}
 }

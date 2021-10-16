@@ -5,7 +5,12 @@ const {apply, create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
-const {Query, QueryField, QueryParam, QueryJoin, QuerySort, QueryPosition} = require('./query.js');
+const {StatementField} = require('./statement/field.js');
+const {StatementFilter} = require('./statement/filter.js');
+const {StatementParam} = require('./statement/param.js');
+const {QueryJoin} = require('./query/join.js');
+const {QuerySort} = require('./query/sort.js');
+const {QueryPosition} = require('./query/position.js');
 
 const major = Symbol('major');
 const minor = Symbol('minor');
@@ -308,19 +313,49 @@ function buildDeflate(baseDeflate, fields){
 	}
 }
 
-function buildParam(field, v){
+// TODO: do I want to want to create a builder class?
+function buildParam(field, v, Class){
 	if (v && typeof(v) === 'object'){
 		if (Array.isArray(v)){
-			return new QueryParam(field, v, '=');
+			return new Class(field, v, '=');
 		} else {
 			return Object.keys(v).map(
-				op => new QueryParam(field, v[op], op)
+				op => new Class(field, v[op], op)
 			);
 		}
 	} else {
 		
-		return new QueryParam(field, v, '=');
+		return new Class(field, v, '=');
 	}
+}
+
+function buildSorts(query, sorts){
+	sorts.split(',')
+		.map((option, pos) => {
+			option = option.trimStart();
+
+			let ascending = true;
+			let char = option[0];
+
+			if (char === '-'){
+				ascending = false;
+				option = option.substr(1);
+			} else if (char === '+'){
+				option = option.substr(1);
+			}
+
+			let base = query.base;
+			if (option[0] === '$'){
+				const pos = option.indexOf('.');
+
+				base = option.substr(1, pos-1);
+				option = option.substr(pos+1);
+			} else if (option[0] === '.'){
+				option = option.substr(1);
+			}
+
+			query.addSorts(base, [new QuerySort(option, pos, ascending)]);
+		});
 }
 
 function buildValidator(old, field, validation){
@@ -418,7 +453,7 @@ async function addAccessorsToQuery(accessors, query, nexus){
 			let aSeries = accessor.series;
 
 			const model = nexus.getModel(accessor.model);
-			query.setSchema(aSeries, model.schema);
+			query.setModel(aSeries, model);
 			
 			// this ensures everything is linked accordingly
 			// await addStuff(this, prev, subAccessor);
@@ -466,7 +501,7 @@ class Structure {
 		this.nexus = nexus;
 	}
 
-	configure(settings){
+	async configure(settings){
 		this.incomingSettings = settings;
 		
 		this.fields = [];
@@ -607,17 +642,114 @@ class Structure {
 		return this.actions.inflate(datum, ctx);
 	}
 
-	async getQuery(settings, ctx){
-		const query = settings.query || new Query(this.name);
+	// generates the base query object for the class, stubed under structure
+	getBaseQuery(){
+		throw new Error('must be extended');
+	}
 
+	// used to extend all statements (query or executable).  These are contextless
+	// properties
+	async extendBaseStatement(statement){
+		const filters = this.incomingSettings.filters;
+		if (filters){
+			Object.keys(filters).map(
+				field => {
+					let path = null;
+					let series = statement.base;
+
+					const param = filters[field];
+
+					if (field[0] === '$'){
+						const pos = field.indexOf('.');
+
+						series = field.substr(1, pos-1);
+						path = field.substr(pos+1);
+					} else {
+						if (field[0] === '.'){
+							field = field.substr(1);
+						}
+
+						path = field;
+					}
+
+					statement.addFilters(
+						series,
+						[buildParam(path, param, StatementFilter)]
+					);
+				}
+			);
+		}
+	}
+
+	// create a base statement and extend it
+	async prepareBaseQuery(){
+		const query = this.getBaseQuery();
+
+		await this.extendBaseStatement(query);
+
+		const sorts = this.incomingSettings.sort;
+		if (sorts){
+			buildSorts(query, sorts);
+		}
+
+		return query;
+	}
+
+	// Add content to a statement based on the given context.  This will be run
+	// each invocation, unlike the prepare which is univeral across all contexts
+	async extendStatement(statement, settings, ctx){
+		// this is in extended because some fields are based on permission.
+		// I could preload some and do the rest, but for now this is how
+		// it will work
 		(await this.testFields('read', ctx))
 		.forEach(
 			(field) => {
-				query.addFields(field.series, [
-					new QueryField(field.storagePath, field.reference || null)
+				statement.addFields(field.series, [
+					new StatementField(field.storagePath, field.reference || null)
 				]);
 			}
 		);
+
+		// parameters we can querying off of, must already be inside the structure
+		/** structure
+		 * {
+		 * 	[inside series].[inside property]: [inside value]
+		 * }
+		 **/
+		 const params = settings.params;
+		if (params){
+			Object.keys(params).map(
+				field => {
+					let path = null;
+					let series = statement.base;
+
+					const param = params[field];
+
+					if (field[0] === '$'){
+						const pos = field.indexOf('.');
+
+						series = field.substr(1, pos-1);
+						path = field.substr(pos+1);
+					} else {
+						if (field[0] === '.'){
+							field = field.substr(1);
+						}
+
+						path = field;
+					}
+
+					statement.addParams(
+						series,
+						[buildParam(path, param, StatementParam)]
+					);
+				}
+			);
+		}
+	}
+
+	// assigns query specific fields
+	async extendQuery(query, settings, ctx){
+		await this.extendStatement(query, settings, ctx);
 
 		// this is the query property.  It allows you to 'join in' from the outside
 		/** structure
@@ -662,76 +794,14 @@ class Structure {
 					const rootAccessor = access[0];
 					
 					const model = this.nexus.getModel(rootAccessor.model); // has to be defined by now
-					query.setSchema(rootAccessor.series, model.schema);
+					query.setModel(rootAccessor.series, model);
 				}, 
 				Promise.resolve(true)
 			);
 		}
 
-		// parameters we can querying off of, must already be inside the structure
-		/** structure
-		 * {
-		 * 	[inside series].[inside property]: [inside value]
-		 * }
-		 **/
-		if (settings.params){
-			Object.keys(settings.params).map(
-				field => {
-					let path = null;
-					let series = query.base;
-
-					const param = settings.params[field];
-
-					if (field[0] === '$'){
-						const pos = field.indexOf('.');
-
-						series = field.substr(1, pos-1);
-						path = field.substr(pos+1);
-					} else {
-						if (field[0] === '.'){
-							field = field.substr(1);
-						}
-
-						path = field;
-					}
-
-					query.addParams(
-						series,
-						[buildParam(path, param)]
-					);
-				}
-			);
-		}
-
 		if (settings.sort){
-			const sorts = settings.sort.split(',')
-				.map(option => {
-					option = option.trimStart();
-
-					let ascending = true;
-					let char = option[0];
-
-					if (char === '-'){
-						ascending = false;
-						option = option.substr(1);
-					} else if (char === '+'){
-						option = option.substr(1);
-					}
-
-					let base = query.base;
-					if (option[0] === '$'){
-						const pos = option.indexOf('.');
-
-						base = option.substr(1, pos-1);
-						option = option.substr(pos+1);
-					} else if (option[0] === '.'){
-						option = option.substr(1);
-					}
-
-					return new QuerySort(base, option, ascending);
-				});
-
-			query.setSorts(sorts);
+			buildSorts(query, settings.sort);
 		}
 
 		if (settings.position && settings.position.limit){
@@ -739,34 +809,6 @@ class Structure {
 		}
 
 		return query;
-	}
-
-	async execute(stmt/*, ctx*/){
-		if (!this.connector){
-			throw create(`missing connector for ${this.name}`, {
-				code: 'BMOOR_CRUD_STRUCTURE_CONNECTOR'
-			});
-		}
-
-		try {
-			return this.nexus.execute(
-				this.connector, 
-				this.incomingSettings.connectorSettings || {},
-				stmt
-			);
-		} catch(ex) {
-			apply(ex, {
-				code: 'BMOOR_CRUD_STRUCTURE_EXECUTE',
-				context: {
-					name: this.name
-				},
-				protected: {
-					stmt
-				}
-			});
-
-			throw ex;
-		}
 	}
 
 	getChangeType(delta){

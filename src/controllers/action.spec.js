@@ -1,7 +1,6 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
-const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -12,22 +11,33 @@ describe('src/controller/action.js', function(){
 	let stubs = {};
 	let nexus = null;
 	let service = null;
-	let interface = null;
+	let connectorResult = null;
 
 	beforeEach(async function(){
-		stubs = {};
-		interface = {};
+		nexus = new Nexus();
 
-		const interfaces = new Config({
-			stub: function(){
-				return interface;
-			}
+		connectorResult = {};
+
+		stubs = {
+			execute: sinon.stub()
+			.callsFake(async function(){
+				return connectorResult;
+			})
+		};
+
+		await nexus.setConnector(
+			'test', 
+			async () => ({
+				execute: async (...args) => stubs.execute(...args)
+			})
+		);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
 		});
-		
-		nexus = new Nexus(null, interfaces);
 
 		nexus.configureModel('service-1', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					create: false,
@@ -49,7 +59,11 @@ describe('src/controller/action.js', function(){
 
 	afterEach(function(){
 		Object.values(stubs)
-		.forEach(stub => stub.restore());
+		.forEach(stub => {
+			if (stub.restore){
+				stub.restore();
+			}
+		});
 	});
 
 	describe('allowing for a method to be called', function(){

@@ -1,6 +1,9 @@
 
 const {del} = require('bmoor/src/core.js');
 
+const {Querier} = require('./querier.js');
+const {Executor} = require('./executor.js');
+
 async function runMap(arr, view, ctx){
 	const mapFn = view.buildMap(ctx);
 	const inflateFn = view.structure.actions.inflate;
@@ -21,7 +24,9 @@ async function runMap(arr, view, ctx){
 		}
 	} else if (inflateFn){
 		rtn = arr.map(
-			datum => inflateFn(datum, ctx)
+			datum => {
+				return inflateFn(datum, ctx);
+			}
 		);
 	} else {
 		rtn = arr;
@@ -146,17 +151,37 @@ class View {
 		}
 	}
 
-	async read(stmt, ctx){
-		stmt.method = 'read';
-		
+	async run(stmt, ctx, settings){
+		await stmt.link(this.structure.nexus);
+
+		return stmt.run(ctx, settings);
+	}
+
+	async process(stmt, ctx, settings={}){
 		return runFilter(
 			await runMap( // converts from internal => external
-				await this.structure.execute(stmt, ctx), 
+				await this.run(stmt, ctx, settings),
 				this, 
 				ctx
 			), 
 			this, 
 			ctx
+		);
+	}
+
+	async query(query, ctx, settings={}){
+		return this.process(
+			new Querier('view:'+this.structure.name, query),
+			ctx, 
+			settings
+		);
+	}
+
+	async execute(exe, ctx, settings={}){
+		return this.process(
+			new Executor('view:'+this.structure.name, exe),
+			ctx,
+			settings
 		);
 	}
 

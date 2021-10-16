@@ -2,15 +2,33 @@
 const sinon = require('sinon');
 const {expect} = require('chai');
 
-describe('src/schema/model.js', function(){
-	const {config} = require('./structure.js');
+const {Nexus, config: nexusConfig} = require('../env/nexus.js');
+const {config} = require('./structure.js');
+
+describe('src/schema/model.js', function(){	
 	const {Model} = require('./model.js');
-
+	
 	let now = Date.now();
+	let nexus = null;
 	let clock = null;
+	let connector = null;
 
-	beforeEach(function(){
+	beforeEach(async function(){
+		nexusConfig.set('timeout', 500);
+		
 		clock = sinon.useFakeTimers(now);
+
+		nexus = new Nexus();
+
+		connector = {
+			// this doesn't matter here, right?
+		};
+
+		await nexus.setConnector('test', async () => connector);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
+		});
 	});
 
 	afterEach(function(){
@@ -24,7 +42,7 @@ describe('src/schema/model.js', function(){
 	describe('.actions', function(){
 		describe('::create', function(){
 			it('should work with a single field', async function(){
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {

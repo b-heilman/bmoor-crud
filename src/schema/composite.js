@@ -5,7 +5,10 @@ const {makeSetter} = require('bmoor/src/core.js');
 
 const {Structure, buildParam} = require('./structure.js');
 
-const {Query, QueryJoin, QueryField} = require('./query.js');
+const {StatementParam} = require('./statement/param.js');
+const {StatementField} = require('./statement/field.js');
+const {QueryJoin} = require('./query/join.js');
+const {QueryStatement} = require('./query/statement.js');
 const {Instructions} = require('./composite/instructions.js');
 
 function buildCalculations(schema, base){
@@ -404,6 +407,8 @@ class Composite extends Structure {
 			}
 		}
 
+		this.preparedQuery = await this.prepareBaseQuery();
+
 		return rtn;  
 	}
 
@@ -511,18 +516,19 @@ class Composite extends Structure {
 		return super.addField(path, settings);
 	}
 
-	// produces representation for interface layer
-	async getQuery(settings={}, ctx={}){
-		const query = settings.query || new Query(this.instructions.model);
+	getBaseQuery(){
+		return new QueryStatement(this.instructions.model);
+	}
 
-		await this.link();
+	async prepareBaseQuery(ctx){
+		const query = await super.prepareBaseQuery(ctx);
 
 		this.instructions.forEach((series, seriesInfo) => {
 			if (!seriesInfo.isNeeded){
 				return;
 			}
 
-			query.setSchema(series, this.nexus.getModel(seriesInfo.model).schema);
+			query.setModel(series, this.nexus.getModel(seriesInfo.model));
 
 			const joinsTo = seriesInfo.join;
 			
@@ -549,9 +555,16 @@ class Composite extends Structure {
 			}
 		});
 
-		return super.getQuery(
+		return query;
+	}
+
+	// produces representation for interface layer
+	async getQuery(settings={}, ctx={}){
+		const query = this.preparedQuery.clone();
+
+		return super.extendQuery(
+			query,
 			{
-				query: query,
 				joins: settings.joins,
 				params: {...settings.params, ...this.instructions.params},
 				sort: settings.sort,
@@ -566,7 +579,7 @@ class Composite extends Structure {
 		await this.link();
 
 		const baseModel = this.baseModel.name;
-		const query = new Query(baseModel);
+		const query = new QueryStatement(baseModel);
 
 		// get everything from the composite to the outer layer
 		const linking = this.instructions.getTrace(compositeName)
@@ -576,7 +589,7 @@ class Composite extends Structure {
 			if (modelName){
 				const model = await this.nexus.loadModel(modelName);
 
-				query.setSchema(series, model.schema);
+				query.setModel(series, model);
 			} else {
 				// I can do this because there should be only one sub in
 				// the chain
@@ -585,11 +598,11 @@ class Composite extends Structure {
 				const sub = await this.nexus.loadComposite(compositeName);
 				const model = await this.nexus.loadModel(sub.baseModel.name);
 
-				query.setSchema(compositeName, model.schema);
+				query.setModel(compositeName, model);
 
 				query.addParams(
 					compositeName,
-					[buildParam(model.getKeyField(), key)]
+					[buildParam(model.getKeyField(), key, StatementParam)]
 				);
 			}
 
@@ -615,7 +628,7 @@ class Composite extends Structure {
 
 		// return back the keys of the base model
 		query.addFields(baseModel, [
-			new QueryField(this.baseModel.getKeyField(), 'key')
+			new StatementField(this.baseModel.getKeyField(), 'key')
 		]);
 
 		return query;
@@ -625,7 +638,7 @@ class Composite extends Structure {
 		await this.link();
 
 		const baseModel = this.baseModel.name;
-		const query = new Query(baseModel);
+		const query = new QueryStatement(baseModel);
 
 		// get everything from the composite to the outer layer
 		const linking = this.instructions.getTrace(
@@ -634,12 +647,12 @@ class Composite extends Structure {
 			const modelName = this.instructions.getSeries(series).model;
 			const model = await this.nexus.loadModel(modelName);
 
-			query.setSchema(series, model.schema);
+			query.setModel(series, model);
 
 			if (byModelName === modelName){
 				query.addParams(
 					series,
-					[buildParam(model.getKeyField(), key)]
+					[buildParam(model.getKeyField(), key, StatementParam)]
 				);
 			}
 
@@ -665,7 +678,7 @@ class Composite extends Structure {
 
 		// return back the keys of the base model
 		query.addFields(baseModel, [
-			new QueryField(this.baseModel.getKeyField(), 'key')
+			new StatementField(this.baseModel.getKeyField(), 'key')
 		]);
 
 		return query;

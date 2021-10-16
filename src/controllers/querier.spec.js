@@ -1,7 +1,6 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
-const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -11,36 +10,34 @@ describe('src/controller/querier.js', function(){
 
 	let nexus = null;
 	let stubs = null;
-	let connector = null;
 	let permissions = null;
-	let connectorExecute = null;
+	let connectorResult = null;
 
 	beforeEach(async function(){
-		connectorExecute = null;
+		nexus = new Nexus();
+
+		connectorResult = {};
 
 		stubs = {
 			execute: sinon.stub()
 			.callsFake(async function(){
-				return connectorExecute;
+				return connectorResult;
 			})
 		};
 
-		permissions = {};
+		await nexus.setConnector(
+			'test', 
+			async () => ({
+				execute: async (...args) => stubs.execute(...args)
+			})
+		);
 
-		connector = {
-			execute: (...args) => stubs.execute(...args)
-		};
-
-		const interfaces = new Config({
-			stub: function(){
-				return connector;
-			}
+		await nexus.configureSource('test-1', {
+			connector: 'test'
 		});
-		
-		nexus = new Nexus(null, interfaces);
 
 		nexus.configureModel('test-group', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -58,7 +55,7 @@ describe('src/controller/querier.js', function(){
 		await nexus.configureCrud('test-group', {});
 
 		nexus.configureModel('test-user', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -82,7 +79,7 @@ describe('src/controller/querier.js', function(){
 		await nexus.configureCrud('test-user', {});
 
 		nexus.configureModel('test-stats', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -154,7 +151,7 @@ describe('src/controller/querier.js', function(){
 					}
 				};
 
-				connectorExecute = [{
+				connectorResult = [{
 					'user': 'user-1',
 					'stats': 'stat-1'
 				}, {
@@ -166,11 +163,10 @@ describe('src/controller/querier.js', function(){
 
 				const args = stubs.execute.getCall(0).args[0];
 			
-				expect(args.method)
-				.to.equal('read');
-
-				expect(args.query.toJSON())
+				expect(args)
 				.to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
 					models: [{
 						series: 'test-user',
 						schema: 'test-user',
@@ -207,6 +203,7 @@ describe('src/controller/querier.js', function(){
 						as: 'stats',
 						path: 'name'
 					}],
+					filters: [],
 					params: [{
 						series: 'test-user',
 						path: 'name',

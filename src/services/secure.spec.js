@@ -4,7 +4,9 @@ const sinon = require('sinon');
 
 const {Model} = require('../schema/model.js');
 const {Crud} = require('./crud.js');
+const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
+
 
 const sut = require('./secure.js');
 
@@ -210,17 +212,28 @@ describe('src/services/secure.js', function(){
 
 	describe('via a Service', function(){
 		let model = null;
+		let nexus = null;
 		let service = null;
 
 		beforeEach(async function(){
 			stubs.execute = sinon.stub();
 
-			model = new Model('model-1', {
-				execute: (...args) => stubs.execute(...args)
+			nexus = new Nexus();
+
+			const connector = {
+				execute: async (...args) => stubs.execute(...args)
+			};
+
+			await nexus.setConnector('test', async () => connector);
+
+			await nexus.configureSource('test-1', {
+				connector: 'test'
 			});
 
+			model = new Model('model-1', nexus);
+
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,

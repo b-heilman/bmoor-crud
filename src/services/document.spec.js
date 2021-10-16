@@ -1,7 +1,6 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
-const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus, config} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -14,40 +13,39 @@ describe('src/services/document.js', function(){
 	let stubs = null;
 	let context = null;
 	
-	let connector = null;
 	let permissions = null;
-	let connectorExecute = null;
+	let connectorResult = null;
 
 	const changeTypes = require('../schema/structure.js').config.get('changeTypes');
 
-	beforeEach(function(){
+	beforeEach(async function(){
 		stubs = {};
 		
-		connector = {
-			execute: (...args) => stubs.execute(...args)
-		};
-
-		const connectors = new Config({
-			stub: function(){
-				return connector;
-			}
-		});
-
 		permissions = {};
 
 		context = new Context({method: 'get'});
 		context.hasPermission = (perm) => !!permissions[perm];
 
+		nexus = new Nexus();
+
 		stubs = {
 			execute: sinon.stub()
 			.callsFake(async function(){
-				return connectorExecute;
+				return connectorResult;
 			})
 		};
 
+		const connector = {
+			execute: async (...args) => stubs.execute(...args)
+		};
+
+		await nexus.setConnector('test', async () => connector);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
+		});
+
 		config.set('timeout', 500);
-		
-		nexus = new Nexus(null, connectors);
 	});
 
 	afterEach(function(){
@@ -61,7 +59,7 @@ describe('src/services/document.js', function(){
 
 	beforeEach(async function(){
 		await nexus.configureModel('test-user', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -73,7 +71,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-user', {});
 
 		await nexus.configureModel('test-item', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -115,7 +113,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-item', {});
 
 		await nexus.configureModel('test-material', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -145,7 +143,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-material', {});
 
 		await nexus.configureModel('test-item-material', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -197,7 +195,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-item-material', {});
 
 		await nexus.configureModel('test-person', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: true,
 				name: true,
@@ -218,7 +216,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-person', {});
 
 		await nexus.configureModel('test-family', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -230,7 +228,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-family', {});
 
 		await nexus.configureModel('test-category', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -262,7 +260,7 @@ describe('src/services/document.js', function(){
 		await nexus.configureCrud('test-category', {});
 
 		await nexus.configureModel('test-tag', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -306,7 +304,7 @@ describe('src/services/document.js', function(){
 			}
 		});
 
-		await nexus.configureDocument('test-composite-item', connector);
+		await nexus.configureDocument('test-composite-item');
 
 		await nexus.configureComposite('test-composite-tag', {
 			base: 'test-tag',
@@ -317,7 +315,7 @@ describe('src/services/document.js', function(){
 			}
 		});
 
-		await nexus.configureDocument('test-composite-tag', connector);
+		await nexus.configureDocument('test-composite-tag');
 
 		await nexus.configureComposite('test-composite-tag-uber', {
 			base: 'test-category',
@@ -330,9 +328,10 @@ describe('src/services/document.js', function(){
 			}
 		});
 
-		await nexus.configureDocument('test-composite-tag-uber', connector);
+		await nexus.configureDocument('test-composite-tag-uber');
 
 		await nexus.configureModel('test-user-family-pivot', {
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -362,7 +361,7 @@ describe('src/services/document.js', function(){
 		it('should properly run the query on an included model', async function(){
 			const doc = await nexus.loadDocument('test-composite-item');
 
-			connectorExecute = [{
+			connectorResult = [{
 				key: 123
 			}, {
 				key: 456
@@ -375,11 +374,9 @@ describe('src/services/document.js', function(){
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					'series': 'test-item',
 					'schema': 'test-item',
@@ -400,12 +397,13 @@ describe('src/services/document.js', function(){
 						}
 					]
 				}],
-				'fields': [{
+				fields: [{
 					'series': 'test-item',
 					'path': 'id',
 					'as': 'key'
 				}],
-				'params': [{
+				filters: [],
+				params: [{
 					'series': 'test-category',
 					'path': 'id',
 					'operation': '=',
@@ -418,7 +416,7 @@ describe('src/services/document.js', function(){
 		it('should properly run the query on the base model', async function(){
 			const doc = await nexus.loadDocument('test-composite-item');
 
-			connectorExecute = [{
+			connectorResult = [{
 				key: 123
 			}, {
 				key: 456
@@ -431,22 +429,21 @@ describe('src/services/document.js', function(){
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					'series': 'test-item',
 					'schema': 'test-item',
 					'joins': []
 				}],
-				'fields': [{
+				fields: [{
 					'series': 'test-item',
 					'path': 'id',
 					'as': 'key'
 				}],
-				'params': [{
+				filters: [],
+				params: [{
 					'series': 'test-item',
 					'path': 'id',
 					'operation': '=',
@@ -460,7 +457,7 @@ describe('src/services/document.js', function(){
 			// this should fail, but instead it results in an all call
 			const doc = await nexus.loadDocument('test-composite-item');
 
-			connectorExecute = [{
+			connectorResult = [{
 				key: 123
 			}, {
 				key: 456
@@ -473,11 +470,9 @@ describe('src/services/document.js', function(){
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					'series': 'test-item',
 					'schema': 'test-item',
@@ -488,6 +483,7 @@ describe('src/services/document.js', function(){
 					'path': 'id',
 					'as': 'key'
 				}],
+				filters: [],
 				'params': []
 			});
 		});
@@ -497,7 +493,7 @@ describe('src/services/document.js', function(){
 		it('should properly run the query', async function(){
 			const doc = await nexus.loadDocument('test-composite-tag-uber');
 
-			connectorExecute = [{
+			connectorResult = [{
 				key: 123
 			}, {
 				key: 456
@@ -510,12 +506,10 @@ describe('src/services/document.js', function(){
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
-				'models': [{
+				method: 'read',
+				models: [{
 					'series': 'test-category',
 					'schema': 'test-category',
 					'joins': []
@@ -536,12 +530,13 @@ describe('src/services/document.js', function(){
 						}
 					]
 				}],
-				'fields': [{
+				fields: [{
 					'series': 'test-category',
 					'path': 'id',
 					'as': 'key'
 				}],
-				'params': [{
+				filters: [],
+				params: [{
 					'series': 'test-composite-tag',
 					'path': 'id',
 					'operation': '=',
@@ -554,7 +549,7 @@ describe('src/services/document.js', function(){
 
 	describe('::read', function(){
 		it('should properly generate a sql request', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personName': 'person-1',
 				'categoryName': 'category-1'
@@ -585,11 +580,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -630,6 +624,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -648,7 +643,7 @@ describe('src/services/document.js', function(){
 		});
 
 		it('should properly encode', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personName': 'person-1',
 				'categoryName': 'category-1'
@@ -689,11 +684,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -734,6 +728,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -748,7 +743,7 @@ describe('src/services/document.js', function(){
 		});
 
 		it('should properly inflate a data response, without security', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personInfo': '{"foo":"bar"}',
 				'category': '{"hello":"world"}'
@@ -771,18 +766,17 @@ describe('src/services/document.js', function(){
 			
 			const doc = new sut.Document(comp);
 
-			await doc.configure(connector);
+			await doc.configure({});
 			await doc.link();
 			
 			const res = await doc.read(1, context);
 			
 			const args = stubs.execute.getCall(0).args[0];
 			
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -819,6 +813,7 @@ describe('src/services/document.js', function(){
 					as: 'personInfo',
 					path: 'json'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -840,7 +835,7 @@ describe('src/services/document.js', function(){
 		it('should properly inflate a data response, with security', async function(){
 			permissions = {admin: true};
 
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personInfo': '{"foo":"bar"}',
 				'categoryInfo': '{"hello":"world"}'
@@ -863,18 +858,17 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const res = await doc.read(1, context);
 			
 			const args = stubs.execute.getCall(0).args[0];
 			
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -915,6 +909,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryInfo',
 					path: 'json'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -952,7 +947,7 @@ describe('src/services/document.js', function(){
 				}
 			});
 			
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personName': 'personName',
 				'ownerName': 'user2',
@@ -963,18 +958,17 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const res = await doc.read(1, context);
 
 			const args = stubs.execute.getCall(0).args[0];
 			
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1030,6 +1024,7 @@ describe('src/services/document.js', function(){
 					as: 'creatorName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -1051,7 +1046,7 @@ describe('src/services/document.js', function(){
 
 	describe('::readAll', function(){
 		it('should properly generate a sql request', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personName': 'person-1',
 				'categoryName': 'category-1'
@@ -1082,11 +1077,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1127,6 +1121,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: []
 			});
 
@@ -1141,7 +1136,7 @@ describe('src/services/document.js', function(){
 
 	describe('::readMany', function(){
 		it('should properly generate a sql request', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personName': 'person-1',
 				'categoryName': 'category-1'
@@ -1172,11 +1167,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1217,6 +1211,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'id',
@@ -1237,7 +1232,7 @@ describe('src/services/document.js', function(){
 
 	describe('::query', function(){
 		it('should handle a sub', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'categoryName': 'category-1',
 				'tag': 'tag-1',
@@ -1285,11 +1280,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1319,16 +1313,16 @@ describe('src/services/document.js', function(){
 					path: 'name',
 					as: 'categoryName'
 				}],
+				filters: [],
 				params: []
 			});
 
 			const args2 = stubs.execute.getCall(1).args[0];
 
-			expect(args2.method)
-			.to.equal('read');
-
-			expect(args2.query.toJSON())
+			expect(args2)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item-material',
 					schema: 'test-item-material',
@@ -1343,6 +1337,7 @@ describe('src/services/document.js', function(){
 					path: 'mask',
 					as: 'mask'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item-material',
 					path: 'tag',
@@ -1370,7 +1365,7 @@ describe('src/services/document.js', function(){
 		});
 
 		it('should handle a sub with a pivot', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'categoryName': 'category-1',
 				'name': 'name-1',
@@ -1413,11 +1408,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1451,16 +1445,16 @@ describe('src/services/document.js', function(){
 					path: 'name',
 					as: 'categoryName'
 				}],
+				filters: [],
 				params: []
 			});
 
 			const args2 = stubs.execute.getCall(1).args[0];
 
-			expect(args2.method)
-			.to.equal('read');
-
-			expect(args2.query.toJSON())
+			expect(args2)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-material',
 					schema: 'test-material',
@@ -1482,6 +1476,7 @@ describe('src/services/document.js', function(){
 					path: 'name',
 					as: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item-material',
 					path: 'itemId',
@@ -1493,11 +1488,10 @@ describe('src/services/document.js', function(){
 
 			const args3 = stubs.execute.getCall(2).args[0];
 
-			expect(args3.method)
-			.to.equal('read');
-
-			expect(args3.query.toJSON())
+			expect(args3)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-material',
 					schema: 'test-material',
@@ -1519,6 +1513,7 @@ describe('src/services/document.js', function(){
 					path: 'name',
 					as: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item-material',
 					path: 'itemId',
@@ -1542,7 +1537,7 @@ describe('src/services/document.js', function(){
 		});
 		
 		it('should handle a full query', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'personName': 'person-1',
 				'categoryName': 'category-1'
@@ -1585,11 +1580,9 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
-			.to.deep.equal({
+			const target = {
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1652,6 +1645,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-item',
 					path: 'name',
@@ -1673,18 +1667,24 @@ describe('src/services/document.js', function(){
 				}],
 				sorts: [{
 					series: 'test-item',
+					pos: 0,
 					path: 'name',
 					ascending: true
 				}, {
 					series: 'test-category',
+					pos: 1,
 					path: 'name',
 					ascending: false
 				}, {
 					series: 'test-person',
+					pos: 2,
 					path: 'name',
 					ascending: true
 				}]
-			});
+			};
+
+			expect(args)
+			.to.deep.equal(target);
 
 			expect(res)
 			.to.deep.equal([{
@@ -1875,7 +1875,7 @@ describe('src/services/document.js', function(){
 
 	describe('::query', function(){
 		it('should properly generate a sql request - setting 1', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'categoryName': 'category-1'
 			}];
@@ -1900,7 +1900,7 @@ describe('src/services/document.js', function(){
 			
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const res = await doc.query({
@@ -1914,11 +1914,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 			
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -1955,6 +1954,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-user',
 					path: 'name',
@@ -1975,7 +1975,7 @@ describe('src/services/document.js', function(){
 		});
 
 		it('should properly generate a sql request - setting 2', async function(){
-			connectorExecute = [{
+			connectorResult = [{
 				'item': 'item-1',
 				'categoryName': 'category-1'
 			}];
@@ -1995,7 +1995,7 @@ describe('src/services/document.js', function(){
 			
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const res = await doc.query({
@@ -2007,11 +2007,10 @@ describe('src/services/document.js', function(){
 			
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args.method)
-			.to.equal('read');
-
-			expect(args.query.toJSON())
+			expect(args)
 			.to.deep.equal({
+				sourceName: 'test-1',
+				method: 'read',
 				models: [{
 					series: 'test-item',
 					schema: 'test-item',
@@ -2037,6 +2036,7 @@ describe('src/services/document.js', function(){
 					as: 'categoryName',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-category',
 					path: 'foo',
@@ -2077,7 +2077,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const instructions = doc.buildNormalizedSchema();
@@ -2124,7 +2124,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const instructions = doc.buildNormalizedSchema();
@@ -2189,7 +2189,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 
 			const res = await doc.push(
 				{
@@ -2266,7 +2266,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			const res = await doc.push({
@@ -2340,7 +2340,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			let failed = false;
@@ -2380,7 +2380,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			await doc.link();
 
 			let failed = false;
@@ -2476,7 +2476,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 
 			const res = await doc.push({
 				id: 12,
@@ -2636,7 +2636,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 
 			const res = await doc.push({
 				id: 12,
@@ -2772,7 +2772,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 
 			const res = await doc.push({
 				id: 12,
@@ -2908,7 +2908,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 
 			let failed = false;
 
@@ -2948,7 +2948,7 @@ describe('src/services/document.js', function(){
 					'name': '.name'
 				}
 			});
-			await nexus.configureDocument('test-material', connector);
+			await nexus.configureDocument('test-material');
 
 			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
@@ -2958,7 +2958,7 @@ describe('src/services/document.js', function(){
 					'pivot': '.id'
 				}
 			});
-			await nexus.configureDocument('test-composite-material', connector);
+			await nexus.configureDocument('test-composite-material');
 
 			await nexus.configureComposite('test-composite-material-2', {
 				base: 'test-item-material',
@@ -2968,7 +2968,7 @@ describe('src/services/document.js', function(){
 					'mask': '.mask'
 				}
 			});
-			await nexus.configureDocument('test-composite-material-2', connector);
+			await nexus.configureDocument('test-composite-material-2');
 
 			await nexus.configureComposite('test-composite-ti', {
 				base: 'test-item',
@@ -2981,7 +2981,7 @@ describe('src/services/document.js', function(){
 					'materials': ['#test-composite-material-2']
 				}
 			});
-			await nexus.configureDocument('test-composite-ti', connector);
+			await nexus.configureDocument('test-composite-ti');
 		});
 
 		it('should work when creating brand new', async function(){
@@ -3018,7 +3018,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 			
 			const res = await doc.push({
 				name: 'item-name-1',
@@ -3153,7 +3153,7 @@ describe('src/services/document.js', function(){
 
 			const doc = new sut.Document(comp);
 			
-			await doc.configure(connector);
+			await doc.configure();
 
 			const res = await doc.push({
 				id: 'item-id-1',
@@ -3303,7 +3303,7 @@ describe('src/services/document.js', function(){
 						'name': '.name'
 					}
 				});
-				await nexus.configureDocument('test-material', connector);
+				await nexus.configureDocument('test-material');
 
 				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
@@ -3316,7 +3316,7 @@ describe('src/services/document.js', function(){
 						'note': '.note'
 					}
 				});
-				await nexus.configureDocument('test-composite-material', connector);
+				await nexus.configureDocument('test-composite-material');
 
 				await nexus.configureComposite('test-composite-ti2', {
 					base: 'test-item',
@@ -3332,7 +3332,7 @@ describe('src/services/document.js', function(){
 						return changeCb(type, instructions);
 					}
 				});
-				doc = await nexus.configureDocument('test-composite-ti2', connector);
+				doc = await nexus.configureDocument('test-composite-ti2');
 			});
 
 			it('should work with a major type change', async function(){
@@ -3465,7 +3465,7 @@ describe('src/services/document.js', function(){
 						'name': '.name'
 					}
 				});
-				await nexus.configureDocument('test-material', connector);
+				await nexus.configureDocument('test-material');
 
 				await nexus.configureComposite('test-item', {
 					base: 'test-item',
@@ -3475,7 +3475,7 @@ describe('src/services/document.js', function(){
 						'name': '.name'
 					}
 				});
-				await nexus.configureDocument('test-item', connector);
+				await nexus.configureDocument('test-item');
 
 				await nexus.configureComposite('test-mappings', {
 					base: 'test-item-material',
@@ -3485,7 +3485,7 @@ describe('src/services/document.js', function(){
 						'materialId': '.materialId'
 					}
 				});
-				await nexus.configureDocument('test-mappings', connector);
+				await nexus.configureDocument('test-mappings');
 
 				await nexus.configureComposite('test-composite-material', {
 					base: 'test-item-material',
@@ -3495,7 +3495,7 @@ describe('src/services/document.js', function(){
 						'pivot': '.id'
 					}
 				});
-				await nexus.configureDocument('test-composite-material', connector);
+				await nexus.configureDocument('test-composite-material');
 
 				await nexus.configureComposite('test-composite-ti3', {
 					base: 'test-item',
@@ -3512,7 +3512,7 @@ describe('src/services/document.js', function(){
 					}
 				});
 
-				doc = await nexus.configureDocument('test-composite-ti3', connector);
+				doc = await nexus.configureDocument('test-composite-ti3');
 			});
 		});
 	});
@@ -3531,7 +3531,7 @@ describe('src/services/document.js', function(){
 					'name': '.name'
 				}
 			});
-			await nexus.configureDocument('test-material', connector);
+			await nexus.configureDocument('test-material');
 
 			await nexus.configureComposite('test-item', {
 				base: 'test-item',
@@ -3541,7 +3541,7 @@ describe('src/services/document.js', function(){
 					'name': '.name'
 				}
 			});
-			await nexus.configureDocument('test-item', connector);
+			await nexus.configureDocument('test-item');
 
 			await nexus.configureComposite('test-mappings', {
 				base: 'test-item-material',
@@ -3551,7 +3551,7 @@ describe('src/services/document.js', function(){
 					'materialId': '.materialId'
 				}
 			});
-			await nexus.configureDocument('test-mappings', connector);
+			await nexus.configureDocument('test-mappings');
 
 			await nexus.configureComposite('test-composite-material', {
 				base: 'test-item-material',
@@ -3561,7 +3561,7 @@ describe('src/services/document.js', function(){
 					'pivot': '.id'
 				}
 			});
-			await nexus.configureDocument('test-composite-material', connector);
+			await nexus.configureDocument('test-composite-material');
 
 			stubs.onChange = sinon.stub()
 			.callsFake(function(type, series){
@@ -3585,7 +3585,7 @@ describe('src/services/document.js', function(){
 				},
 				onChange: stubs.onChange
 			});
-			await nexus.configureDocument('test-composite-ti3', connector);
+			await nexus.configureDocument('test-composite-ti3');
 
 			await nexus.configureComposite('test-ownership', {
 				base: 'test-user',
@@ -3617,7 +3617,7 @@ describe('src/services/document.js', function(){
 		});
 
 		it('should only call once', async function(){
-			doc = await nexus.configureDocument('test-ownership', connector);
+			doc = await nexus.configureDocument('test-ownership');
 
 			const users = await nexus.loadCrud('test-user');
 			const items = await nexus.loadCrud('test-item');
@@ -3814,7 +3814,7 @@ describe('src/services/document.js', function(){
 		});
 
 		it('should complete parallel processing', async function(){
-			doc = await nexus.configureDocument('test-god', connector);
+			doc = await nexus.configureDocument('test-god');
 
 			const users = await nexus.loadCrud('test-user');
 			const items = await nexus.loadCrud('test-item');
@@ -3988,6 +3988,246 @@ describe('src/services/document.js', function(){
 					'creatorId': 'user-id'
 				}]
 			});
+		});
+	});
+
+	describe('with multiple sources', function(){
+		beforeEach(async function(){
+			const connector = {
+				execute: async (...args) => stubs.execute(...args)
+			};
+
+			await nexus.setConnector('test-2-c', async () => connector);
+
+			await nexus.configureSource('test-2', {
+				connector: 'test-2-c'
+			});
+
+			await nexus.configureModel('test-team', {
+				source: 'test-2',
+				fields: {
+					id: {
+						read: true,
+						key: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						updateType: changeTypes.major
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true,
+						updateType: changeTypes.minor
+					},
+					ownerId: {
+						read: true,
+						link: {
+							name: 'test-user',
+							field: 'id'
+						}
+					}
+				}
+			});
+			await nexus.configureCrud('test-team', {});
+
+			await nexus.configureModel('test-team-user', {
+				source: 'test-2',
+				fields: {
+					id: {
+						read: true,
+						key: true
+					},
+					userId: {
+						read: true,
+						link: {
+							name: 'test-user',
+							field: 'id'
+						}
+					},
+					teamId: {
+						read: true,
+						link: {
+							name: 'test-team',
+							field: 'id'
+						}
+					}
+				}
+			});
+			await nexus.configureCrud('test-team-user', {});
+
+			await nexus.configureComposite('test-user-display', {
+				base: 'test-user',
+				joins: [],
+				fields: {
+					'name': '.name'
+				}
+			});
+			await nexus.configureDocument('test-user-display');
+
+			await nexus.configureComposite('test-organization', {
+				base: 'test-team',
+				joins: [
+					'.id > $test-team-user > #test-user-display',
+					'> $test-user'
+				],
+				fields: {
+					'id': '.id',
+					'name': '.name',
+					'owner': '$test-user.name',
+					'users':  ['#test-user-display']
+				}
+			});
+			await nexus.configureDocument('test-organization');
+		});
+
+		it('should call the two sources', async function(){
+			const comp = await nexus.loadComposite('test-organization');
+
+			const doc = new sut.Document(comp);
+
+			await doc.configure();
+
+			stubs.execute = sinon.stub();
+			stubs.execute.onCall(0)
+			.resolves([{
+				id: 't-1',
+				name: 'dallas runs draw with 14 left',
+				'exe_0': 'u-1'
+			}]);
+
+			stubs.execute.onCall(1)
+			.resolves([{
+				owner: 'Dak Prescott'
+			}]);
+
+			stubs.execute.onCall(2)
+			.resolves([{
+				'exe_0': 'u-1'
+			}, {
+				'exe_0': 'u-2'
+			}]);
+			
+			stubs.execute.onCall(3)
+			.resolves([{
+				id: 'u-1',
+				name: 'C3PO'
+			}]);
+
+			stubs.execute.onCall(4)
+			.resolves([{
+				id: 'u-2',
+				name: 'R2D2'
+			}]);
+
+			const res = await doc.query({}, context);
+			
+			const args0 = stubs.execute.getCall(0).args[0];
+			expect(args0)
+			.to.deep.equal({
+			  method: 'read',
+			  models: [ { series: 'test-team', schema: 'test-team', joins: [] } ],
+			  fields: [
+			    { series: 'test-team', path: 'id', as: 'id' },
+			    { series: 'test-team', path: 'name', as: 'name' },
+			    { series: 'test-team', path: 'ownerId', as: 'exe_0' }
+			  ],
+			  filters: [],
+			  params: [],
+			  sourceName: 'test-2'
+			});
+
+			const args1 = stubs.execute.getCall(1).args[0];
+			expect(args1)
+			.to.deep.equal({
+			  method: 'read',
+			  models: [ { series: 'test-user', schema: 'test-user', joins: [] } ],
+			  fields: [ { series: 'test-user', path: 'name', as: 'owner' } ],
+			  filters: [],
+			  params: [
+			    {
+			      series: 'test-user',
+			      path: 'id',
+			      operation: '=',
+			      value: 'u-1',
+			      settings: {}
+			    }
+			  ],
+			  sourceName: 'test-1'
+			});
+
+			const args2 = stubs.execute.getCall(2).args[0];
+			expect(args2)
+			.to.deep.equal({
+			  method: 'read',
+			  models: [ { series: 'test-team-user', schema: 'test-team-user', joins: [] } ],
+			  fields: [ { series: 'test-team-user', path: 'userId', as: 'exe_0' } ],
+			  filters: [],
+			  params: [
+			    {
+			      series: 'test-team-user',
+			      path: 'teamId',
+			      operation: '=',
+			      value: 't-1',
+			      settings: {}
+			    }
+			  ],
+			  sourceName: 'test-2'
+			});
+
+			const args3 = stubs.execute.getCall(3).args[0];
+			expect(args3)
+			.to.deep.equal({
+			  method: 'read',
+			  models: [ { series: 'test-user', schema: 'test-user', joins: [] } ],
+			  fields: [ { series: 'test-user', path: 'name', as: 'name' } ],
+			  filters: [],
+			  params: [
+			    {
+			      series: 'test-user',
+			      path: 'id',
+			      operation: '=',
+			      value: 'u-1',
+			      settings: {}
+			    }
+			  ],
+			  sourceName: 'test-1'
+			});
+
+			const args4 = stubs.execute.getCall(4).args[0];
+			expect(args4)
+			.to.deep.equal({
+			  method: 'read',
+			  models: [ { series: 'test-user', schema: 'test-user', joins: [] } ],
+			  fields: [ { series: 'test-user', path: 'name', as: 'name' } ],
+			  filters: [],
+			  params: [
+			    {
+			      series: 'test-user',
+			      path: 'id',
+			      operation: '=',
+			      value: 'u-2',
+			      settings: {}
+			    }
+			  ],
+			  sourceName: 'test-1'
+			});
+
+			expect(res)
+			.to.deep.equal([
+			  {
+			    id: 't-1',
+			    name: 'dallas runs draw with 14 left',
+			    owner: 'Dak Prescott',
+			    users: [{ 
+			    	name: 'C3PO' 
+			    }, { 
+			    	name: 'R2D2' 
+			    }]
+			  }
+			]);
 		});
 	});
 });

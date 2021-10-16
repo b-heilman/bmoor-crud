@@ -1,9 +1,10 @@
 
 const {get} = require('bmoor/src/core.js');
 const {Waitlist} = require('./waitlist.js');
+const {Cache} = require('./cache.js');
 
 class Context {
-	constructor(systemContext = {}, cfg={}, cache=null){
+	constructor(systemContext = {}, cfg={}, settings={}){
 		cfg = Object.assign({
 			query: 'query',   // ?foo=bar
 			params: 'params', // /hello/:world
@@ -25,7 +26,8 @@ class Context {
 
 		// controller specific properties
 		this.info = {};
-		this.cache = cache;
+		this.cache = settings.cache;
+		this.sessionCache = new Cache({default: {ttl: 60}});
 	}
 
 	setInfo(info){
@@ -41,6 +43,42 @@ class Context {
 		return !!this.permissions[permission];
 	}
 
+	hasCache(series, key){
+		if (this.cache){
+			return this.cache.has(series, key);
+		}
+
+		return false;
+	}
+
+	async getCache(series, key){
+		if (this.cache){
+			return this.cache.get(series, key);
+		} else {
+			return null;
+		}
+	}
+
+	setCache(series, key, value){
+		if (this.cache){
+			this.cache.set(series, key, value);
+		}
+	}
+
+	async promiseCache(series, key, promise){
+		if (this.cache){
+			this.setCache(series, key, promise);
+
+			try {
+				await promise;
+			} catch(ex){
+				// TODO: I probably wanna clear, right?
+			}
+		}
+
+		return promise;
+	}
+
 	// method
 	getMethod(){
 		return this.method;
@@ -53,7 +91,6 @@ class Context {
 		} else {
 			return this.params && Object.keys(this.params).length !== 0;
 		}
-		
 	}
 
 	setParam(name, value){

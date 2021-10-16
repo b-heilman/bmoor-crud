@@ -1,6 +1,7 @@
 
 const {Structure} = require('./structure.js');
-const {Query} = require('./query.js');
+const {QueryStatement} = require('./query/statement.js');
+const {ExecutableStatement} = require('./executable/statement.js');
 
 function buildSettings(properties, field){
 	const path = field.path;
@@ -64,9 +65,8 @@ class Model extends Structure {
 	async configure(settings){
 		await super.configure(settings);
 		
-		this.settings = null;
 		this.schema = settings.schema || this.name;
-		this.connector = settings.connector;
+		this.settings = null;
 
 		const fields = settings.fields;
 
@@ -90,7 +90,10 @@ class Model extends Structure {
 			this.addField(property, field);
 		}
 
-		return this.build();
+		await this.build();
+
+		this.preparedQuery = await this.prepareBaseQuery();
+		this.preparedExecutable = await this.prepareBaseExecutable();
 	}
 
 	getKeyField(){
@@ -147,18 +150,63 @@ class Model extends Structure {
 		);
 	}
 
+	getBaseExecutable(){
+		return new ExecutableStatement(this.name);
+	}
+
+	async prepareBaseExecutable(){
+		const exe = this.getBaseExecutable();
+
+		exe.setModel(this.name, this);
+
+		await this.extendBaseStatement(exe);
+
+		return exe;
+	}
+
+	async getExecutable(method, settings, ctx){
+		const exe = this.preparedExecutable.clone();
+
+		exe.setMethod(method);
+
+		if (settings.payload){
+			exe.setPayload(this.name, settings.payload);
+		}
+
+		await this.extendStatement(
+			exe,
+			{
+				params: settings.params
+			},
+			ctx
+		);
+
+		return exe;
+	}
+
+	getBaseQuery(){
+		return new QueryStatement(this.name);
+	}
+
+	async prepareBaseQuery(){
+		const query = await super.prepareBaseQuery();
+
+		query.setModel(this.name, this);
+
+		return query;
+	}
+
 	// produces representation for interface layer
 	// similar to lookup, which is a combination of models
 	async getQuery(settings, ctx){
-		const query = settings.baseQuery || new Query(this.name);
+		const query = this.preparedQuery.clone();
 
-		query.setSchema(this.name, this.schema);
-
-		return super.getQuery(
+		return this.extendQuery(
+			query,
 			{
-				query: query,
 				joins: settings.joins,
-				params: settings.params
+				params: settings.params,
+				sort: settings.sort
 			},
 			ctx
 		);

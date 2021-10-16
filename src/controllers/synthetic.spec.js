@@ -1,7 +1,6 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
-const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -13,23 +12,35 @@ describe('src/controller/synthetic.js', function(){
 	let stubs = null;
 	
 	let permissions = null;
+	let connectorResult = null;
 
 	let doc = null;
 
 	beforeEach(async function(){
-		stubs = {};
-		permissions = {};
+		nexus = new Nexus();
 
-		const interfaces = new Config({
-			stub: function(){
-				return {};
-			}
+		connectorResult = {};
+
+		stubs = {
+			execute: sinon.stub()
+			.callsFake(async function(){
+				return connectorResult;
+			})
+		};
+
+		await nexus.setConnector(
+			'test', 
+			async () => ({
+				execute: async (...args) => stubs.execute(...args)
+			})
+		);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
 		});
-		
-		nexus = new Nexus(null, interfaces);
 
 		nexus.configureModel('test-user', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				id: {
 					read: true,
@@ -44,7 +55,7 @@ describe('src/controller/synthetic.js', function(){
 				}
 			}
 		});
-		await nexus.configureCrud('test-user', {});
+		await nexus.configureCrud('test-user');
 
 		nexus.configureComposite('test-ownership', {
 			base: 'test-user',
@@ -55,7 +66,7 @@ describe('src/controller/synthetic.js', function(){
 			}
 		});
 
-		doc = await nexus.configureDocument('test-ownership', {});
+		doc = await nexus.configureDocument('test-ownership');
 	});
 
 	afterEach(function(){
@@ -103,6 +114,8 @@ describe('src/controller/synthetic.js', function(){
 				const synth = new sut.Synthetic(doc);
 
 				await synth.configure({readable: true, read:'can-read'});
+
+				permissions = {};
 
 				let failed = false;
 				try {

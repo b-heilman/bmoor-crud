@@ -11,15 +11,31 @@ describe('src/service/normalization', function(){
 	let stubs = null;
 	let nexus = null;
 
-	beforeEach(function(){
+	beforeEach(async function(){
 		ctx = new Context();
-		stubs = {};
+		stubs = {
+			execute: sinon.stub()
+		};
 		nexus = new Nexus();
+
+		const connector = {
+			execute: async (...args) => stubs.execute(...args)
+		};
+
+		await nexus.setConnector('test', async () => connector);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
+		});
 	});
 
 	afterEach(function(){
 		Object.values(stubs)
-		.forEach(stub => stub.restore());
+		.forEach(stub => {
+			if (stub.restore){
+				stub.restore();
+			}
+		});
 	});
 	
 	describe('::deflate', function(){
@@ -30,6 +46,7 @@ describe('src/service/normalization', function(){
 
 		beforeEach(async function(){
 			nexus.configureModel('class-1', {
+				source: 'test-1',
 				fields: {
 					'id': {
 						key: true,
@@ -43,6 +60,7 @@ describe('src/service/normalization', function(){
 			class1 = await nexus.configureCrud('class-1');
 
 			nexus.configureModel('class-2', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -60,6 +78,7 @@ describe('src/service/normalization', function(){
 			class2 = await nexus.configureCrud('class-2');
 
 			nexus.configureModel('class-3', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -77,6 +96,7 @@ describe('src/service/normalization', function(){
 			class3 = await nexus.configureCrud('class-3');
 
 			nexus.configureModel('class-4', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -434,6 +454,7 @@ describe('src/service/normalization', function(){
 
 		beforeEach(async function(){
 			await nexus.configureModel('class-1', {
+				source: 'test-1',
 				fields: {
 					'id': {
 						key: true,
@@ -447,6 +468,7 @@ describe('src/service/normalization', function(){
 			class1 = await nexus.configureCrud('class-1');
 
 			await nexus.configureModel('class-2', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -463,6 +485,7 @@ describe('src/service/normalization', function(){
 			class2 = await nexus.configureCrud('class-2');
 
 			await nexus.configureModel('class-3', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -479,6 +502,7 @@ describe('src/service/normalization', function(){
 			class3 = await nexus.configureCrud('class-3');
 
 			await nexus.configureModel('class-4', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1139,6 +1163,7 @@ describe('src/service/normalization', function(){
 
 		beforeEach(async function(){
 			await nexus.configureModel('class-1', {
+				source: 'test-1',
 				fields: {
 					'id': {
 						key: true,
@@ -1152,6 +1177,7 @@ describe('src/service/normalization', function(){
 			class1 = await nexus.configureCrud('class-1');
 
 			await nexus.configureModel('class-2', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1168,6 +1194,7 @@ describe('src/service/normalization', function(){
 			class2 = await nexus.configureCrud('class-2');
 
 			await nexus.configureModel('class-3', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1178,6 +1205,7 @@ describe('src/service/normalization', function(){
 			class3 = await nexus.configureCrud('class-3');
 
 			await nexus.configureModel('class-4', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1194,6 +1222,7 @@ describe('src/service/normalization', function(){
 			class4 = await nexus.configureCrud('class-4');
 
 			await nexus.configureModel('class-5', {
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,

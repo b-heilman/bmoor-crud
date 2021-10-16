@@ -5,20 +5,36 @@ const sinon = require('sinon');
 const {config} = require('../schema/structure.js');
 const {Model} = require('../schema/model.js');
 const {Crud} = require('./crud.js');
+const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 
 describe('src/services/crud.js', function(){
 	let stubs = null;
+	let nexus = null;
 	let context = null;
+	let connector = null;
+
 	let permissions = null;
 
-	beforeEach(function(){
+	beforeEach(async function(){
 		stubs = {};
 
 		permissions = {};
 
 		context = new Context({method: 'get'});
 		context.hasPermission =  (perm) => !!permissions[perm];
+
+		nexus = new Nexus();
+
+		connector = {
+			// this doesn't matter here, right?
+		};
+
+		await nexus.setConnector('test', async () => connector);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
+		});
 	});
 
 	afterEach(function(){
@@ -39,9 +55,10 @@ describe('src/services/crud.js', function(){
 		let service = null;
 
 		beforeEach(async function(){
-			model = new Model('model-1');
+			model = new Model('model-1', nexus);
 
 			await model.configure({
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -238,41 +255,55 @@ describe('src/services/crud.js', function(){
 	});
 
 	describe('::create', function(){
-		let ctx = null;
-
-		beforeEach(function(){
-			ctx = new Context();
-		});
-
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(connector)
-					.to.equal('stub');
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
 
-					expect(request.method)
-					.to.equal('create');
+				expect(request)
+				.to.deep.equal({
+					method: 'create',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						payload: {
+							name: 'name-1',
+							title: 'title-1',
+							json: '{"hello":"world"}'
+						}
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}, {
+						series: 'model-1',
+						as: 'json',
+						path: 'json'
+					}],
+					filters: [],
+					params: []
+				});
 
-					expect(request.model)
-					.to.equal('model-1');
+				return Promise.resolve([{
+					id: 'something-1',
+					value: 'v-1',
+					json: '{"foo":"bar"}'
+				}]);
+			};
 
-					expect(request.payload)
-					.to.deep.equal({
-						name: 'name-1',
-						title: 'title-1',
-						json: '{"hello":"world"}'
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						value: 'v-1',
-						json: '{"foo":"bar"}'
-					}]);
-				}
-			});
+			const model = new Model('model-1', nexus);
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -311,7 +342,7 @@ describe('src/services/crud.js', function(){
 				json: {
 					hello: 'world'
 				}
-			}, ctx)
+			}, context)
 			.then(res => {
 				expect(res)
 				.to.deep.equal({
@@ -324,29 +355,52 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should not fail if a type field is blank', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('create');
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
 
-					expect(request.model)
-					.to.equal('model-1');
+				expect(request)
+				.to.deep.equal({
+					method: 'create',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						payload: {
+							name: 'name-1',
+							title: 'title-1'
+						}
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}, {
+						series: 'model-1',
+						as: 'json',
+						path: 'json'
+					}],
+					filters: [],
+					params: []
+				});
 
-					expect(request.payload)
-					.to.deep.equal({
-						name: 'name-1',
-						title: 'title-1'
-					});
+				return Promise.resolve([{
+					id: 'something-1',
+					value: 'v-1'
+				}]);
+			};
 
-					return Promise.resolve([{
-						id: 'something-1',
-						value: 'v-1'
-					}]);
-				}
-			});
+			const model = new Model('model-1', nexus);
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -382,7 +436,7 @@ describe('src/services/crud.js', function(){
 				name: 'name-1',
 				title: 'title-1',
 				junk: 'junk'
-			}, ctx)
+			}, context)
 			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1'
@@ -393,55 +447,58 @@ describe('src/services/crud.js', function(){
 
 	describe('::read', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('read');
+			const model = new Model('model-1', nexus);
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}, {
-							series: 'model-1',
-							as: 'json',
-							path: 'json'
-						}],
-						params: [{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: 123,
-							settings: {}
-						}]
-					});
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request)
+				.to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						joins: []
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}, {
+						series: 'model-1',
+						as: 'json',
+						path: 'json'
+					}],
+					filters: [],
+					params: [{
+						series: 'model-1',
+						path: 'id',
+						operation: '=',
+						value: 123,
+						settings: {}
+					}]
+				});
 
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						json: '{"foo":"bar"}'
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					json: '{"foo":"bar"}'
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -470,7 +527,7 @@ describe('src/services/crud.js', function(){
 
 			service.configure();
 
-			return service.read(123, {})
+			return service.read(123, context)
 			.then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
@@ -486,14 +543,17 @@ describe('src/services/crud.js', function(){
 		it('should work with a map function', async function(){
 			let response = null;
 			
-			const model = new Model('model-1', {
-				execute: function(){
-					return Promise.resolve([response]);
-				}
-			});
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				return Promise.resolve([response]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true
@@ -519,7 +579,7 @@ describe('src/services/crud.js', function(){
 			};
 			permissions = {};
 
-			const res1 = await service.read(123, context);
+			const res1 = await service.read(123, context, {noCache: true});
 			
 			expect(res1)
 			.to.deep.equal({
@@ -536,7 +596,7 @@ describe('src/services/crud.js', function(){
 				user: true
 			};
 
-			const res2 = await service.read(123, context);
+			const res2 = await service.read(123, context, {noCache: true});
 			
 			expect(res2)
 			.to.deep.equal({
@@ -554,7 +614,7 @@ describe('src/services/crud.js', function(){
 				user: false
 			};
 
-			const res3 = await service.read(123, context);
+			const res3 = await service.read(123, context, {noCache: true});
 			
 			expect(res3)
 			.to.deep.equal({
@@ -573,7 +633,7 @@ describe('src/services/crud.js', function(){
 				admin: true
 			};
 
-			const res4 = await service.read(123, context);
+			const res4 = await service.read(123, context, {noCache: true});
 			
 			expect(res4)
 			.to.deep.equal({
@@ -585,45 +645,48 @@ describe('src/services/crud.js', function(){
 
 	describe('::readAll', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('read');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request)
+				.to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						joins: []
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}, {
+						series: 'model-1',
+						as: 'json',
+						path: 'json'
+					}],
+					filters: [],
+					params: []
+				});
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}, {
-							series: 'model-1',
-							as: 'json',
-							path: 'json'
-						}],
-						params: []
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						foo: 'bar'
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					foo: 'bar'
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true
@@ -645,7 +708,7 @@ describe('src/services/crud.js', function(){
 
 			await service.configure();
 
-			return service.readAll()
+			return service.readAll(context)
 			.then(res => {
 				// this illustrates a good point, I am not doing a clean on the
 				// data returned from the execution 
@@ -659,47 +722,51 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should work with a type', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('read');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request.method)
+				.to.equal('read');
 
+				expect(request.query)
+				.to.deep.equal({
+					sourceName: 'test-1',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						joins: []
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}, {
+						series: 'model-1',
+						as: 'json',
+						path: 'json'
+					}],
+					filters: [],
+					params: []
+				});
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}, {
-							series: 'model-1',
-							as: 'json',
-							path: 'json'
-						}],
-						params: []
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						foo: 'bar',
-						json: '{"hello":"world"}'
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					foo: 'bar',
+					json: '{"hello":"world"}'
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true
@@ -721,7 +788,7 @@ describe('src/services/crud.js', function(){
 
 			await service.configure();
 
-			service.readAll()
+			service.readAll(context)
 			.then(res => {
 				// this illustrates a good point, I am not doing a clean on the
 				// data returned from the execution, but am an inflate
@@ -738,19 +805,22 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should work with permissions', async function(){
-			const model = new Model('model-1', {
-				execute: function(){
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						foo: 'bar'
-					}]);
-				}
-			});
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					foo: 'bar'
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true
@@ -787,50 +857,53 @@ describe('src/services/crud.js', function(){
 
 	describe('::readMany', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('read');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request)
+				.to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						joins: []
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [{
+						series: 'model-1',
+						path: 'id',
+						operation: '=',
+						value: [1,2,3],
+						settings: {}
+					}]
+				});
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: [1,2,3],
-							settings: {}
-						}]
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -855,7 +928,7 @@ describe('src/services/crud.js', function(){
 
 			await service.configure();
 
-			return service.readMany([1,2,3])
+			return service.readMany([1,2,3], context)
 			.then(res => {
 				expect(res).to.deep.equal([{
 					id: 'something-1',
@@ -866,19 +939,22 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should work with permissions', async function(){
-			const model = new Model('model-1', {
-				execute: function(){
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						foo: 'bar'
-					}]);
-				}
-			}); 
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					foo: 'bar'
+				}]);
+			}; 
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true
@@ -915,50 +991,53 @@ describe('src/services/crud.js', function(){
 
 	describe('::query', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('read');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request)
+				.to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						joins: []
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [{
+						series: 'model-1',
+						path: 'name',
+						operation: '=',
+						value: 'test-1',
+						settings: {}
+					}]
+				});
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
-							series: 'model-1',
-							path: 'name',
-							operation: '=',
-							value: 'test-1',
-							settings: {}
-						}]
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -987,7 +1066,7 @@ describe('src/services/crud.js', function(){
 				params: {
 					name: 'test-1'
 				}
-			}, {}).then(res => {
+			}, context).then(res => {
 				expect(res).to.deep.equal([{
 					id: 'something-1',
 					name: 'v-1',
@@ -997,68 +1076,71 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should pass through', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('read');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request)
+				.to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1',
+						joins: []
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [{
+						series: 'model-1',
+						path: 'id',
+						operation: '=',
+						value: 1,
+						settings: {}
+					}, {
+						series: 'model-1',
+						path: 'name',
+						operation: 'gt',
+						value: 'test-1.1',
+						settings: {}
+					}, {
+						series: 'model-1',
+						path: 'name',
+						operation: 'lt',
+						value: 'test-1.9',
+						settings: {}
+					}, {
+						series: 'model-1',
+						path: 'title',
+						operation: '=',
+						value: 'title-1',
+						settings: {}
+					}]
+				});
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: 1,
-							settings: {}
-						}, {
-							series: 'model-1',
-							path: 'name',
-							operation: 'gt',
-							value: 'test-1.1',
-							settings: {}
-						}, {
-							series: 'model-1',
-							path: 'name',
-							operation: 'lt',
-							value: 'test-1.9',
-							settings: {}
-						}, {
-							series: 'model-1',
-							path: 'title',
-							operation: '=',
-							value: 'title-1',
-							settings: {}
-						}]
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1083,16 +1165,18 @@ describe('src/services/crud.js', function(){
 
 			await service.configure();
 
-			return service.query({
-				params: {
-					id: 1,
-					name: {
-						gt: 'test-1.1',
-						lt: 'test-1.9'
-					},
-					title: 'title-1'
-				}
-			}, {}).then(res => {
+			return service.query(
+				{
+					params: {
+						id: 1,
+						name: {
+							gt: 'test-1.1',
+							lt: 'test-1.9'
+						},
+						title: 'title-1'
+					}
+				}, context
+			).then(res => {
 				expect(res).to.deep.equal([{
 					id: 'something-1',
 					name: 'v-1',
@@ -1102,19 +1186,22 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should work with permissions', async function(){
-			const model = new Model('model-1', {
-				execute: function(){
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						foo: 'bar'
-					}]);
-				}
-			});
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					foo: 'bar'
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						read: true
@@ -1151,55 +1238,59 @@ describe('src/services/crud.js', function(){
 
 	describe('::update', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('update');
-
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
+				
+				expect(request)
+				.to.deep.equal({
+					method: 'update',
+					models: [
+						{
 							series: 'model-1',
 							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
+							payload: {
+								name: 'test-1',
+								title: 'title-1'
+							}
+						}
+					],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [
+						{
 							series: 'model-1',
 							path: 'id',
 							operation: '=',
 							value: '1',
 							settings: {}
-						}]
-					});
-					expect(request.payload)
-					.to.deep.equal({
-						name: 'test-1',
-						title: 'title-1'
-					});
+						}
+					]
+				});
 
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1231,12 +1322,14 @@ describe('src/services/crud.js', function(){
 			stubs.read = sinon.stub(service, 'read')
 			.resolves({id:123});
 
-			return service.update('1', {
-				id: 1,
-				name: 'test-1',
-				title: 'title-1'
-			}, {})
-			.then(res => {
+			return service.update('1', 
+				{
+					id: 1,
+					name: 'test-1',
+					title: 'title-1'
+				},
+				context
+			).then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
 					name: 'v-1',
@@ -1249,63 +1342,61 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should work with types', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(connector)
-					.to.equal('stub');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
 
-					expect(settings)
-					.to.deep.equal({});
-
-					expect(request.method)
-					.to.equal('update');
-
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
+				expect(request)
+				.to.deep.equal({
+					method: 'update',
+					models: [
+						{
 							series: 'model-1',
 							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
+							payload: {
+								name: 'test-1',
+								title: 'title-1',
+								json: '{"hello":"world"}'
+							}
+						}
+					],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [
+						{
 							series: 'model-1',
 							path: 'id',
 							operation: '=',
 							value: '1',
 							settings: {}
-						}]
-					});
-					expect(request.payload)
-					.to.deep.equal({
-						name: 'test-1',
-						title: 'title-1',
-						json: '{"hello":"world"}'
-					});
+						}
+					]
+				});
 
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-						json: '{"foo":"bar"}'
-					}]);
-				}
-			}); 
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+					json: '{"foo":"bar"}'
+				}]);
+			}; 
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1337,15 +1428,17 @@ describe('src/services/crud.js', function(){
 			stubs.read = sinon.stub(service, 'read')
 			.resolves({id:123});
 
-			return service.update('1', {
-				id: 1,
-				name: 'test-1',
-				title: 'title-1',
-				json: {
-					hello: 'world'
-				}
-			}, {})
-			.then(res => {
+			return service.update('1', 
+				{
+					id: 1,
+					name: 'test-1',
+					title: 'title-1',
+					json: {
+						hello: 'world'
+					}
+				},
+				context
+			).then(res => {
 				expect(res).to.deep.equal({
 					id: 'something-1',
 					name: 'v-1',
@@ -1363,56 +1456,51 @@ describe('src/services/crud.js', function(){
 
 	describe('::delete', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(connector)
-					.to.equal('test');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
 
-					expect(settings)
-					.to.deep.equal({});
+				expect(request)
+				.to.deep.equal({
+					method: 'delete',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1'
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [{
+						series: 'model-1',
+						path: 'id',
+						operation: '=',
+						value: '1',
+						settings: {}
+					}]
+				});
 
-					expect(request.method)
-					.to.equal('delete');
-
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: '1',
-							settings: {}
-						}]
-					});
-
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			};
 
 			await model.configure({
-				connector: 'test',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1440,7 +1528,7 @@ describe('src/services/crud.js', function(){
 			stubs.read = sinon.stub(service, 'read')
 			.resolves({id: 123});
 
-			return service.delete('1')
+			return service.delete('1', context)
 			.then(res => {
 				expect(res).to.deep.equal({
 					id: 123
@@ -1454,50 +1542,51 @@ describe('src/services/crud.js', function(){
 
 	describe('::decorate', function(){
 		it('should basically work', async function(){
-			const model = new Model('model-1', {
-				execute: function(connector, settings, request){
-					expect(request.method)
-					.to.equal('delete');
+			const model = new Model('model-1', nexus);
+			
+			connector.execute = async function(request, myCtx){
+				expect(myCtx)
+				.to.equal(context);
 
-					expect(request.query.toJSON())
-					.to.deep.equal({
-						models: [{
-							series: 'model-1',
-							schema: 'model-1',
-							joins: []
-						}],
-						fields: [{
-							series: 'model-1',
-							as: 'id',
-							path: 'id'
-						}, {
-							series: 'model-1',
-							as: 'name',
-							path: 'name'
-						}, {
-							series: 'model-1',
-							as: 'title',
-							path: 'title'
-						}],
-						params: [{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: '1',
-							settings: {}
-						}]
-					});
+				expect(request)
+				.to.deep.equal({
+					method: 'delete',
+					models: [{
+						series: 'model-1',
+						schema: 'model-1'
+					}],
+					fields: [{
+						series: 'model-1',
+						as: 'id',
+						path: 'id'
+					}, {
+						series: 'model-1',
+						as: 'name',
+						path: 'name'
+					}, {
+						series: 'model-1',
+						as: 'title',
+						path: 'title'
+					}],
+					filters: [],
+					params: [{
+						series: 'model-1',
+						path: 'id',
+						operation: '=',
+						value: '1',
+						settings: {}
+					}]
+				});
 
-					return Promise.resolve([{
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1',
-					}]);
-				}
-			});
+				return Promise.resolve([{
+					id: 'something-1',
+					name: 'v-1',
+					title: 't-1',
+				}]);
+			};
 
 			await model.configure({
-				connector: 'stub',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1525,19 +1614,19 @@ describe('src/services/crud.js', function(){
 			let wasSupered = false;
 
 			service.decorate({
-				superDelete: async function(id, ctx){
+				superDelete: async function(id, context){
 					expect(id).to.equal('1');
 
 					wasSupered = true;
 
-					return this.delete(id, ctx);
+					return this.delete(id, context);
 				}
 			});
 
 			stubs.read = sinon.stub(service, 'read')
 			.resolves({id: 123});
 
-			return service.superDelete('1')
+			return service.superDelete('1', context)
 			.then(res => {
 				expect(res).to.deep.equal({
 					id: 123
@@ -1551,10 +1640,10 @@ describe('src/services/crud.js', function(){
 
 	describe('::getChangeType', function(){
 		it('should run when the id is null', async function(){
-			const model = new Model('model-1', {});
+			const model = new Model('model-1', nexus);
 
 			await model.configure({
-				connector: 'test',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1611,10 +1700,10 @@ describe('src/services/crud.js', function(){
 		});
 
 		it('should run when the id is null', async function(){
-			const model = new Model('model-1', {});
+			const model = new Model('model-1', nexus);
 
 			await model.configure({
-				connector: 'test',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1735,28 +1824,28 @@ describe('src/services/crud.js', function(){
 	});
 
 	describe('::validate', function(){
-		let ctx = null;
+		let context = null;
 		let payload = null;
 		let service = null;
 
 		beforeEach(async function(){
-			ctx = new Context();
+			context = new Context();
 
-			const model = new Model('model-1', {
-				execute: async (connector, settings, request) => {
-					expect(request.payload)
-					.to.deep.equal(payload);
+			connector.execute = async (request) => {
+				expect(request)
+				.to.deep.equal(payload);
 
-					return [{
-						id: 'something-1',
-						junk: 'v-1',
-						title: 't-2'
-					}];
-				}
-			});
+				return [{
+					id: 'something-1',
+					junk: 'v-1',
+					title: 't-2'
+				}];
+			};
+
+			const model = new Model('model-1', nexus);
 
 			await model.configure({
-				connector: 'test',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1837,7 +1926,7 @@ describe('src/services/crud.js', function(){
 			let failed = false;
 
 			try {
-				await service.create({junk: true}, ctx);
+				await service.create({junk: true}, context);
 			} catch(ex){
 				expect(ex.code)
 				.to.equal('BMOOR_CRUD_SERVICE_VALIDATE_CREATE');
@@ -1856,7 +1945,7 @@ describe('src/services/crud.js', function(){
 				.resolves({});
 
 			try {
-				await service.update(1, {junk: 1, name: null, title: ''}, ctx);
+				await service.update(1, {junk: 1, name: null, title: ''}, context);
 			} catch(ex){
 				expect(ex.code)
 				.to.equal('BMOOR_CRUD_SERVICE_VALIDATE_UPDATE');
@@ -1870,22 +1959,22 @@ describe('src/services/crud.js', function(){
 	});
 
 	describe('with a cache', function(){
-		let ctx = null;
+		let context = null;
 		let service = null;
 
 		beforeEach(async function(){
-			ctx = new Context();
+			context = new Context();
 
 			stubs.execute = sinon.stub();
 
-			const model = new Model('model-1', {
-				execute: async () => {
-					return stubs.execute();
-				}
-			});
+			connector.execute = async () => {
+				return stubs.execute();
+			};
+
+			const model = new Model('model-1', nexus);
 
 			await model.configure({
-				connector: 'test',
+				source: 'test-1',
 				fields: {
 					id: {
 						key: true,
@@ -1912,10 +2001,10 @@ describe('src/services/crud.js', function(){
 					name: 'foo-1'
 				}]);
 
-				ctx.cache = {
+				context.sessionCache = {
 					set: function(name, key, datum){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(123);
@@ -1928,7 +2017,7 @@ describe('src/services/crud.js', function(){
 					}
 				};
 
-				let res = await service.create({foo: 'bar'}, ctx);
+				let res = await service.create({foo: 'bar'}, context);
 
 				expect(res)
 				.to.deep.equal({
@@ -1946,20 +2035,20 @@ describe('src/services/crud.js', function(){
 					name: 'foo-1'
 				}]);
 
-				ctx.cache = {
+				context.sessionCache = {
 					has: function(name, key){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(234);
 					},
 					set: function(name, key, datum){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
-						.to.equal(234);
+						.to.equal(123);
 
 						expect(datum)
 						.to.deep.equal({
@@ -1969,7 +2058,7 @@ describe('src/services/crud.js', function(){
 					}
 				};
 
-				let res = await service.read(234, ctx);
+				let res = await service.read(234, context);
 
 				expect(res)
 				.to.deep.equal({
@@ -1979,10 +2068,10 @@ describe('src/services/crud.js', function(){
 			});
 
 			it('should respect a cache hit', async function(){
-				ctx.cache = {
+				context.sessionCache = {
 					has: function(name, key){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(234);
@@ -1991,7 +2080,7 @@ describe('src/services/crud.js', function(){
 					},
 					get: function(name, key){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(234);
@@ -2003,7 +2092,7 @@ describe('src/services/crud.js', function(){
 					}
 				};
 
-				let res = await service.read(234, ctx);
+				let res = await service.read(234, context);
 
 				expect(res)
 				.to.deep.equal({
@@ -2027,15 +2116,15 @@ describe('src/services/crud.js', function(){
 				stubs.set = sinon.stub()
 					.returns(null);
 
-				ctx.cache = {
+				context.sessionCache = {
 					set: stubs.set
 				};
 
-				let res = await service.query({}, ctx);
+				let res = await service.query({}, context);
 
 				expect(stubs.set.getCall(0).args)
 				.to.deep.equal([
-					'model-1',
+					'crud:model-1',
 					123,
 					{
 						id: 123,
@@ -2045,7 +2134,7 @@ describe('src/services/crud.js', function(){
 
 				expect(stubs.set.getCall(1).args)
 				.to.deep.equal([
-					'model-1',
+					'crud:model-1',
 					234,
 					{
 						id: 234,
@@ -2072,11 +2161,11 @@ describe('src/services/crud.js', function(){
 					name: 'foo-3'
 				}]);
 
-				ctx.cache = {
+				context.sessionCache = {
 					// these are for the read
 					has: function(name, key){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(234);
@@ -2085,7 +2174,7 @@ describe('src/services/crud.js', function(){
 					},
 					get: function(name, key){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(234);
@@ -2098,7 +2187,7 @@ describe('src/services/crud.js', function(){
 					// this is the actual update
 					set: function(name, key, datum){
 						expect(name)
-						.to.equal('model-1');
+						.to.equal('crud:model-1');
 
 						expect(key)
 						.to.equal(234);
@@ -2111,7 +2200,7 @@ describe('src/services/crud.js', function(){
 					}
 				};
 
-				let res = await service.update(234, {}, ctx);
+				let res = await service.update(234, {}, context);
 
 				expect(res)
 				.to.deep.equal({

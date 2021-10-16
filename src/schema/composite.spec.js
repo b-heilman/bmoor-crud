@@ -3,9 +3,10 @@ const expect = require('chai').expect;
 
 const {Nexus, config: nexusConfig} = require('../env/nexus.js');
 const {config} = require('./structure.js');
-const {Composite} = require('./composite.js');
 
 describe('src/schema/composite.js', function(){
+	const {Composite} = require('./composite.js');
+
 	let nexus = null;
 
 	beforeEach(async function(){
@@ -14,6 +15,7 @@ describe('src/schema/composite.js', function(){
 		nexus = new Nexus();
 
 		await nexus.configureModel('test-1', {
+			source: 'source-1',
 			fields: {
 				id: {
 					read: true,
@@ -33,6 +35,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-2', {
+			source: 'source-1',
 			schema: 'table_2',
 			fields: {
 				id: {
@@ -59,6 +62,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-3', {
+			source: 'source-1',
 			isFlat: true,
 			fields: {
 				id: {
@@ -82,6 +86,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-3-1', {
+			source: 'source-1',
 			isFlat: true,
 			fields: {
 				id: {
@@ -106,6 +111,7 @@ describe('src/schema/composite.js', function(){
 
 
 		await nexus.configureModel('test-pivot', {
+			source: 'source-1',
 			fields: {
 				id: {
 					read: true
@@ -128,6 +134,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-4', {
+			source: 'source-1',
 			isFlat: false,
 			fields: {
 				id: {
@@ -144,6 +151,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-5', {
+			source: 'source-1',
 			fields: {
 				id: {
 					read: true,
@@ -233,6 +241,7 @@ describe('src/schema/composite.js', function(){
 
 				expect(query.toJSON())
 				.to.deep.equal({
+					method: 'read',
 					models: [{
 						series: 'test-3',
 						schema: 'test-3',
@@ -258,6 +267,7 @@ describe('src/schema/composite.js', function(){
 						as: 'sub_0',
 						path: 'test2Id'
 					}],
+					filters: [],
 					params: [{
 						operation: '=',
 						path: 'doo',
@@ -314,6 +324,7 @@ describe('src/schema/composite.js', function(){
 
 				expect(query.toJSON())
 				.to.deep.equal({
+					method: 'read',
 					models: [{
 						series: 'test-3',
 						schema: 'test-3',
@@ -328,6 +339,7 @@ describe('src/schema/composite.js', function(){
 						as: 'sub_0',
 						path: 'test2Id'
 					}],
+					filters: [],
 					params: []
 				});
 
@@ -374,6 +386,7 @@ describe('src/schema/composite.js', function(){
 
 				expect(query.toJSON())
 				.to.deep.equal({
+					method: 'read',
 					models: [{
 						series: 'test-1',
 						schema: 'test-1',
@@ -392,6 +405,7 @@ describe('src/schema/composite.js', function(){
 						as: 'sub_1',
 						path: 'id'
 					}],
+					filters: [],
 					params: []
 				});
 			});
@@ -655,6 +669,7 @@ describe('src/schema/composite.js', function(){
 			const lookup = new Composite('foo-bar', nexus);
 
 			await nexus.configureModel('my-model', {
+				source: 'source-1',
 				schema: 'a_schema',
 				fields: {
 					id: {
@@ -675,6 +690,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			await nexus.configureModel('my-tail', {
+				source: 'source-1',
 				schema: 'tail_schema',
 				fields: {
 					id: {
@@ -688,6 +704,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			await nexus.configureModel('my-pivot', {
+				source: 'source-1',
 				schema: 'pivot_schema',
 				fields: {
 					id: {
@@ -743,6 +760,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-1',
 					schema: 'test-1',
@@ -832,6 +850,7 @@ describe('src/schema/composite.js', function(){
 					as: 'tail',
 					path: 'name'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-1',
 					path: 'name',
@@ -870,6 +889,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-1',
 					schema: 'test-1',
@@ -929,6 +949,7 @@ describe('src/schema/composite.js', function(){
 					as: 'other',
 					path: 'name'
 				}],
+				filters: [],
 				params: []
 			});
 		});
@@ -966,6 +987,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-5',
 					schema: 'test-5',
@@ -1025,6 +1047,7 @@ describe('src/schema/composite.js', function(){
 					as: 'funf',
 					path: 'title'
 				}],
+				filters: [],
 				params: [{
 					series: 'creator',
 					path: 'id',
@@ -1190,6 +1213,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-1',
 					schema: 'test-1',
@@ -1200,6 +1224,7 @@ describe('src/schema/composite.js', function(){
 					as: 'key',
 					path: 'id'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-1',
 					path: 'id',
@@ -1213,6 +1238,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-1',
 					schema: 'test-1',
@@ -1234,6 +1260,7 @@ describe('src/schema/composite.js', function(){
 					as: 'key',
 					path: 'id'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-2',
 					path: 'id',
@@ -1247,6 +1274,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-1',
 					schema: 'test-1',
@@ -1279,6 +1307,7 @@ describe('src/schema/composite.js', function(){
 					as: 'key',
 					path: 'id'
 				}],
+				filters: [],
 				params: [{
 					series: 'test-3',
 					path: 'id',
@@ -1311,6 +1340,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [{
 					series: 'test-5',
 					schema: 'test-5',
@@ -1343,6 +1373,7 @@ describe('src/schema/composite.js', function(){
 					as: 'key',
 					path: 'id'
 				}],
+				filters: [],
 				params: [{
 					series: 'owner',
 					path: 'id',
@@ -1401,6 +1432,7 @@ describe('src/schema/composite.js', function(){
 
 			expect(query.toJSON())
 			.to.deep.equal({
+				method: 'read',
 				models: [
 					{
 						'series': 'test-1',
@@ -1479,15 +1511,14 @@ describe('src/schema/composite.js', function(){
 						'as': 'key'
 					}
 				],
-				params: [
-					{
-						'series': 'sub',
-						'path': 'id',
-						'operation': '=',
-						'value': 3,
-						'settings': {}
-					}
-				]
+				filters: [],
+				params: [{
+					'series': 'sub',
+					'path': 'id',
+					'operation': '=',
+					'value': 3,
+					'settings': {}
+				}]
 			});
 		});
 	});
@@ -1804,6 +1835,7 @@ describe('src/schema/composite.js', function(){
 
 				expect(query.toJSON())
 				.to.deep.equal({
+					method: 'read',
 					models: [{
 						series: 'test-2',
 						schema: 'table_2',
@@ -1829,6 +1861,7 @@ describe('src/schema/composite.js', function(){
 						path: 'name',
 						as: 'parent.name'
 					}],
+					filters: [],
 					params: []
 				});
 			});
@@ -1873,7 +1906,8 @@ describe('src/schema/composite.js', function(){
 
 				expect(query.toJSON())
 				.to.deep.equal({
-					'models': [
+					method: 'read',
+					models: [
 						{
 							'series': 'test-2',
 							'schema': 'table_2',
@@ -1912,7 +1946,7 @@ describe('src/schema/composite.js', function(){
 							]
 						}
 					],
-					'fields': [
+					fields: [
 						{
 							'series': 'test-2',
 							'path': 'name',
@@ -1929,7 +1963,8 @@ describe('src/schema/composite.js', function(){
 							'as': 'stuff.extend.name'
 						}
 					],
-					'params': []
+					filters: [],
+					params: []
 				});
 			});
 
@@ -1973,7 +2008,8 @@ describe('src/schema/composite.js', function(){
 
 				expect(query.toJSON())
 				.to.deep.equal({
-					'models': [
+					method: 'read',
+					models: [
 						{
 							'series': 'test-2',
 							'schema': 'table_2',
@@ -1996,7 +2032,7 @@ describe('src/schema/composite.js', function(){
 							]
 						}
 					],
-					'fields': [
+					fields: [
 						{
 							'series': 'test-2',
 							'path': 'name',
@@ -2013,7 +2049,8 @@ describe('src/schema/composite.js', function(){
 							'as': 'sub_0'
 						}
 					],
-					'params': []
+					filters: [],
+					params: []
 				});
 			});
 		});

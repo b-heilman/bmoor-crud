@@ -39,6 +39,14 @@ describe('src/env/bootstrap.js', function(){
 						execute: stubs.execute
 					})
 				},
+				sources: {
+					's-1': {
+						connector: 'http',
+					},
+					's-2': {
+						connector: 'http'
+					}
+				},
 				directories: {
 					model: '/models',
 					decorator: '/decorators',
@@ -62,7 +70,7 @@ describe('src/env/bootstrap.js', function(){
 				cruds: [{
 					name: 'service-1',
 					settings: {
-						connector: 'http',
+						source: 's-1',
 						fields: {
 							id: {
 								create: false,
@@ -77,7 +85,7 @@ describe('src/env/bootstrap.js', function(){
 				}, {
 					name: 'service-2',
 					settings: {
-						connector: 'http',
+						source: 's-2',
 						fields: {
 							id: {
 								create: false,

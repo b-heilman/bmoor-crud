@@ -1,7 +1,6 @@
 
 const {expect} = require('chai');
 const sinon = require('sinon');
-const {Config} = require('bmoor/src/lib/config.js');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
@@ -12,22 +11,33 @@ describe('src/controller/guard.js', function(){
 	let stubs = {};
 	let nexus = null;
 	let service = null;
-	let interface = null;
+	let connectorResult = null;
 
 	beforeEach(async function(){
-		stubs = {};
-		interface = {};
+		nexus = new Nexus();
 
-		const interfaces = new Config({
-			stub: function(){
-				return interface;
-			}
+		connectorResult = {};
+
+		stubs = {
+			execute: sinon.stub()
+			.callsFake(async function(){
+				return connectorResult;
+			})
+		};
+
+		await nexus.setConnector(
+			'test', 
+			async () => ({
+				execute: async (...args) => stubs.execute(...args)
+			})
+		);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
 		});
-		
-		nexus = new Nexus(null, interfaces);
 
 		nexus.configureModel('service-1', {
-			connector: 'stub',
+			source: 'test-1',
 			fields: {
 				eins: {
 					create: false,
@@ -44,13 +54,7 @@ describe('src/controller/guard.js', function(){
 			}
 		});
 
-		stubs.execute = sinon.stub();
-
-		interface = {
-			execute: stubs.execute
-		};
-			
-		service = await nexus.configureCrud('service-1', interface);
+		service = await nexus.configureCrud('service-1');
 	});
 
 	afterEach(function(){
@@ -141,11 +145,11 @@ describe('src/controller/guard.js', function(){
 					}]);
 
 					const args = stubs.execute.getCall(0).args[0];
-					expect(args.method)
-					.to.deep.equal('read');
-
-					expect(args.query.toJSON())
+					
+					expect(args)
 					.to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
 						models: [{
 							series: 'service-1',
 							schema: 'service-1',
@@ -156,6 +160,7 @@ describe('src/controller/guard.js', function(){
 							path: 'eins',
 							series: 'service-1'
 						}],
+						filters: [],
 						params: [{
 							series: 'service-1',
 							path: 'zwei',

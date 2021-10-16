@@ -27,6 +27,11 @@ describe('src/server/scafolding.js', function(){
 					execute: stubs.execute
 				})
 			},
+			sources: {
+				'test-1': {
+					connector: 'http'
+				}
+			},
 			directories: {
 				models: '/models',
 				decorators: '/decorators',
@@ -56,7 +61,7 @@ describe('src/server/scafolding.js', function(){
 			name: 'service-1',
 			path: 'model-path-1',
 			settings: {
-				connector: 'http',
+				source: 'test-1',
 				fields: {
 					id: {
 						create: false,
@@ -75,7 +80,7 @@ describe('src/server/scafolding.js', function(){
 			name: 'service-2',
 			path: 'model-path-2',
 			settings: {
-				connector: 'http',
+				source: 'test-1',
 				fields: {
 					id: {
 						create: false,
