@@ -61,7 +61,7 @@ const normalization = require('./normalization.js');
 
 				// Loop through each result, and process the sub queries for each
 				await Promise.all(this.structure.subs.map(
-					async ({info, mounts, document}) => {
+					async ({info, mounts, document, params}) => {
 						const query = mounts.reduce(
 							(agg, {path, clear, param, joinPath}) => {
 								agg.params[param] = get(queryDatum, path);
@@ -77,7 +77,7 @@ const normalization = require('./normalization.js');
 								return agg;
 							},
 							{
-								params: {},
+								params,
 								joins: []
 							}
 						);

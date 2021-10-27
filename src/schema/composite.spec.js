@@ -213,15 +213,23 @@ describe('src/schema/composite.js', function(){
 				const lookup = await nexus.configureComposite('hello-world-2', {
 					base: 'test-3',
 					joins: [
+						'> $test-pivot',
 						'> #hello-world-1'
 					],
+					params: {
+						'$test-pivot.boom': true
+					},
 					fields: {
 						name: '.name',
 						version: '#hello-world-1'
 					}
 				});
 
-				const query = await lookup.getQuery();
+				const query = await lookup.getQuery({
+					params: {
+						'$test-3.doo': 5
+					}
+				});
 
 				expect(query.toJSON())
 				.to.deep.equal({
@@ -229,6 +237,17 @@ describe('src/schema/composite.js', function(){
 						series: 'test-3',
 						schema: 'test-3',
 						joins: []
+					}, {
+						series: 'test-pivot',
+						schema: 'test-pivot',
+						joins: [{
+							name: 'test-3',
+							optional: false,
+							mappings: [{
+								from: 'test3Id',
+								to: 'id'
+							}]
+						}]
 					}],
 					fields: [{
 						series: 'test-3',
@@ -239,7 +258,19 @@ describe('src/schema/composite.js', function(){
 						as: 'sub_0',
 						path: 'test2Id'
 					}],
-					params: []
+					params: [{
+						operation: '=',
+						path: 'doo',
+						series: 'test-3',
+						settings: {},
+						value: 5
+					}, {
+						operation: '=',
+						path: 'boom',
+						series: 'test-pivot',
+						settings: {},
+						value: true
+					}]
 				});
 
 				const subs = lookup.subs;

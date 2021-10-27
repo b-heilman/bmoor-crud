@@ -144,6 +144,8 @@ class Composite extends Structure {
 	}
 
 	async linkSubs(){
+		const joinParams = this.incomingSettings.joinParams || {};
+
 		return Promise.all(this.instructions.subs.map(
 			async (sub, i) => {
 				// I'm going to make sure all previous files are imported
@@ -211,7 +213,8 @@ class Composite extends Structure {
 						param: '$'+paramModel+'.'+join.to,
 						joinPath
 					}],
-					composite
+					composite,
+					params: joinParams[sub.action.series] || {}
 				};
 			}
 		));
@@ -376,7 +379,8 @@ class Composite extends Structure {
 		this.instructions = new Instructions(
 			settings.base,
 			settings.joins,
-			settings.fields
+			settings.fields,
+			settings.params
 		);
 
 		const rtn = await this.build();
@@ -549,7 +553,7 @@ class Composite extends Structure {
 			{
 				query: query,
 				joins: settings.joins,
-				params: settings.params,
+				params: {...settings.params, ...this.instructions.params},
 				sort: settings.sort,
 				position: settings.position
 			},

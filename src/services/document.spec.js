@@ -1263,6 +1263,11 @@ describe('src/services/document.js', function(){
 					'> $test-category',
 					'> #test-tags'
 				],
+				joinParams: {
+					'test-tags': {
+						tag: 'foo-bar'
+					}
+				},
 				fields: {
 					'item': '.name',
 					'categoryName':  '$test-category.name',
@@ -1339,6 +1344,12 @@ describe('src/services/document.js', function(){
 					as: 'mask'
 				}],
 				params: [{
+					series: 'test-item-material',
+					path: 'tag',
+					operation: '=',
+					settings: {},
+					value: 'foo-bar'
+				}, {
 					series: 'test-item-material',
 					path: 'itemId',
 					operation: '=',

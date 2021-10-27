@@ -93,7 +93,7 @@ function absorbIndexMerge(target, source, namespace=''){
 
 // used to parse appart the paths that can be fed into a composite schema
 class Instructions {
-	constructor(baseModel, joinSchema, fieldSchema){
+	constructor(baseModel, joinSchema, fieldSchema, params={}){
 		this.model = baseModel;
 
 		this.index = joinSchema.reduce(
@@ -170,12 +170,25 @@ class Instructions {
 
 		this.subs = [];
 		this.fields = [];
+		this.params = params;
 		this.variables = {};
 
 		// break this into
 		// [path]: [accessor]
-		const imploded = implode(fieldSchema);Object.keys(imploded).map(
+		const imploded = implode(fieldSchema);
+		Object.keys(imploded).map(
 			(mount) => this.addStatement(mount, imploded[mount])
+		);
+
+		Object.keys(params).map(
+			key => {
+				if (key[0] === '$'){
+					const pos = key.indexOf('.');
+					const series = key.substr(1, pos-1);
+
+					this.getSeries(series).isNeeded = true;
+				}
+			}
 		);
 	}
 

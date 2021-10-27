@@ -149,7 +149,6 @@ class Query {
 		const ordered = [];
 
 		let toProcess = Object.values(this.models);
-
 		const extraRoots = toProcess.filter(
 			link => !Object.values(link.joins).length && link.series !== this.base
 		);
