@@ -1,8 +1,7 @@
-
 // const sinon = require('sinon');
 // const {expect} = require('chai');
 
-xdescribe('src/interfaces/knex.js', function(){
+xdescribe('src/interfaces/knex.js', function () {
 	/*
 	const {Query, StatementParam, StatementField, QueryPosition, QuerySort} = require('../schema/query.js');
 

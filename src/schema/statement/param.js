@@ -1,4 +1,3 @@
-
 class StatementParam {
 	/***
 	 * values
@@ -7,7 +6,7 @@ class StatementParam {
 	 * value
 	 * op
 	 ***/
-	constructor(path, value, operation = '=', settings = {}){
+	constructor(path, value, operation = '=', settings = {}) {
 		this.path = path;
 		this.operation = operation;
 		this.value = value;

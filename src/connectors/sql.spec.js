@@ -1,7 +1,6 @@
-
 // const {expect} = require('chai');
 
-xdescribe('src/interfaces/knex.js', function(){
+xdescribe('src/interfaces/knex.js', function () {
 	/*
 	const sut = require('./sql.js');
 

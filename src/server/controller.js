@@ -1,9 +1,8 @@
-
 const {Route} = require('./route.js');
 const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
-async function parseQuery(view, ctx){
+async function parseQuery(view, ctx) {
 	const sort = ctx.getQuery('sort') || null;
 	const joins = ctx.getQuery('join') || [];
 	const limit = ctx.getQuery('limit') || null;
@@ -15,7 +14,7 @@ async function parseQuery(view, ctx){
 	// ? limit=100
 	// TODO: pagination?
 	let parsedParams = params;
-	if (view){
+	if (view) {
 		parsedParams = await view.structure.clean('query', params, ctx);
 	}
 
@@ -27,32 +26,29 @@ async function parseQuery(view, ctx){
 	};
 }
 
-async function formatResponse(res, changes/*, ctx, nexus*/){
-	if (changes.length){
+async function formatResponse(res, changes /*, ctx, nexus*/) {
+	if (changes.length) {
 		return {
 			result: res,
-			changes: changes.reduce(
-				function(agg, change, i){
-					if (!change.md.internal){
-						let modelInfo = agg[change.model];
+			changes: changes.reduce(function (agg, change, i) {
+				if (!change.md.internal) {
+					let modelInfo = agg[change.model];
 
-						if (!modelInfo){
-							modelInfo = [];
+					if (!modelInfo) {
+						modelInfo = [];
 
-							agg[change.model] = modelInfo;
-						}
-
-						modelInfo.push({
-							order: i,
-							action: change.action,
-							datum: change.to || change.from
-						});
+						agg[change.model] = modelInfo;
 					}
 
-					return agg;
-				},
-				{}
-			)
+					modelInfo.push({
+						order: i,
+						action: change.action,
+						datum: change.to || change.from
+					});
+				}
+
+				return agg;
+			}, {})
 		};
 	} else {
 		return {
@@ -61,31 +57,27 @@ async function formatResponse(res, changes/*, ctx, nexus*/){
 	}
 }
 
-async function handleRollback(changes, ctx, nexus){
+async function handleRollback(changes, ctx, nexus) {
 	ctx.trackChanges(false);
 
-	await changes.reverse()
-	.reduce(
-		async (prom, d) => {
-			await prom;
+	await changes.reverse().reduce(async (prom, d) => {
+		await prom;
 
-			const service = await nexus.loadCrud(d.model);
+		const service = await nexus.loadCrud(d.model);
 
-			if (d.action === 'create'){
-				// if it was created, just delete it
-				return service.delete(d.key, ctx);
-			} else if (d.action === 'update'){
-				// if it was updated, roll it back
-				return service.update(d.key, d.from, ctx);
-			} else if (d.action === 'delete'){
-				// I don't know what to do here, because anything created that 
-				// links back to this is gonna need updated.  That causes a whole
-				// slew of issues.  So for now, I'm not supporting restoring deleted
-				// data.
-			}
-		},
-		null
-	);
+		if (d.action === 'create') {
+			// if it was created, just delete it
+			return service.delete(d.key, ctx);
+		} else if (d.action === 'update') {
+			// if it was updated, roll it back
+			return service.update(d.key, d.from, ctx);
+		} else if (d.action === 'delete') {
+			// I don't know what to do here, because anything created that
+			// links back to this is gonna need updated.  That causes a whole
+			// slew of issues.  So for now, I'm not supporting restoring deleted
+			// data.
+		}
+	}, null);
 
 	ctx.trackChanges(true);
 }
@@ -96,15 +88,15 @@ const config = new Config({
 });
 
 class Controller {
-	constructor(view){
+	constructor(view) {
 		this.view = view;
 	}
 
-	async configure(settings){
+	async configure(settings) {
 		this.incomingSettings = settings;
 	}
 
-	prepareRoute(settings={}){
+	prepareRoute(settings = {}) {
 		return new Route(
 			settings.route.path,
 			settings.route.method,
@@ -115,16 +107,20 @@ class Controller {
 					const res = await settings.fn(ctx);
 					const changes = ctx.getChanges();
 
-					if (ctx.info.response){
+					if (ctx.info.response) {
 						return ctx.info.response(res, changes, ctx);
-					} else if (settings.formatResponse){
+					} else if (settings.formatResponse) {
 						return settings.formatResponse(res, changes, ctx);
 					} else {
 						return config.get('formatResponse')(res, changes, ctx);
 					}
-				} catch(ex){
-					if (settings.enableRollback){
-						await config.get('handleRollback')(ctx.getChanges(), ctx, this.view.structure.nexus);
+				} catch (ex) {
+					if (settings.enableRollback) {
+						await config.get('handleRollback')(
+							ctx.getChanges(),
+							ctx,
+							this.view.structure.nexus
+						);
 					}
 
 					throw ex;
@@ -134,42 +130,41 @@ class Controller {
 		);
 	}
 
-	_buildRoutes(){
-		return [{
-			route: {
-				path: '',
-				method: 'get'
-			},
-			fn: () => {
-				return {ok: true};
+	_buildRoutes() {
+		return [
+			{
+				route: {
+					path: '',
+					method: 'get'
+				},
+				fn: () => {
+					return {ok: true};
+				}
 			}
-		}];
+		];
 	}
 
-	getRoutes(){
-		return this._buildRoutes()
-		.map(routeInfo => this.prepareRoute(routeInfo));
+	getRoutes() {
+		return this._buildRoutes().map((routeInfo) => this.prepareRoute(routeInfo));
 	}
 
-	getRouter(){
-		const router = new Router('/'+this.view.structure.name);
+	getRouter() {
+		const router = new Router('/' + this.view.structure.name);
 
 		router.addRoutes(this.getRoutes());
 
 		return router;
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			$schema: 'bmoor-crud:controller',
 			routes: this._buildRoutes()
-			.filter(routeInfo => !routeInfo.hidden)
-			.map(
-				routeInfo => ({
+				.filter((routeInfo) => !routeInfo.hidden)
+				.map((routeInfo) => ({
 					route: routeInfo.route,
 					structure: routeInfo.structure.name
-				})
-			)
+				}))
 		};
 	}
 }

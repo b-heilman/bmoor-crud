@@ -1,8 +1,7 @@
-
-function asyncWrap(fn, old, before = true){
-	if (before){
-		if (old){
-			return async function(datum, ctx, self, delta = {}){
+function asyncWrap(fn, old, before = true) {
+	if (before) {
+		if (old) {
+			return async function (datum, ctx, self, delta = {}) {
 				await fn(datum, ctx, self, delta);
 
 				return old(datum, ctx, self, delta);
@@ -11,8 +10,8 @@ function asyncWrap(fn, old, before = true){
 			return fn;
 		}
 	} else {
-		if (old){
-			return async function(datum, ctx, self, delta = {}){
+		if (old) {
+			return async function (datum, ctx, self, delta = {}) {
 				await old(datum, ctx, self, delta);
 
 				return fn(datum, ctx, self, delta);
@@ -23,89 +22,86 @@ function asyncWrap(fn, old, before = true){
 	}
 }
 
-function mapFactory(fn, old){
-	if (!old){
+function mapFactory(fn, old) {
+	if (!old) {
 		return fn;
 	} else {
-		return async function(ctx){
+		return async function (ctx) {
 			const eins = await old(ctx);
 			const zwei = await fn(ctx);
 
-			return function(datum){
+			return function (datum) {
 				return zwei(eins(datum));
 			};
 		};
 	}
 }
 
-function hook(crud, settings){
-	if (settings.beforeCreate){
+function hook(crud, settings) {
+	if (settings.beforeCreate) {
 		crud.hooks.beforeCreate = asyncWrap(
-			settings.beforeCreate, 
+			settings.beforeCreate,
 			crud.hooks.beforeCreate,
 			true
 		);
 	}
 
-	if (settings.afterCreate){
+	if (settings.afterCreate) {
 		crud.hooks.afterCreate = asyncWrap(
-			settings.afterCreate, 
+			settings.afterCreate,
 			crud.hooks.afterCreate,
 			false
 		);
 	}
 
-	if (settings.beforeRead){
+	if (settings.beforeRead) {
 		crud.hooks.beforeRead = asyncWrap(
-			settings.beforeRead, 
+			settings.beforeRead,
 			crud.hooks.beforeRead,
 			true
 		);
 	}
 
-	if (settings.beforeUpdate){
+	if (settings.beforeUpdate) {
 		crud.hooks.beforeUpdate = asyncWrap(
-			settings.beforeUpdate, 
+			settings.beforeUpdate,
 			crud.hooks.beforeUpdate,
 			true
 		);
 	}
 
-	if (settings.afterUpdate){
+	if (settings.afterUpdate) {
 		crud.hooks.afterUpdate = asyncWrap(
-			settings.afterUpdate, 
+			settings.afterUpdate,
 			crud.hooks.afterUpdate,
 			false
 		);
 	}
 
-	if (settings.beforeDelete){
+	if (settings.beforeDelete) {
 		crud.hooks.beforeDelete = asyncWrap(
-			settings.beforeDelete, 
+			settings.beforeDelete,
 			crud.hooks.beforeDelete,
 			true
 		);
 	}
 
-	if (settings.afterDelete){
+	if (settings.afterDelete) {
 		crud.hooks.afterDelete = asyncWrap(
-			settings.afterDelete, 
+			settings.afterDelete,
 			crud.hooks.afterDelete,
 			false
 		);
 	}
 
-	
 	//------------
 
-	if (settings.mapFactory){
+	if (settings.mapFactory) {
 		crud.hooks.mapFactory = mapFactory(
 			settings.mapFactory,
 			crud.hooks.mapFactory
 		);
 	}
-
-	
 }
 
 module.exports = {

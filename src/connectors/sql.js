@@ -1,18 +1,17 @@
-
 const arrayMethods = {
 	'=': 'IN'
 };
 
 const scalarMethods = {
 	'=': '=',
-	'eq': '=',
-	'lt': '<',
-	'lte': '<=',
-	'gt': '>',
-	'gte': '>='
+	eq: '=',
+	lt: '<',
+	lte: '<=',
+	gt: '>',
+	gte: '>='
 };
 
-function translateSelect(stmt){
+function translateSelect(stmt) {
 	const query = stmt.query;
 
 	const settings = query.getInOrder().reduce(
@@ -20,22 +19,24 @@ function translateSelect(stmt){
 			const modelName = model.schema;
 			const modelRef = model.series;
 
-			model.fields.forEach(field => {
+			model.fields.forEach((field) => {
 				// as => alias
-				if (field.as){
-					agg.select.push(`\`${modelRef}\`.\`${field.path}\` AS \`${field.as}\``);
+				if (field.as) {
+					agg.select.push(
+						`\`${modelRef}\`.\`${field.path}\` AS \`${field.as}\``
+					);
 				} else {
 					agg.select.push(`\`${modelRef}\`.\`${field.path}\``);
 				}
 			});
 
 			const joins = Object.values(model.joins);
-			if (joins.length){
-				joins.forEach(join => {
+			if (joins.length) {
+				joins.forEach((join) => {
 					const type = join.optional ? 'LEFT JOIN' : 'INNER JOIN';
 					const joinPoint = `${type} \`${modelName}\` AS \`${modelRef}\``;
 
-					const on = join.mappings.map(on => {
+					const on = join.mappings.map((on) => {
 						const dis = `\`${modelRef}\`.\`${on.from}\``;
 						const dat = `\`${join.name}\`.\`${on.to}\``;
 
@@ -48,11 +49,11 @@ function translateSelect(stmt){
 				agg.from.push(`\`${modelName}\` AS \`${modelRef}\``);
 			}
 
-			model.params.forEach(param => {
+			model.params.forEach((param) => {
 				const path = param.path;
 				const op = param.operation;
 
-				if (Array.isArray(param.value)){
+				if (Array.isArray(param.value)) {
 					const comp = arrayMethods[op];
 
 					agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}(?)`);
@@ -66,7 +67,8 @@ function translateSelect(stmt){
 			});
 
 			return agg;
-		}, {
+		},
+		{
 			select: [],
 			from: [],
 			where: [],
@@ -78,34 +80,40 @@ function translateSelect(stmt){
 	return {
 		select: `${settings.select.join(',\n\t')}`,
 		from: `${settings.from.join('\n\t')}`,
-		where: settings.where.length ?
-			settings.where.join('\n\tAND ') : null,
+		where: settings.where.length ? settings.where.join('\n\tAND ') : null,
 		params: settings.params,
-		orderBy: query.sorts ? query.sorts.map(
-				order => `\`${order.series}\`.\`${order.path}\` `+
-					(order.ascending ? 'ASC' : 'DESC')
-			).join(',') : null,
-		limit: position ?
-			(position.start ? position.start+','+position.limit : position.limit) :
-			null
+		orderBy: query.sorts
+			? query.sorts
+					.map(
+						(order) =>
+							`\`${order.series}\`.\`${order.path}\` ` +
+							(order.ascending ? 'ASC' : 'DESC')
+					)
+					.join(',')
+			: null,
+		limit: position
+			? position.start
+				? position.start + ',' + position.limit
+				: position.limit
+			: null
 	};
 }
 
 const connector = {
-	prepare: async function(stmt){
+	prepare: async function (stmt) {
 		const query = translateSelect(stmt);
 
 		let sql = `SELECT ${query.select} \nFROM ${query.from}`;
 
-		if (query.where){
+		if (query.where) {
 			sql += `\nWHERE ${query.where}`;
 		}
 
-		if (query.orderBy){
+		if (query.orderBy) {
 			sql += `\nORDER BY ${query.orderBy}`;
 		}
 
-		if (query.limit){
+		if (query.limit) {
 			sql += `\nLIMIT ${query.limit}`;
 		}
 
@@ -115,11 +123,11 @@ const connector = {
 		};
 	},
 
-	run: async function(sql, params){
+	run: async function (sql, params) {
 		console.log('------\n', sql, '\n===', params, '\n------');
 	},
-	
-	execute: async function(stmt){
+
+	execute: async function (stmt) {
 		const prepared = await this.prepare(stmt);
 
 		return this.run(prepared.sql, prepared.query.params, stmt);
@@ -131,7 +139,7 @@ module.exports = {
 
 	connector,
 
-	factory(){
+	factory() {
 		return connector;
 	}
 };

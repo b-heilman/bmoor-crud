@@ -1,41 +1,38 @@
-
 class Router {
-	constructor(path){
+	constructor(path) {
 		this.path = path;
 
 		this.subs = [];
 		this.routes = [];
 	}
 
-	addRoutes(routes){
+	addRoutes(routes) {
 		this.routes = this.routes.concat(routes);
 	}
 
-	getRoutes(){
+	getRoutes() {
 		return this.routes;
 	}
 
-	addRouters(routers){
+	addRouters(routers) {
 		this.subs = this.subs.concat(routers);
 	}
 
-	getRouters(){
+	getRouters() {
 		return this.subs;
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			$schema: 'bmoor-crud:router',
 			path: this.path,
-			routes: this.routes.concat(this.subs).sort(
-				(a,b) => {
-					if (a.path === b.path){
-						return a.method.localeCompare(b.method);
-					} else {
-						return a.path.localeCompare(b.path);
-					}
+			routes: this.routes.concat(this.subs).sort((a, b) => {
+				if (a.path === b.path) {
+					return a.method.localeCompare(b.method);
+				} else {
+					return a.path.localeCompare(b.path);
 				}
-			)
+			})
 		};
 	}
 }

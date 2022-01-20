@@ -1,54 +1,53 @@
-
 const {StatementParam} = require('../schema/statement/param.js');
 const {Queriable} = require('../schema/query/queriable.js');
 
-function canExecute(statement, datum){
+function canExecute(statement, datum) {
 	let ok = true;
-	const checks  = statement.externals.flatMap(
-		({mappings}) => mappings.map(mapping => mapping.from)
+	const checks = statement.externals.flatMap(({mappings}) =>
+		mappings.map((mapping) => mapping.from)
 	);
 
-	for(let i = 0, c = checks.length; i < c && ok; i++){
-		ok = (checks[i] in datum);
+	for (let i = 0, c = checks.length; i < c && ok; i++) {
+		ok = checks[i] in datum;
 	}
 
 	return ok;
 }
 
-function combine(arr){
+function combine(arr) {
 	const set = arr.shift();
 
-	if (arr.length){
+	if (arr.length) {
 		const sub = combine(arr);
 
-		return sub.flatMap(datum => set.map(
-			myDatum => {
+		return sub.flatMap((datum) =>
+			set.map((myDatum) => {
 				return Object.assign({}, datum, myDatum);
-			}
-		));
+			})
+		);
 	} else {
 		return set;
 	}
 }
 
-async function executeQueriable(querier, queriable, ctx){
+async function executeQueriable(querier, queriable, ctx) {
 	const source = querier.sources[queriable.name];
 
 	return source.execute(queriable.toJSON(), ctx);
 }
 
-async function runQueriable(querier, settings, queriable, ctx){
-	if (settings.cacheable){
-		const series = 'querier:'+querier.name;
+async function runQueriable(querier, settings, queriable, ctx) {
+	if (settings.cacheable) {
+		const series = 'querier:' + querier.name;
 		const key = queriable.getIdentifier();
 		const check = ctx.hasCache(series, key);
 
-		if (check){
+		if (check) {
 			return ctx.getCache(series, key);
 		} else {
 			return ctx.promiseCache(
-				series, 
-				key, 
+				series,
+				key,
 				executeQueriable(querier, queriable, ctx)
 			);
 		}
@@ -57,20 +56,19 @@ async function runQueriable(querier, settings, queriable, ctx){
 	}
 }
 
-async function processDatum(querier, settings, stmts, datum, ctx){
+async function processDatum(querier, settings, stmts, datum, ctx) {
 	const res = await Promise.all(
 		stmts.map(async (stmt) => {
 			const queriable = stmt.queriable.clone();
-			
+
 			// TODO: process the externals
-			stmt.externals.forEach(
-				({name, mappings}) => queriable.addParams(name, 
-					mappings.map(mapping => {
+			stmt.externals.forEach(({name, mappings}) =>
+				queriable.addParams(
+					name,
+					mappings.map((mapping) => {
 						const val = datum[mapping.from];
 
-						return new StatementParam(
-							mapping.to, val, '='
-						);
+						return new StatementParam(mapping.to, val, '=');
 					})
 				)
 			);
@@ -81,19 +79,21 @@ async function processDatum(querier, settings, stmts, datum, ctx){
 
 	res.push([datum]);
 
-	return combine(res);  
+	return combine(res);
 }
 
-async function processStatements(querier, settings, stmts, datums, ctx){
-	return (await Promise.all(
-		datums.map(async (datum) => processDatum(
-			querier, settings, stmts, datum, ctx
-		))
-	)).flat();
+async function processStatements(querier, settings, stmts, datums, ctx) {
+	return (
+		await Promise.all(
+			datums.map(async (datum) =>
+				processDatum(querier, settings, stmts, datum, ctx)
+			)
+		)
+	).flat();
 }
 
 class Querier {
-	constructor(name, query){
+	constructor(name, query) {
 		this.name = name;
 
 		const sourceMemory = {};
@@ -109,13 +109,13 @@ class Querier {
 		}
 		*/
 		let tempCount = 0;
-		this.statements = Object.values(query.getInOrder().reduce(
-			(agg, info) => {
+		this.statements = Object.values(
+			query.getInOrder().reduce((agg, info) => {
 				const series = info.series;
 				const sourceName = info.model.incomingSettings.source;
 
 				sourceMemory[series] = sourceName;
-				// The thing I know is series always join left here.  So 
+				// The thing I know is series always join left here.  So
 				// I am able to figure out of the join is internal or external
 				let order = 0;
 				const joins = Object.values(info.joins).reduce(
@@ -125,25 +125,25 @@ class Querier {
 						const other = agg[otherSource];
 
 						// if the other series uses the same source...
-						if (otherSource === sourceName){
+						if (otherSource === sourceName) {
 							joins.internal.push(join);
 						} else {
 							const otherOrder = other.order;
-							if (order <= otherOrder){
+							if (order <= otherOrder) {
 								order = otherOrder + 1;
 							}
 
-							const mappings = join.mappings.map(mapping => {
+							const mappings = join.mappings.map((mapping) => {
 								// We need to check to see if the joining field has been added to the
-								// query.  If not, it has to be added to the other query so we can 
+								// query.  If not, it has to be added to the other query so we can
 								// reference it here.
 								let temp = false;
 								let fieldAs = other.queriable.getField(join.name, mapping.to);
 
-								if (!fieldAs){
+								if (!fieldAs) {
 									fieldAs = other.queriable.addTempField(
-										join.name, 
-										'exe_'+(tempCount++), 
+										join.name,
+										'exe_' + tempCount++,
 										mapping.to
 									);
 									temp = true;
@@ -151,7 +151,7 @@ class Querier {
 
 								return {
 									from: fieldAs,
-									to: mapping.from, 
+									to: mapping.from,
 									temp
 								};
 							});
@@ -172,16 +172,16 @@ class Querier {
 
 				let queriable = null;
 				let statement = agg[sourceName];
-				if (statement){
+				if (statement) {
 					queriable = statement.queriable;
 				} else {
-					// these should all be in order, so the first series should be the 
+					// these should all be in order, so the first series should be the
 					// base series
 					queriable = new Queriable(
-						'fragment-'+Object.keys(agg).length,
+						'fragment-' + Object.keys(agg).length,
 						series
 					);
-					
+
 					statement = {
 						queriable,
 						externals: [],
@@ -192,7 +192,7 @@ class Querier {
 
 				queriable.setModel(series, info.model);
 
-				joins.external.forEach(join => {
+				joins.external.forEach((join) => {
 					statement.externals.push(join);
 				});
 
@@ -207,46 +207,44 @@ class Querier {
 				queriable.addSorts(series, info.sorts);
 
 				return agg;
-			},
-			{
-			}
-		));
+			}, {})
+		);
 
-		if (this.position){
+		if (this.position) {
 			// first source should always be the root
 			this.statements[0].queriable.setPosition(this.position);
 		}
 	}
 
-	async link(nexus){
+	async link(nexus) {
 		const sources = {};
 
-		await Promise.all(this.statements.map(
-			async (stmt) => {
+		await Promise.all(
+			this.statements.map(async (stmt) => {
 				sources[stmt.queriable.name] = await nexus.loadSource(
 					stmt.queriable.sourceName
 				);
-			}
-		));
+			})
+		);
 
 		this.sources = sources;
 	}
-	
-	async run(ctx, settings={}){
+
+	async run(ctx, settings = {}) {
 		let rtn = [{}];
 		const stmts = this.statements.slice(0);
 
-		if (stmts.length > 1){
-			while(stmts.length){
+		if (stmts.length > 1) {
+			while (stmts.length) {
 				let toCall = [];
 				let current = rtn[0];
-				
+
 				const check = stmts.length;
-				while(stmts.length && canExecute(stmts[0], current)){
+				while (stmts.length && canExecute(stmts[0], current)) {
 					toCall.push(stmts.shift());
 				}
 
-				if (stmts.length === check){
+				if (stmts.length === check) {
 					throw new Error('TODO: no way to reduce?');
 				}
 
@@ -261,8 +259,8 @@ class Querier {
 		return rtn;
 	}
 
-	toJSON(){
-		return this.statements.map(stmt => {
+	toJSON() {
+		return this.statements.map((stmt) => {
 			const exe = stmt.queriable.toJSON();
 
 			exe.externals = stmt.externals;

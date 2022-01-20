@@ -1,4 +1,3 @@
-
 const {expect} = require('chai');
 const sinon = require('sinon');
 
@@ -7,30 +6,26 @@ const {Context} = require('../server/context.js');
 
 const sut = require('./action.js');
 
-describe('src/controller/action.js', function(){
+describe('src/controller/action.js', function () {
 	let stubs = {};
 	let nexus = null;
 	let service = null;
 	let connectorResult = null;
 
-	beforeEach(async function(){
+	beforeEach(async function () {
 		nexus = new Nexus();
 
 		connectorResult = {};
 
 		stubs = {
-			execute: sinon.stub()
-			.callsFake(async function(){
+			execute: sinon.stub().callsFake(async function () {
 				return connectorResult;
 			})
 		};
 
-		await nexus.setConnector(
-			'test', 
-			async () => ({
-				execute: async (...args) => stubs.execute(...args)
-			})
-		);
+		await nexus.setConnector('test', async () => ({
+			execute: async (...args) => stubs.execute(...args)
+		}));
 
 		await nexus.configureSource('test-1', {
 			connector: 'test'
@@ -53,29 +48,29 @@ describe('src/controller/action.js', function(){
 				}
 			}
 		});
-			
+
 		service = await nexus.configureCrud('service-1');
 	});
 
-	afterEach(function(){
-		Object.values(stubs)
-		.forEach(stub => {
-			if (stub.restore){
+	afterEach(function () {
+		Object.values(stubs).forEach((stub) => {
+			if (stub.restore) {
 				stub.restore();
 			}
 		});
 	});
 
-	describe('allowing for a method to be called', function(){
+	describe('allowing for a method to be called', function () {
 		const {Action} = sut;
 
-		it('should work', async function(){
+		it('should work', async function () {
 			let called = false;
 
-			stubs.read = sinon.stub(service, 'read')
-			.resolves({id: 'eins', name: 'hello-world'});
+			stubs.read = sinon
+				.stub(service, 'read')
+				.resolves({id: 'eins', name: 'hello-world'});
 
-			service.fooBar = function(){
+			service.fooBar = function () {
 				called = true;
 
 				return 'eins-zwei';
@@ -99,20 +94,19 @@ describe('src/controller/action.js', function(){
 
 			const res = await action.route(context);
 
-			expect(called)
-			.to.equal(true);
+			expect(called).to.equal(true);
 
-			expect(res)
-			.to.equal('eins-zwei');
+			expect(res).to.equal('eins-zwei');
 		});
 
-		it('should fail if permission fails', async function(){
+		it('should fail if permission fails', async function () {
 			let called = false;
 
-			stubs.read = sinon.stub(service, 'read')
-			.resolves({id: 'eins', name: 'hello-world'});
+			stubs.read = sinon
+				.stub(service, 'read')
+				.resolves({id: 'eins', name: 'hello-world'});
 
-			service.fooBar = function(){
+			service.fooBar = function () {
 				called = true;
 
 				return 'eins-zwei';
@@ -135,9 +129,8 @@ describe('src/controller/action.js', function(){
 				}
 			});
 
-			context.hasPermission = function(perm){
-				expect(perm)
-				.to.equal('oh-boy');
+			context.hasPermission = function (perm) {
+				expect(perm).to.equal('oh-boy');
 
 				return false;
 			};
@@ -146,32 +139,28 @@ describe('src/controller/action.js', function(){
 			try {
 				const res = await action.route(context);
 
-				expect(called)
-				.to.equal(true);
+				expect(called).to.equal(true);
 
-				expect(res)
-				.to.equal('eins-zwei');
-			} catch(ex){
+				expect(res).to.equal('eins-zwei');
+			} catch (ex) {
 				failed = true;
 
-				expect(ex.code)
-				.to.equal('ACTION_CONTROLLER_PERMISSION');
+				expect(ex.code).to.equal('ACTION_CONTROLLER_PERMISSION');
 			}
 
-			expect(failed)
-			.to.equal(true);
+			expect(failed).to.equal(true);
 
-			expect(called)
-			.to.equal(false);
+			expect(called).to.equal(false);
 		});
 
-		it('should succeed if permission allows', async function(){
+		it('should succeed if permission allows', async function () {
 			let called = false;
 
-			stubs.read = sinon.stub(service, 'read')
-			.resolves({id: 'eins', name: 'hello-world'});
+			stubs.read = sinon
+				.stub(service, 'read')
+				.resolves({id: 'eins', name: 'hello-world'});
 
-			service.fooBar = function(){
+			service.fooBar = function () {
 				called = true;
 
 				return 'eins-zwei';
@@ -194,9 +183,8 @@ describe('src/controller/action.js', function(){
 				}
 			});
 
-			context.hasPermission = function(perm){
-				expect(perm)
-				.to.equal('oh-boy');
+			context.hasPermission = function (perm) {
+				expect(perm).to.equal('oh-boy');
 
 				return true;
 			};
@@ -205,27 +193,22 @@ describe('src/controller/action.js', function(){
 			try {
 				const res = await action.route(context);
 
-				expect(called)
-				.to.equal(true);
+				expect(called).to.equal(true);
 
-				expect(res)
-				.to.equal('eins-zwei');
-			} catch(ex){
+				expect(res).to.equal('eins-zwei');
+			} catch (ex) {
 				failed = true;
 
-				expect(ex.code)
-				.to.equal('ACTION_CONTROLLER_PERMISSION');
+				expect(ex.code).to.equal('ACTION_CONTROLLER_PERMISSION');
 			}
 
-			expect(failed)
-			.to.equal(false);
+			expect(failed).to.equal(false);
 
-			expect(called)
-			.to.equal(true);
+			expect(called).to.equal(true);
 		});
 	});
 
-	it('should fail if a method not defined is called', async function(){
+	it('should fail if a method not defined is called', async function () {
 		const {Action} = sut;
 
 		let called = false;
@@ -254,26 +237,21 @@ describe('src/controller/action.js', function(){
 		try {
 			const res = await action.route(context);
 
-			expect(called)
-			.to.equal(true);
+			expect(called).to.equal(true);
 
-			expect(res)
-			.to.equal('eins-zwei');
-		} catch(ex){
+			expect(res).to.equal('eins-zwei');
+		} catch (ex) {
 			failed = true;
 
-			expect(ex.code)
-			.to.equal('ACTION_CONTROLLER_METHOD');
+			expect(ex.code).to.equal('ACTION_CONTROLLER_METHOD');
 		}
 
-		expect(failed)
-		.to.equal(true);
+		expect(failed).to.equal(true);
 
-		expect(called)
-		.to.equal(false);
+		expect(called).to.equal(false);
 	});
 
-	it('should fail if an action not defined is called', async function(){
+	it('should fail if an action not defined is called', async function () {
 		const {Action} = sut;
 
 		let called = false;
@@ -299,26 +277,21 @@ describe('src/controller/action.js', function(){
 		try {
 			const res = await action.route(context);
 
-			expect(called)
-			.to.equal(true);
+			expect(called).to.equal(true);
 
-			expect(res)
-			.to.equal('eins-zwei');
-		} catch(ex){
+			expect(res).to.equal('eins-zwei');
+		} catch (ex) {
 			failed = true;
 
-			expect(ex.code)
-			.to.equal('ACTION_CONTROLLER_NO_ACTION');
+			expect(ex.code).to.equal('ACTION_CONTROLLER_NO_ACTION');
 		}
 
-		expect(failed)
-		.to.equal(true);
+		expect(failed).to.equal(true);
 
-		expect(called)
-		.to.equal(false);
+		expect(called).to.equal(false);
 	});
 
-	it('should fail if the http method is incorrect', async function(){
+	it('should fail if the http method is incorrect', async function () {
 		const {Action} = sut;
 
 		let called = false;
@@ -344,22 +317,17 @@ describe('src/controller/action.js', function(){
 		try {
 			const res = await action.route(context);
 
-			expect(called)
-			.to.equal(true);
+			expect(called).to.equal(true);
 
-			expect(res)
-			.to.equal('eins-zwei');
-		} catch(ex){
+			expect(res).to.equal('eins-zwei');
+		} catch (ex) {
 			failed = true;
 
-			expect(ex.code)
-			.to.equal('ACTION_CONTROLLER_WRONG_METHOD');
+			expect(ex.code).to.equal('ACTION_CONTROLLER_WRONG_METHOD');
 		}
 
-		expect(failed)
-		.to.equal(true);
+		expect(failed).to.equal(true);
 
-		expect(called)
-		.to.equal(false);
+		expect(called).to.equal(false);
 	});
 });

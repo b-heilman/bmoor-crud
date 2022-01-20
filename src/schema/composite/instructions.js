@@ -1,23 +1,20 @@
-
 const {create} = require('bmoor/src/lib/error.js');
 const {implode} = require('bmoor/src/object.js');
 
 const {pathToAccessors} = require('../../graph/path.js');
 
-function instructionIndexMerge(target, source){
-	Object.keys(source).forEach(key => {
+function instructionIndexMerge(target, source) {
+	Object.keys(source).forEach((key) => {
 		const existing = target[key];
 		const additional = source[key];
 
-		if (existing){
+		if (existing) {
 			Object.assign(existing.join, additional.join);
 
-			if (additional.incoming){
-				existing.incoming = existing.incoming.concat(
-					additional.incoming
-				);
+			if (additional.incoming) {
+				existing.incoming = existing.incoming.concat(additional.incoming);
 			}
-		} else if (additional.composite){
+		} else if (additional.composite) {
 			target[key] = {
 				series: additional.series,
 				composite: additional.composite,
@@ -40,44 +37,45 @@ function instructionIndexMerge(target, source){
 	return target;
 }
 
-function absorbIndexMerge(target, source, namespace=''){
-	Object.keys(source).forEach(series => {
-		const namespacedSeries = namespace+series;
+function absorbIndexMerge(target, source, namespace = '') {
+	Object.keys(source).forEach((series) => {
+		const namespacedSeries = namespace + series;
 		const existing = target[namespacedSeries];
 		const additional = source[series];
-		const incoming = additional.incoming.map(inSeries => namespace+inSeries);
+		const incoming = additional.incoming.map(
+			(inSeries) => namespace + inSeries
+		);
 
-		if (additional.composite){
+		if (additional.composite) {
 			target[namespacedSeries] = {
-				series: namespace+additional.series,
+				series: namespace + additional.series,
 				composite: additional.composite,
 				isNeeded: additional.isNeeded,
 				optional: additional.optional,
 				incoming
 			};
 		} else {
-			const namespacedJoin = Object.keys(additional.join)
-			.reduce(
+			const namespacedJoin = Object.keys(additional.join).reduce(
 				(agg, joinedSeries) => {
-					agg[namespace+joinedSeries] = additional.join[joinedSeries];
+					agg[namespace + joinedSeries] = additional.join[joinedSeries];
 
 					return agg;
 				},
-				{} 
+				{}
 			);
 
 			// only time existing will be a hit is with the sub => new series
-			if (existing){
+			if (existing) {
 				Object.assign(existing.join, namespacedJoin);
 
-				if (additional.incoming){
+				if (additional.incoming) {
 					existing.incoming = existing.incoming.concat(
-						additional.incoming.map(inSeries => namespace+inSeries)
+						additional.incoming.map((inSeries) => namespace + inSeries)
 					);
 				}
 			} else {
 				target[namespacedSeries] = {
-					series: namespace+additional.series,
+					series: namespace + additional.series,
 					model: additional.model,
 					isNeeded: additional.isNeeded,
 					optional: additional.optional,
@@ -93,27 +91,27 @@ function absorbIndexMerge(target, source, namespace=''){
 
 // used to parse appart the paths that can be fed into a composite schema
 class Instructions {
-	constructor(baseModel, joinSchema, fieldSchema, params={}){
+	constructor(baseModel, joinSchema, fieldSchema, params = {}) {
 		this.model = baseModel;
 
 		this.index = joinSchema.reduce(
 			(agg, path) => {
-				path = path.replace(/\s/g,'');
+				path = path.replace(/\s/g, '');
 
-				if (path[0] !== '$'){
-					path = '$'+baseModel + path;
+				if (path[0] !== '$') {
+					path = '$' + baseModel + path;
 				}
 
 				const accessors = pathToAccessors(path);
 				let last = accessors.shift();
-				
-				while (accessors.length){
+
+				while (accessors.length) {
 					let cur = accessors.shift();
-					
+
 					const {series, field} = last;
 
 					const base = agg[series];
-					if (!base){
+					if (!base) {
 						throw create(`can not connect to ${series}`, {
 							code: 'BMOOR_CRUD_COMPOSITE_MISSING_SERIES',
 							context: {
@@ -128,10 +126,10 @@ class Instructions {
 						to: cur.target
 					};
 
-					if (agg[cur.series]){
+					if (agg[cur.series]) {
 						agg[cur.series].incoming.push(series);
 					} else {
-						if (cur.loader === 'include'){
+						if (cur.loader === 'include') {
 							agg[cur.series] = {
 								series: cur.series,
 								composite: cur.model,
@@ -176,32 +174,30 @@ class Instructions {
 		// break this into
 		// [path]: [accessor]
 		const imploded = implode(fieldSchema);
-		Object.keys(imploded).map(
-			(mount) => this.addStatement(mount, imploded[mount])
+		Object.keys(imploded).map((mount) =>
+			this.addStatement(mount, imploded[mount])
 		);
 
-		Object.keys(params).map(
-			key => {
-				if (key[0] === '$'){
-					const pos = key.indexOf('.');
-					const series = key.substr(1, pos-1);
+		Object.keys(params).map((key) => {
+			if (key[0] === '$') {
+				const pos = key.indexOf('.');
+				const series = key.substr(1, pos - 1);
 
-					this.getSeries(series).isNeeded = true;
-				}
+				this.getSeries(series).isNeeded = true;
 			}
-		);
+		});
 	}
 
-	addStatement(mount, statement, namespace=''){
-		statement = statement.replace(/\s/g,'');
+	addStatement(mount, statement, namespace = '') {
+		statement = statement.replace(/\s/g, '');
 
-		if (statement[0] === '.'){
-			statement = '$'+this.model + statement;
+		if (statement[0] === '.') {
+			statement = '$' + this.model + statement;
 		}
 
 		// if it's an = statement, the properties can't be short hand
 		const action = pathToAccessors(statement)[0]; // this is an array of action tokens
-		if (!action){
+		if (!action) {
 			throw create(`unable to parse ${statement}`, {
 				code: 'BMOOR_CRUD_COMPOSITE_PARSE_STATEMENT',
 				context: {
@@ -212,16 +208,21 @@ class Instructions {
 
 		const isArray = mount.indexOf('[0]') !== -1;
 
-		const path = mount.substring(0, isArray ? mount.length-3 : mount.length);
+		const path = mount.substring(0, isArray ? mount.length - 3 : mount.length);
 
-		const join = this.index[namespace+action.series];
-		if  (!join){
-			throw create(`requesting field not joined ${namespace?namespace+':':''}${action.series}`, {
-				code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
-				context: {
-					statement
+		const join = this.index[namespace + action.series];
+		if (!join) {
+			throw create(
+				`requesting field not joined ${namespace ? namespace + ':' : ''}${
+					action.series
+				}`,
+				{
+					code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
+					context: {
+						statement
+					}
 				}
-			});
+			);
 		}
 
 		action.model = join.model;
@@ -234,26 +235,26 @@ class Instructions {
 			isArray
 		};
 
-		if (info.type === 'access'){
-			let toProcess = [namespace+info.action.series];
+		if (info.type === 'access') {
+			let toProcess = [namespace + info.action.series];
 
-			while(toProcess.length){
+			while (toProcess.length) {
 				const curSeries = toProcess.shift();
 				const cur = this.getSeries(curSeries);
 
 				// I only need to go up the chain until I find
 				// another isNeeded
-				if (!cur.isNeeded){
+				if (!cur.isNeeded) {
 					cur.isNeeded = true;
 
-					if (cur.incoming){
+					if (cur.incoming) {
 						toProcess = toProcess.concat(cur.incoming);
 					}
 				}
 			}
 
 			this.fields.push(info);
-		} else if (info.type === 'include'){
+		} else if (info.type === 'include') {
 			this.subs.push(info);
 		} else {
 			throw create(`unknown type ${info.type}`, {
@@ -266,9 +267,9 @@ class Instructions {
 	}
 
 	// this will map another set of instructions directly onto the model
-	extend(parent){
-		if (this.model !== parent.model){
-			if (!this.index[parent.model]){
+	extend(parent) {
+		if (this.model !== parent.model) {
+			if (!this.index[parent.model]) {
 				this.index[parent.model] = {
 					model: parent.model,
 					series: parent.model,
@@ -294,19 +295,19 @@ class Instructions {
 	}
 
 	// will map another set of instructions into a specific property
-	inline(series, instructions){
+	inline(series, instructions) {
 		// I need to convert the sub into a position on the index.
-		const sub = this.subs.filter(info => info.action.series === series)[0];
+		const sub = this.subs.filter((info) => info.action.series === series)[0];
 		const path = sub.path;
 		const namespace = sub.action.series;
 
 		const dex = this.index[namespace];
 
-		if (dex){
+		if (dex) {
 			delete this.index[namespace];
 
-			const namespacedTarget = namespace+instructions.model;
-			
+			const namespacedTarget = namespace + instructions.model;
+
 			// this needs to convert from sub to model shape
 			this.index[namespacedTarget] = {
 				model: instructions.model,
@@ -317,17 +318,15 @@ class Instructions {
 				join: {}
 			};
 
-			dex.incoming.forEach(
-				incoming => {
-					const incomingDex = this.index[incoming];
+			dex.incoming.forEach((incoming) => {
+				const incomingDex = this.index[incoming];
 
-					const join = incomingDex.join[namespace];
+				const join = incomingDex.join[namespace];
 
-					delete incomingDex.join[namespace];
+				delete incomingDex.join[namespace];
 
-					incomingDex.join[namespacedTarget] = join;
-				}
-			);
+				incomingDex.join[namespacedTarget] = join;
+			});
 		} else {
 			throw new Error('how did we get here?');
 		}
@@ -336,109 +335,104 @@ class Instructions {
 
 		// first we remove the sub that is at the root position, then we
 		// add any additional subs
-		this.subs = this.subs.filter(info => info.path !== path)
-		.concat(
-			instructions.subs.map(
-				info => {
+		this.subs = this.subs
+			.filter((info) => info.path !== path)
+			.concat(
+				instructions.subs.map((info) => {
 					const rtn = Object.assign({}, info);
 
-					rtn.path = path+'.'+info.path;
+					rtn.path = path + '.' + info.path;
 
 					rtn.action = Object.assign({}, rtn.action);
 
-					rtn.action.series = namespace+rtn.action.series;
+					rtn.action.series = namespace + rtn.action.series;
 
 					return rtn;
-				}
-			)
-		);
+				})
+			);
 
 		this.fields = this.fields.concat(
-			instructions.fields.map(
-				info => {
-					const rtn = Object.assign({}, info);
+			instructions.fields.map((info) => {
+				const rtn = Object.assign({}, info);
 
-					rtn.path = path+'.'+info.path;
+				rtn.path = path + '.' + info.path;
 
-					rtn.action = Object.assign({}, rtn.action);
+				rtn.action = Object.assign({}, rtn.action);
 
-					rtn.action.series = namespace+rtn.action.series;
+				rtn.action.series = namespace + rtn.action.series;
 
-					return rtn;
-				}
-			)
+				return rtn;
+			})
 		);
 
 		return !!instructions.subs.length;
 	}
 
-	getAllSeries(){
+	getAllSeries() {
 		return Object.keys(this.index);
 	}
 
-	getSeries(series){
+	getSeries(series) {
 		return this.index[series];
 	}
 
-	getJoin(from, to){
+	getJoin(from, to) {
 		return this.index[from].join[to];
 	}
 
-	getIncoming(to){
+	getIncoming(to) {
 		return this.getSeries(to).incoming;
 	}
 
-	forEach(fn){
+	forEach(fn) {
 		const processed = {};
 
 		let toProcess = [this.model];
 
-		while(toProcess.length){
+		while (toProcess.length) {
 			const seriesName = toProcess.shift();
-			
-			if (processed[seriesName]){
+
+			if (processed[seriesName]) {
 				return;
 			} else {
 				processed[seriesName] = true;
 			}
-			
+
 			const seriesInfo = this.getSeries(seriesName);
 
 			fn(seriesName, seriesInfo);
 
-			if (seriesInfo.join){
-				toProcess = toProcess.concat(Object.keys(
-					seriesInfo.join
-				));
+			if (seriesInfo.join) {
+				toProcess = toProcess.concat(Object.keys(seriesInfo.join));
 			}
 		}
 	}
 
-	getSeriesByModel(model){
-		return Object.keys(this.index)
-		.filter(series => this.index[series].model === model);
+	getSeriesByModel(model) {
+		return Object.keys(this.index).filter(
+			(series) => this.index[series].model === model
+		);
 	}
 
 	// returns back all the models going back to the root
-	getTrace(...to){
+	getTrace(...to) {
 		const trace = [];
 		let toProcess = to;
 
-		while(toProcess.length){
+		while (toProcess.length) {
 			const curSeries = toProcess.shift();
 			const cur = this.getSeries(curSeries);
 
 			trace.push(cur);
 
-			if (cur.incoming){
+			if (cur.incoming) {
 				toProcess = toProcess.concat(cur.incoming);
 			}
 		}
 
 		const found = {};
-		return trace.reverse()
-		.filter(cur => {
-			if (found[cur.series]){
+		return trace.reverse().filter((cur) => {
+			if (found[cur.series]) {
 				return false;
 			} else {
 				found[cur.series] = true;
@@ -447,25 +441,24 @@ class Instructions {
 		});
 	}
 
-	getMount(doc){
+	getMount(doc) {
 		const trace = [];
 		let toProcess = [doc];
 
-		while(toProcess.length){
+		while (toProcess.length) {
 			const curSeries = toProcess.shift();
 			const cur = this.getSeries(curSeries);
 
 			trace.push(cur);
 
-			if (cur.incoming && !cur.isNeeded){
+			if (cur.incoming && !cur.isNeeded) {
 				toProcess = toProcess.concat(cur.incoming);
 			}
 		}
 
 		const found = {};
-		return trace.reverse()
-		.filter(cur => {
-			if (found[cur.series]){
+		return trace.reverse().filter((cur) => {
+			if (found[cur.series]) {
 				return false;
 			} else {
 				found[cur.series] = true;
@@ -475,21 +468,20 @@ class Instructions {
 	}
 
 	// TODO: I should do something that calculates the relationships for join
-	getOutgoingLinks(series){
+	getOutgoingLinks(series) {
 		const rtn = [];
 		const seriesInfo = this.getSeries(series);
 
-		if (seriesInfo.incoming){
-			seriesInfo.incoming.forEach(incomingSeries => {
-				const join = this.getJoin(
-					incomingSeries, series
-				);
+		if (seriesInfo.incoming) {
+			seriesInfo.incoming.forEach((incomingSeries) => {
+				const join = this.getJoin(incomingSeries, series);
 
 				const direction = join.relationship.metadata.direction;
 				const vector = join.relationship.name;
-				if ((vector === series && direction === 'incoming') ||
+				if (
+					(vector === series && direction === 'incoming') ||
 					(vector !== series && direction === 'outgoing')
-				){
+				) {
 					rtn.push({
 						local: join.to,
 						remote: join.from,
@@ -499,14 +491,15 @@ class Instructions {
 			});
 		}
 
-		Object.keys(seriesInfo.join).forEach(outgoingSeries => {
+		Object.keys(seriesInfo.join).forEach((outgoingSeries) => {
 			const join = seriesInfo.join[outgoingSeries];
 
 			const direction = join.relationship.metadata.direction;
 			const vector = join.relationship.name;
-			if ((vector === series && direction === 'incoming') ||
+			if (
+				(vector === series && direction === 'incoming') ||
 				(vector !== series && direction === 'outgoing')
-			){
+			) {
 				rtn.push({
 					local: join.from,
 					remote: join.to,

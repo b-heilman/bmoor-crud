@@ -1,39 +1,34 @@
-
 const {expect} = require('chai');
 const sinon = require('sinon');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 
-describe('src/controller/synthetic.js', function(){
+describe('src/controller/synthetic.js', function () {
 	const sut = require('./synthetic.js');
 
 	let nexus = null;
 	let stubs = null;
-	
+
 	let permissions = null;
 	let connectorResult = null;
 
 	let doc = null;
 
-	beforeEach(async function(){
+	beforeEach(async function () {
 		nexus = new Nexus();
 
 		connectorResult = {};
 
 		stubs = {
-			execute: sinon.stub()
-			.callsFake(async function(){
+			execute: sinon.stub().callsFake(async function () {
 				return connectorResult;
 			})
 		};
 
-		await nexus.setConnector(
-			'test', 
-			async () => ({
-				execute: async (...args) => stubs.execute(...args)
-			})
-		);
+		await nexus.setConnector('test', async () => ({
+			execute: async (...args) => stubs.execute(...args)
+		}));
 
 		await nexus.configureSource('test-1', {
 			connector: 'test'
@@ -61,37 +56,36 @@ describe('src/controller/synthetic.js', function(){
 			base: 'test-user',
 			joins: [],
 			fields: {
-				'id': '.id',
-				'name': '.name'
+				id: '.id',
+				name: '.name'
 			}
 		});
 
 		doc = await nexus.configureDocument('test-ownership');
 	});
 
-	afterEach(function(){
-		Object.values(stubs)
-		.forEach(stub => {
-			if (stub.restore){
+	afterEach(function () {
+		Object.values(stubs).forEach((stub) => {
+			if (stub.restore) {
 				stub.restore();
 			}
 		});
 	});
 
-	describe('method(get)', function(){
+	describe('method(get)', function () {
 		let context = null;
 
-		beforeEach(function(){
+		beforeEach(function () {
 			context = new Context({method: 'get'});
 			context.hasPermission = (perm) => !!permissions[perm];
 		});
 
-		describe('::read', function(){
-			beforeEach(function(){
+		describe('::read', function () {
+			beforeEach(function () {
 				stubs.read = sinon.stub(doc, 'read');
 			});
 
-			it('should reject if not readable', async function(){
+			it('should reject if not readable', async function () {
 				const synth = new sut.Synthetic(doc);
 
 				await synth.configure({readable: false});
@@ -99,42 +93,38 @@ describe('src/controller/synthetic.js', function(){
 				let failed = false;
 				try {
 					await synth.route(context);
-				} catch(ex){
+				} catch (ex) {
 					failed = true;
 
-					expect(ex.code)
-					.to.equal('DOCUMENT_CONTROLLER_READ_UNAVAILABLE');
+					expect(ex.code).to.equal('DOCUMENT_CONTROLLER_READ_UNAVAILABLE');
 				}
 
-				expect(failed)
-				.to.equal(true);
+				expect(failed).to.equal(true);
 			});
 
-			it('should reject if not read permission', async function(){
+			it('should reject if not read permission', async function () {
 				const synth = new sut.Synthetic(doc);
 
-				await synth.configure({readable: true, read:'can-read'});
+				await synth.configure({readable: true, read: 'can-read'});
 
 				permissions = {};
 
 				let failed = false;
 				try {
 					await synth.route(context);
-				} catch(ex){
+				} catch (ex) {
 					failed = true;
 
-					expect(ex.code)
-					.to.equal('DOCUMENT_CONTROLLER_READ_PERMISSION');
+					expect(ex.code).to.equal('DOCUMENT_CONTROLLER_READ_PERMISSION');
 				}
 
-				expect(failed)
-				.to.equal(true);
+				expect(failed).to.equal(true);
 			});
 
-			it('should succeed if reading by id', async function(){
+			it('should succeed if reading by id', async function () {
 				const synth = new sut.Synthetic(doc);
 
-				await synth.configure({readable: true, read:'can-read'});
+				await synth.configure({readable: true, read: 'can-read'});
 
 				context.params = {
 					id: 'req-1'
@@ -148,24 +138,21 @@ describe('src/controller/synthetic.js', function(){
 
 				const args = stubs.read.getCall(0).args;
 
-				expect(args[0])
-				.to.equal('req-1');
+				expect(args[0]).to.equal('req-1');
 
-				expect(res)
-				.to.deep.equal({hello: 'world'});
+				expect(res).to.deep.equal({hello: 'world'});
 			});
 		});
 
-
-		describe('::query', function(){
-			beforeEach(function(){
+		describe('::query', function () {
+			beforeEach(function () {
 				stubs.query = sinon.stub(doc, 'query');
 			});
 
-			it('should succeed if reading by query', async function(){
+			it('should succeed if reading by query', async function () {
 				const synth = new sut.Synthetic(doc);
 
-				await synth.configure({readable: true, read:'can-read'});
+				await synth.configure({readable: true, read: 'can-read'});
 
 				context.query = {
 					param: {
@@ -182,8 +169,7 @@ describe('src/controller/synthetic.js', function(){
 
 				const args = stubs.query.getCall(0).args;
 
-				expect(args[0])
-				.to.deep.equal({
+				expect(args[0]).to.deep.equal({
 					params: {
 						id: 123,
 						name: 'req-1'
@@ -195,26 +181,25 @@ describe('src/controller/synthetic.js', function(){
 					}
 				});
 
-				expect(res)
-				.to.deep.equal({hello: 'world'});
+				expect(res).to.deep.equal({hello: 'world'});
 			});
 		});
 	});
 
-	describe('method(post)', function(){
+	describe('method(post)', function () {
 		let context = null;
 
-		beforeEach(function(){
+		beforeEach(function () {
 			context = new Context({method: 'post'});
 			context.hasPermission = (perm) => !!permissions[perm];
 		});
 
-		describe('::push', function(){
-			beforeEach(function(){
+		describe('::push', function () {
+			beforeEach(function () {
 				stubs.push = sinon.stub(doc, 'push');
 			});
 
-			it('should reject if not readable', async function(){
+			it('should reject if not readable', async function () {
 				const synth = new sut.Synthetic(doc);
 
 				await synth.configure({writable: false});
@@ -222,40 +207,36 @@ describe('src/controller/synthetic.js', function(){
 				let failed = false;
 				try {
 					await synth.route(context);
-				} catch(ex){
+				} catch (ex) {
 					failed = true;
 
-					expect(ex.code)
-					.to.equal('DOCUMENT_CONTROLLER_WRITE_UNAVAILABLE');
+					expect(ex.code).to.equal('DOCUMENT_CONTROLLER_WRITE_UNAVAILABLE');
 				}
 
-				expect(failed)
-				.to.equal(true);
+				expect(failed).to.equal(true);
 			});
 
-			it('should reject if not write permission', async function(){
+			it('should reject if not write permission', async function () {
 				const synth = new sut.Synthetic(doc);
 
-				await synth.configure({writable: true, write:'can-write'});
+				await synth.configure({writable: true, write: 'can-write'});
 
 				let failed = false;
 				try {
 					await synth.route(context);
-				} catch(ex){
+				} catch (ex) {
 					failed = true;
 
-					expect(ex.code)
-					.to.equal('DOCUMENT_CONTROLLER_WRITE_PERMISSION');
+					expect(ex.code).to.equal('DOCUMENT_CONTROLLER_WRITE_PERMISSION');
 				}
 
-				expect(failed)
-				.to.equal(true);
+				expect(failed).to.equal(true);
 			});
 
-			it('should succeed if writing', async function(){
+			it('should succeed if writing', async function () {
 				const synth = new sut.Synthetic(doc);
 
-				await synth.configure({writable: true, read:'can-write'});
+				await synth.configure({writable: true, read: 'can-write'});
 
 				context.content = {
 					id: 'req-1'
@@ -269,11 +250,9 @@ describe('src/controller/synthetic.js', function(){
 
 				const args = stubs.push.getCall(0).args;
 
-				expect(args[0])
-				.to.deep.equal({id: 'req-1'});
+				expect(args[0]).to.deep.equal({id: 'req-1'});
 
-				expect(res)
-				.to.deep.equal({hello: 'world'});
+				expect(res).to.deep.equal({hello: 'world'});
 			});
 		});
 	});

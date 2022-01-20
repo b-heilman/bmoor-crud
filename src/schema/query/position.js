@@ -1,6 +1,5 @@
-
 class QueryPosition {
-	constructor(start, limit){
+	constructor(start, limit) {
 		this.start = start;
 		this.limit = limit;
 	}

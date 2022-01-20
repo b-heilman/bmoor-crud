@@ -1,4 +1,3 @@
-
 const {Statement} = require('../statement.js');
 
 const methods = {
@@ -8,35 +7,35 @@ const methods = {
 };
 
 class ExecutableStatement extends Statement {
-	constructor(baseSeries){
+	constructor(baseSeries) {
 		super(baseSeries);
 	}
 
-	getSeries(series){
+	getSeries(series) {
 		const rtn = super.getSeries(series);
 
-		if (!rtn.payload){
+		if (!rtn.payload) {
 			rtn.payload = null;
 		}
 
 		return rtn;
 	}
 
-	setPayload(series, payload){
+	setPayload(series, payload) {
 		this.getSeries(series).payload = payload;
 
 		return this;
 	}
 
-	setMethod(method){
-		if (!Object.values(methods).includes(method)){
+	setMethod(method) {
+		if (!Object.values(methods).includes(method)) {
 			throw new Error('unknown method');
 		}
 
 		this.method = method;
 	}
 
-	importSeries(series, statement){
+	importSeries(series, statement) {
 		const incoming = super.importSeries(series, statement);
 
 		this.setPayload(series, incoming.payload);
@@ -44,14 +43,14 @@ class ExecutableStatement extends Statement {
 		return incoming;
 	}
 
-	toJSON(){
+	toJSON() {
 		const json = super.toJSON();
 
 		let hasPayload = false;
-		json.models.map(model => {
+		json.models.map((model) => {
 			const payload = this.getSeries(model.series).payload;
 
-			if (payload){
+			if (payload) {
 				hasPayload = true;
 
 				model.payload = payload;
@@ -60,26 +59,26 @@ class ExecutableStatement extends Statement {
 
 		let method = '';
 		// sanity check based on method
-		if (this.method === methods.create){
+		if (this.method === methods.create) {
 			method = 'create';
 			// params aren't allowed here
-			if (json.params.length){
+			if (json.params.length) {
 				throw new Error('creating with params');
 			}
 
-			if (json.models.length > 1){
+			if (json.models.length > 1) {
 				throw new Error('multiple creates not supported');
 			}
-		} else if (this.method === methods.update){
+		} else if (this.method === methods.update) {
 			method = 'update';
 
-			if (!json.params.length){
+			if (!json.params.length) {
 				throw new Error('update without a target');
 			}
-		} else if (this.method === methods.delete){
+		} else if (this.method === methods.delete) {
 			method = 'delete';
 			// no payload is allowed
-			if (hasPayload){
+			if (hasPayload) {
 				throw new Error('deleting with a payload');
 			}
 		} else {

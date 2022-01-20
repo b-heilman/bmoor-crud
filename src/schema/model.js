@@ -1,40 +1,41 @@
-
 const {Structure} = require('./structure.js');
 const {QueryStatement} = require('./query/statement.js');
 const {ExecutableStatement} = require('./executable/statement.js');
 
-function buildSettings(properties, field){
+function buildSettings(properties, field) {
 	const path = field.path;
 
 	const settings = field.incomingSettings;
 
-	if (settings.create){
+	if (settings.create) {
 		properties.create.push(path);
 	}
 
-	if (settings.read){
+	if (settings.read) {
 		properties.read.push(path);
 	}
 
-	if (settings.update){
+	if (settings.update) {
 		properties.update.push(path);
 
-		if (settings.updateType){
+		if (settings.updateType) {
 			properties.updateType[path] = settings.updateType;
 		}
 	}
 
-	if (settings.index){
+	if (settings.index) {
 		properties.index.push(path);
 	}
 
-	if (settings.query){
+	if (settings.query) {
 		properties.query.push(path);
 	}
 
-	if (settings.key){
-		if (properties.key){
-			throw new Error(`bmoor-data.Structure does not support compound keys: (${properties.key}, ${path})`);
+	if (settings.key) {
+		if (properties.key) {
+			throw new Error(
+				`bmoor-data.Structure does not support compound keys: (${properties.key}, ${path})`
+			);
 		}
 
 		properties.key = path;
@@ -44,8 +45,8 @@ function buildSettings(properties, field){
 }
 
 class Model extends Structure {
-	async build(){
-		if (!this.settings){
+	async build() {
+		if (!this.settings) {
 			await super.build();
 
 			Object.assign(this.settings, {
@@ -57,29 +58,29 @@ class Model extends Structure {
 				index: [],
 				query: []
 			});
-			
+
 			this.fields.reduce(buildSettings, this.settings);
 		}
 	}
 
-	async configure(settings){
+	async configure(settings) {
 		await super.configure(settings);
-		
+
 		this.schema = settings.schema || this.name;
 		this.settings = null;
 
 		const fields = settings.fields;
 
-		for (let property in fields){
+		for (let property in fields) {
 			let field = fields[property];
 
-			if (field === true){
+			if (field === true) {
 				field = {
 					create: true,
 					read: true,
 					update: true
 				};
-			} else if (field === false){
+			} else if (field === false) {
 				field = {
 					create: false,
 					read: true,
@@ -96,65 +97,57 @@ class Model extends Structure {
 		this.preparedExecutable = await this.prepareBaseExecutable();
 	}
 
-	getKeyField(){
+	getKeyField() {
 		return this.settings.key;
 	}
 
-	getKey(delta){
-		if (!delta){
+	getKey(delta) {
+		if (!delta) {
 			throw new Error('Can not getKey of undefined delta');
 		}
 
 		return delta[this.settings.key];
 	}
 
-	hasIndex(){
+	hasIndex() {
 		return this.settings.index.length !== 0;
 	}
 
-	clean(type, datum){
-		if (!this.settings){
+	clean(type, datum) {
+		if (!this.settings) {
 			this.build();
 		}
 
-		return this.settings[type]
-		.reduce(
-			(agg, field) => {
-				if (field in datum){
-					agg[field] = datum[field];
-				}
+		return this.settings[type].reduce((agg, field) => {
+			if (field in datum) {
+				agg[field] = datum[field];
+			}
 
-				return agg;
-			}, 
-			{}
-		);
+			return agg;
+		}, {});
 	}
 
-	cleanDelta(delta, type='update'){
+	cleanDelta(delta, type = 'update') {
 		return this.clean(type, delta);
 	}
 
-	getChanges(datum, delta){
+	getChanges(datum, delta) {
 		delta = this.clean('update', delta);
 
-		return this.settings.update
-		.reduce(
-			(agg, field) => {
-				if (field in delta && datum[field] !== delta[field]){
-					agg[field] = delta[field];
-				}
+		return this.settings.update.reduce((agg, field) => {
+			if (field in delta && datum[field] !== delta[field]) {
+				agg[field] = delta[field];
+			}
 
-				return agg;
-			},
-			{}
-		);
+			return agg;
+		}, {});
 	}
 
-	getBaseExecutable(){
+	getBaseExecutable() {
 		return new ExecutableStatement(this.name);
 	}
 
-	async prepareBaseExecutable(){
+	async prepareBaseExecutable() {
 		const exe = this.getBaseExecutable();
 
 		exe.setModel(this.name, this);
@@ -164,12 +157,12 @@ class Model extends Structure {
 		return exe;
 	}
 
-	async getExecutable(method, settings, ctx){
+	async getExecutable(method, settings, ctx) {
 		const exe = this.preparedExecutable.clone();
 
 		exe.setMethod(method);
 
-		if (settings.payload){
+		if (settings.payload) {
 			exe.setPayload(this.name, settings.payload);
 		}
 
@@ -184,11 +177,11 @@ class Model extends Structure {
 		return exe;
 	}
 
-	getBaseQuery(){
+	getBaseQuery() {
 		return new QueryStatement(this.name);
 	}
 
-	async prepareBaseQuery(){
+	async prepareBaseQuery() {
 		const query = await super.prepareBaseQuery();
 
 		query.setModel(this.name, this);
@@ -198,7 +191,7 @@ class Model extends Structure {
 
 	// produces representation for interface layer
 	// similar to lookup, which is a combination of models
-	async getQuery(settings, ctx){
+	async getQuery(settings, ctx) {
 		const query = this.preparedQuery.clone();
 
 		return this.extendQuery(

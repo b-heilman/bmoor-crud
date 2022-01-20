@@ -1,18 +1,17 @@
-
 const {hook} = require('../services/hook.js');
 
 // this is our building object, it produces all the little things running in the system
 class Forge {
-	constructor(nexus, messageBus){
+	constructor(nexus, messageBus) {
 		this.nexus = nexus;
 		this.messageBus = messageBus;
 	}
 
-	async subscribe(ref, subscriptions){
+	async subscribe(ref, subscriptions) {
 		const service = await this.nexus.loadCrud(ref);
 
 		return Promise.all(
-			subscriptions.map(settings => {
+			subscriptions.map((settings) => {
 				return this.messageBus.addListener(
 					settings.model,
 					settings.action,
@@ -22,7 +21,7 @@ class Forge {
 		);
 	}
 
-	async installCruds(instructions){
+	async installCruds(instructions) {
 		return Promise.all(
 			instructions.map(async (rule) => {
 				const ref = rule.name;
@@ -34,29 +33,29 @@ class Forge {
 
 				hook(service, {
 					afterCreate: (key, datum, ctx) => {
-						return this.messageBus.debounceEvent(
-							ref, 
-							'create', 
+						return this.messageBus.debounceEvent(ref, 'create', key, [
 							key,
-							[key, null, datum, ctx]
-						);
+							null,
+							datum,
+							ctx
+						]);
 					},
 					afterUpdate: (key, datum, ctx, self, was) => {
-						return this.messageBus.debounceEvent(
-							ref, 
-							'update',
+						return this.messageBus.debounceEvent(ref, 'update', key, [
 							key,
-							[key, was, datum, ctx]
-						);
+							was,
+							datum,
+							ctx
+						]);
 					},
 					// this should be before, because any links will be destroyed after delete
 					beforeDelete: (key, datum, ctx) => {
-						return this.messageBus.debounceEvent(
-							ref, 
-							'delete', 
+						return this.messageBus.debounceEvent(ref, 'delete', key, [
 							key,
-							[key, datum, null, ctx]
-						);
+							datum,
+							null,
+							ctx
+						]);
 					}
 				});
 
@@ -65,7 +64,7 @@ class Forge {
 		);
 	}
 
-	async installDocuments(instructions){
+	async installDocuments(instructions) {
 		return Promise.all(
 			instructions.map(async (rule) => {
 				const ref = rule.name;
@@ -78,74 +77,94 @@ class Forge {
 				// a model which is part of the document has changed
 				const models = {};
 				doc.structure.instructions.forEach((series, seriesInfo) => {
-					if (seriesInfo.composite){
+					if (seriesInfo.composite) {
 						const subName = seriesInfo.composite;
 
-						this.messageBus.addListener(subName, 'push',
+						this.messageBus.addListener(
+							subName,
+							'push',
 							async (triggerKey, datum, ctx) => {
-								const keys = await doc.getAffectedBySub(subName, triggerKey, ctx);
-								
-								return Promise.all(keys.map(
-									key => this.messageBus.debounceEvent(
-										ref, 
-										'push',
-										key,
-										[key, null, null, ctx]
+								const keys = await doc.getAffectedBySub(
+									subName,
+									triggerKey,
+									ctx
+								);
+
+								return Promise.all(
+									keys.map((key) =>
+										this.messageBus.debounceEvent(ref, 'push', key, [
+											key,
+											null,
+											null,
+											ctx
+										])
 									)
-								));
+								);
 							}
 						);
 					} else {
 						const model = seriesInfo.model;
 
-						if (models[model]){
+						if (models[model]) {
 							return;
 						}
 
 						models[model] = true;
 
-						this.messageBus.addListener(model, 'create',
+						this.messageBus.addListener(
+							model,
+							'create',
 							async (key, _, datum, ctx) => {
 								const keys = await doc.getAffectedByModel(model, key, ctx);
 
-								return Promise.all(keys.map(
-									key => this.messageBus.debounceEvent(
-										ref, 
-										'push',
-										key,
-										[key, null, null, ctx]
+								return Promise.all(
+									keys.map((key) =>
+										this.messageBus.debounceEvent(ref, 'push', key, [
+											key,
+											null,
+											null,
+											ctx
+										])
 									)
-								));
+								);
 							}
 						);
 
-						this.messageBus.addListener(model, 'update',
+						this.messageBus.addListener(
+							model,
+							'update',
 							async (key, _, datum, ctx) => {
 								const keys = await doc.getAffectedByModel(model, key, ctx);
-								
-								return Promise.all(keys.map(
-									key => this.messageBus.debounceEvent(
-										ref, 
-										'push',
-										key,
-										[key, null, null, ctx]
+
+								return Promise.all(
+									keys.map((key) =>
+										this.messageBus.debounceEvent(ref, 'push', key, [
+											key,
+											null,
+											null,
+											ctx
+										])
 									)
-								));
+								);
 							}
 						);
 
-						this.messageBus.addListener(model, 'delete',
+						this.messageBus.addListener(
+							model,
+							'delete',
 							async (key, datum, _, ctx) => {
 								const keys = await doc.getAffectedByModel(model, key, ctx);
 
-								return Promise.all(keys.map(
-									key => this.messageBus.debounceEvent(
-										ref, 
-										'push',
-										key,
-										[key, null, null, ctx]
+								return Promise.all(
+									keys.map((key) =>
+										this.messageBus.debounceEvent(ref, 'push', key, [
+											key,
+											null,
+											null,
+											ctx
+										])
 									)
-								));
+								);
 							}
 						);
 					}
@@ -154,13 +173,13 @@ class Forge {
 				// the document itself was just pushed against
 				hook(doc, {
 					afterPush: (keys, _, ctx) => {
-						return keys.map(
-							key => this.messageBus.debounceEvent(
-								ref, 
-								'push',
+						return keys.map((key) =>
+							this.messageBus.debounceEvent(ref, 'push', key, [
 								key,
-								[key, null, null, ctx]
-							)
+								null,
+								null,
+								ctx
+							])
 						);
 					}
 				});
@@ -170,7 +189,7 @@ class Forge {
 		);
 	}
 
-	async installDecorators(instructions){
+	async installDecorators(instructions) {
 		return Promise.all(
 			instructions.map(async (rule) => {
 				const ref = rule.name;
@@ -181,7 +200,7 @@ class Forge {
 		);
 	}
 
-	async installHooks(instructions){
+	async installHooks(instructions) {
 		return Promise.all(
 			instructions.map(async (rule) => {
 				const ref = rule.name;
@@ -192,7 +211,7 @@ class Forge {
 		);
 	}
 
-	async installSecurity(instructions){
+	async installSecurity(instructions) {
 		return Promise.all(
 			instructions.map(async (rule) => {
 				const ref = rule.name;
@@ -203,7 +222,7 @@ class Forge {
 		);
 	}
 
-	async installEffects(instructions){
+	async installEffects(instructions) {
 		return Promise.all(
 			instructions.map(async (rule) => {
 				const ref = rule.name;
@@ -214,16 +233,16 @@ class Forge {
 		);
 	}
 
-	async install(cfg){
+	async install(cfg) {
 		const [services, docs] = await Promise.all([
-			this.installCruds(cfg.get('cruds')||[]),
-			this.installDocuments(cfg.get('documents')||[]),
-			this.installDecorators(cfg.get('decorators')||[]),
-			this.installHooks(cfg.get('hooks')||[]),
-			this.installSecurity(cfg.get('security')||[]),
-			this.installEffects(cfg.get('effects')||[])
+			this.installCruds(cfg.get('cruds') || []),
+			this.installDocuments(cfg.get('documents') || []),
+			this.installDecorators(cfg.get('decorators') || []),
+			this.installHooks(cfg.get('hooks') || []),
+			this.installSecurity(cfg.get('security') || []),
+			this.installEffects(cfg.get('effects') || [])
 		]);
-		
+
 		// install the services, they should be fully hydrated at this point
 		return {
 			services,

@@ -1,11 +1,10 @@
-
 const {expect} = require('chai');
 const sinon = require('sinon');
 
 const {Nexus} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 
-describe('src/controller/querier.js', function(){
+describe('src/controller/querier.js', function () {
 	const sut = require('./querier.js');
 
 	let nexus = null;
@@ -13,24 +12,20 @@ describe('src/controller/querier.js', function(){
 	let permissions = null;
 	let connectorResult = null;
 
-	beforeEach(async function(){
+	beforeEach(async function () {
 		nexus = new Nexus();
 
 		connectorResult = {};
 
 		stubs = {
-			execute: sinon.stub()
-			.callsFake(async function(){
+			execute: sinon.stub().callsFake(async function () {
 				return connectorResult;
 			})
 		};
 
-		await nexus.setConnector(
-			'test', 
-			async () => ({
-				execute: async (...args) => stubs.execute(...args)
-			})
-		);
+		await nexus.setConnector('test', async () => ({
+			execute: async (...args) => stubs.execute(...args)
+		}));
 
 		await nexus.configureSource('test-1', {
 			connector: 'test'
@@ -104,33 +99,30 @@ describe('src/controller/querier.js', function(){
 		await nexus.configureCrud('test-stats', {});
 	});
 
-	afterEach(function(){
-		Object.values(stubs)
-		.forEach(stub => {
-			if (stub.restore){
+	afterEach(function () {
+		Object.values(stubs).forEach((stub) => {
+			if (stub.restore) {
 				stub.restore();
 			}
 		});
 	});
 
-	describe('method(get)', function(){
+	describe('method(get)', function () {
 		let context = null;
 
-		beforeEach(function(){
+		beforeEach(function () {
 			context = new Context({method: 'get'});
 			context.hasPermission = (perm) => !!permissions[perm];
 		});
 
-		describe('::query', function(){
-			it('should succeed if reading by query', async function(){
+		describe('::query', function () {
+			it('should succeed if reading by query', async function () {
 				const querier = new sut.Querier(nexus);
 
 				context.query = {
-					join: [
-						'$test-group > $test-user'
-					],
+					join: ['$test-group > $test-user'],
 					param: {
-						'name': {
+						name: {
 							'~': 'something%like'
 						},
 						'.title': {
@@ -142,97 +134,118 @@ describe('src/controller/querier.js', function(){
 
 				context.content = {
 					base: 'test-user',
-					joins: [
-						'> $test-stats'
-					],
+					joins: ['> $test-stats'],
 					fields: {
-						'user': '.name',
-						'stats':  '$test-stats.name'
+						user: '.name',
+						stats: '$test-stats.name'
 					}
 				};
 
-				connectorResult = [{
-					'user': 'user-1',
-					'stats': 'stat-1'
-				}, {
-					'user': 'user-2',
-					'stats': 'stat-2'
-				}];
+				connectorResult = [
+					{
+						user: 'user-1',
+						stats: 'stat-1'
+					},
+					{
+						user: 'user-2',
+						stats: 'stat-2'
+					}
+				];
 
 				const res = await querier.query(context);
 
 				const args = stubs.execute.getCall(0).args[0];
-			
-				expect(args)
-				.to.deep.equal({
+
+				expect(args).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
-					models: [{
-						series: 'test-user',
-						schema: 'test-user',
-						joins: []
-					}, {
-						series: 'test-stats',
-						schema: 'test-stats',
-						joins: [{
-							name: 'test-user',
-							optional: false,
-							mappings: [{
-								from: 'userId',
-								to: 'id'
-							}]
-						}]
-					}, {
-						series: 'test-group',
-						schema: 'test-group',
-						joins: [{
-							name: 'test-user',
-							optional: false,
-							mappings: [{
-								from: 'id',
-								to: 'groupId'
-							}]
-						}]
-					}],
-					fields: [{
-						series: 'test-user',
-						as: 'user',
-						path: 'name'
-					}, {
-						series: 'test-stats',
-						as: 'stats',
-						path: 'name'
-					}],
+					models: [
+						{
+							series: 'test-user',
+							schema: 'test-user',
+							joins: []
+						},
+						{
+							series: 'test-stats',
+							schema: 'test-stats',
+							joins: [
+								{
+									name: 'test-user',
+									optional: false,
+									mappings: [
+										{
+											from: 'userId',
+											to: 'id'
+										}
+									]
+								}
+							]
+						},
+						{
+							series: 'test-group',
+							schema: 'test-group',
+							joins: [
+								{
+									name: 'test-user',
+									optional: false,
+									mappings: [
+										{
+											from: 'id',
+											to: 'groupId'
+										}
+									]
+								}
+							]
+						}
+					],
+					fields: [
+						{
+							series: 'test-user',
+							as: 'user',
+							path: 'name'
+						},
+						{
+							series: 'test-stats',
+							as: 'stats',
+							path: 'name'
+						}
+					],
 					filters: [],
-					params: [{
-						series: 'test-user',
-						path: 'name',
-						operation: '~',
-						value: 'something%like',
-						settings: {}
-					}, {
-						series: 'test-user',
-						path: 'title',
-						operation: '~',
-						value: '%oye',
-						settings: {}
-					}, {
-						series: 'test-group',
-						path: 'name',
-						operation: '=',
-						value: 'woot',
-						settings: {}
-					}]
+					params: [
+						{
+							series: 'test-user',
+							path: 'name',
+							operation: '~',
+							value: 'something%like',
+							settings: {}
+						},
+						{
+							series: 'test-user',
+							path: 'title',
+							operation: '~',
+							value: '%oye',
+							settings: {}
+						},
+						{
+							series: 'test-group',
+							path: 'name',
+							operation: '=',
+							value: 'woot',
+							settings: {}
+						}
+					]
 				});
 
-				expect(res)
-				.to.deep.equal([{
-					'user': 'user-1',
-					'stats': 'stat-1'
-				}, {
-					'user': 'user-2',
-					'stats': 'stat-2'
-				}]);
+				expect(res).to.deep.equal([
+					{
+						user: 'user-1',
+						stats: 'stat-1'
+					},
+					{
+						user: 'user-2',
+						stats: 'stat-2'
+					}
+				]);
 			});
 		});
 	});

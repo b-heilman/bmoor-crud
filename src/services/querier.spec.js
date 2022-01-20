@@ -1,4 +1,3 @@
-
 const sinon = require('sinon');
 const {expect} = require('chai');
 
@@ -15,27 +14,26 @@ const {QueryJoin} = require('../schema/query/join.js');
 const {QuerySort} = require('../schema/query/sort.js');
 const {QueryStatement} = require('../schema/query/statement.js');
 
-describe('src/schema/services/querier.js', function(){
+describe('src/schema/services/querier.js', function () {
 	let stubs = null;
 
-	beforeEach(function(){
+	beforeEach(function () {
 		stubs = {};
 	});
 
-	afterEach(function(){
-		Object.values(stubs)
-		.forEach(stub => {
-			if (stub.restore){
+	afterEach(function () {
+		Object.values(stubs).forEach((stub) => {
+			if (stub.restore) {
 				stub.restore();
 			}
 		});
 	});
 
-	describe('single source', function(){
+	describe('single source', function () {
 		let source = null;
 		let query = null;
 
-		beforeEach(function(){
+		beforeEach(function () {
 			query = new QueryStatement('a');
 
 			stubs.execute = sinon.stub();
@@ -43,13 +41,13 @@ describe('src/schema/services/querier.js', function(){
 			source = {execute: stubs.execute};
 
 			query.setModel('a', {
-				schema: 'schemaA', 
+				schema: 'schemaA',
 				incomingSettings: {
 					source: 'ok'
 				}
 			});
 			query.setModel('c', {
-				schema: 'schemaC', 
+				schema: 'schemaC',
 				incomingSettings: {
 					source: 'ok'
 				}
@@ -62,146 +60,171 @@ describe('src/schema/services/querier.js', function(){
 			});
 
 			query.addJoins('b', [
-				new QueryJoin('a', [{from:'aId', to:'id'}]),
-				new QueryJoin('c', [{from:'cId', to:'id'}])
+				new QueryJoin('a', [{from: 'aId', to: 'id'}]),
+				new QueryJoin('c', [{from: 'cId', to: 'id'}])
 			]);
 
-			query.addSorts('a', [
-				new QuerySort('bar', 2, true)
-			]);
+			query.addSorts('a', [new QuerySort('bar', 2, true)]);
 
-			query.addSorts('c', [
-				new QuerySort('foo', 1, false)
-			]);
+			query.addSorts('c', [new QuerySort('foo', 1, false)]);
 		});
 
-		describe('::query', function(){
-			it('should work', async function(){
+		describe('::query', function () {
+			it('should work', async function () {
 				stubs.execute.resolves([{hello: 'world'}]);
 
 				const exe = new sut.Querier('examp-1', query);
 				const ctx = {};
 
 				await exe.link({
-					loadSource: async function(){
+					loadSource: async function () {
 						return source;
 					}
 				});
 
 				const res = await exe.run(ctx);
 
-				expect(stubs.execute.getCall(0).args[0])
-				.to.deep.equal({
+				expect(stubs.execute.getCall(0).args[0]).to.deep.equal({
 					method: 'read',
 					sourceName: 'ok',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}, {
-						series: 'b',
-						schema: 'schemaB',
-						joins: [{
-							name: 'a',
-							optional: false,
-							mappings: [{
-								from: 'aId',
-								to: 'id'
-							}]
-						}]
-					}, {
-						series: 'c',
-						schema: 'schemaC',
-						joins: [{
-							name: 'b',
-							optional: false,
-							mappings: [{
-								from: 'id',
-								to: 'cId'
-							}]
-						}]
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						},
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: [
+								{
+									name: 'a',
+									optional: false,
+									mappings: [
+										{
+											from: 'aId',
+											to: 'id'
+										}
+									]
+								}
+							]
+						},
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: [
+								{
+									name: 'b',
+									optional: false,
+									mappings: [
+										{
+											from: 'id',
+											to: 'cId'
+										}
+									]
+								}
+							]
+						}
+					],
 					fields: [],
 					filters: [],
 					params: [],
-					sorts: [{
-						path: 'foo',
-						pos: 1,
-						series: 'c',
-						ascending: false
-					}, {
-						path: 'bar',
-						pos: 2,
-						series: 'a',
-						ascending: true
-					}]
+					sorts: [
+						{
+							path: 'foo',
+							pos: 1,
+							series: 'c',
+							ascending: false
+						},
+						{
+							path: 'bar',
+							pos: 2,
+							series: 'a',
+							ascending: true
+						}
+					]
 				});
 
-				expect(res)
-				.to.deep.equal([{hello: 'world'}]);
+				expect(res).to.deep.equal([{hello: 'world'}]);
 			});
 		});
 
-		describe('::toJSON', function(){
-			it('should work', async function(){
+		describe('::toJSON', function () {
+			it('should work', async function () {
 				const exe = new sut.Querier('examp-2', query);
 
-				expect(exe.toJSON())
-				.to.deep.equal([{
-					method: 'read',
-					sourceName: 'ok',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}, {
-						series: 'b',
-						schema: 'schemaB',
-						joins: [{
-							name: 'a',
-							optional: false,
-							mappings: [{
-								from: 'aId',
-								to: 'id'
-							}]
-						}]
-					}, {
-						series: 'c',
-						schema: 'schemaC',
-						joins: [{
-							name: 'b',
-							optional: false,
-							mappings: [{
-								from: 'id',
-								to: 'cId'
-							}]
-						}]
-					}],
-					fields: [],
-					filters: [],
-					params: [],
-					externals: [],
-					sorts: [{
-						path: 'foo',
-						pos: 1,
-						series: 'c',
-						ascending: false
-					}, {
-						path: 'bar',
-						pos: 2,
-						series: 'a',
-						ascending: true
-					}]
-				}]);
+				expect(exe.toJSON()).to.deep.equal([
+					{
+						method: 'read',
+						sourceName: 'ok',
+						models: [
+							{
+								series: 'a',
+								schema: 'schemaA',
+								joins: []
+							},
+							{
+								series: 'b',
+								schema: 'schemaB',
+								joins: [
+									{
+										name: 'a',
+										optional: false,
+										mappings: [
+											{
+												from: 'aId',
+												to: 'id'
+											}
+										]
+									}
+								]
+							},
+							{
+								series: 'c',
+								schema: 'schemaC',
+								joins: [
+									{
+										name: 'b',
+										optional: false,
+										mappings: [
+											{
+												from: 'id',
+												to: 'cId'
+											}
+										]
+									}
+								]
+							}
+						],
+						fields: [],
+						filters: [],
+						params: [],
+						externals: [],
+						sorts: [
+							{
+								path: 'foo',
+								pos: 1,
+								series: 'c',
+								ascending: false
+							},
+							{
+								path: 'bar',
+								pos: 2,
+								series: 'a',
+								ascending: true
+							}
+						]
+					}
+				]);
 			});
 		});
 	});
 
-	describe('central pivot table', function(){
+	describe('central pivot table', function () {
 		let query = null;
 		let nexus = null;
 
-		it('should work with a-b leading', async function(){
+		it('should work with a-b leading', async function () {
 			query = new QueryStatement('a-b');
 
 			stubs.execute = {
@@ -223,38 +246,36 @@ describe('src/schema/services/querier.js', function(){
 			};
 
 			query.setModel('a-b', {
-				schema: 'schemaAtoB', 
+				schema: 'schemaAtoB',
 				incomingSettings: {
 					source: 's-1'
 				}
 			});
 
 			query.setModel('b', {
-				schema: 'schemaB', 
+				schema: 'schemaB',
 				incomingSettings: {
 					source: 's-2'
 				}
 			});
 
-			query.addFields('b', [
-				new StatementField('foo', 'bar')
+			query.addFields('b', [new StatementField('foo', 'bar')]);
+
+			query.addJoins('a-b', [new QueryJoin('b', [{from: 'bId', to: 'id'}])]);
+
+			query.addParams('a-b', [new StatementParam('aId', 567)]);
+
+			stubs.execute.a.onCall(0).resolves([
+				{
+					exe_0: 'b-1'
+				}
 			]);
 
-			query.addJoins('a-b', [
-				new QueryJoin('b', [{from:'bId', to:'id'}])
+			stubs.execute.b.onCall(0).resolves([
+				{
+					bar: 'hello-world'
+				}
 			]);
-
-			query.addParams('a-b', [
-				new StatementParam('aId', 567)
-			]);
-
-			stubs.execute.a.onCall(0).resolves([{
-				'exe_0': 'b-1'
-			}]);
-
-			stubs.execute.b.onCall(0).resolves([{
-				'bar': 'hello-world'
-			}]);
 			/**
 			stubs.execute.b.onCall(0)
 			.callsFake(async function(args){
@@ -271,75 +292,74 @@ describe('src/schema/services/querier.js', function(){
 			const res = await exe.run(ctx);
 
 			const argsA = stubs.execute.a.getCall(0).args[0];
-			expect(argsA)
-			.to.deep.equal({
-				'method': 'read',
-				'sourceName': 's-1',
-				'models': [
+			expect(argsA).to.deep.equal({
+				method: 'read',
+				sourceName: 's-1',
+				models: [
 					{
-						'series': 'a-b',
-						'schema': 'schemaAtoB',
-						'joins': []
+						series: 'a-b',
+						schema: 'schemaAtoB',
+						joins: []
 					}
 				],
-				'fields': [
+				fields: [
 					{
-						'series': 'a-b',
-						'path': 'bId',
-						'as': 'exe_0'
+						series: 'a-b',
+						path: 'bId',
+						as: 'exe_0'
 					}
 				],
-				'filters': [],
-				'params': [
+				filters: [],
+				params: [
 					{
-						'series': 'a-b',
-						'path': 'aId',
-						'operation': '=',
-						'value': 567,
-						'settings': {}
+						series: 'a-b',
+						path: 'aId',
+						operation: '=',
+						value: 567,
+						settings: {}
 					}
 				]
 			});
 
 			const argsB = stubs.execute.b.getCall(0).args[0];
-			expect(argsB)
-			.to.deep.equal({
-				'method': 'read',
-				'sourceName': 's-2',
-				'models': [
+			expect(argsB).to.deep.equal({
+				method: 'read',
+				sourceName: 's-2',
+				models: [
 					{
-						'series': 'b',
-						'schema': 'schemaB',
-						'joins': []
+						series: 'b',
+						schema: 'schemaB',
+						joins: []
 					}
 				],
-				'fields': [
+				fields: [
 					{
-						'series': 'b',
-						'path': 'foo',
-						'as': 'bar'
+						series: 'b',
+						path: 'foo',
+						as: 'bar'
 					}
 				],
-				'filters': [],
-				'params': [
+				filters: [],
+				params: [
 					{
-						'series': 'b',
-						'path': 'id',
-						'operation': '=',
-						'value': 'b-1',
-						'settings': {}
+						series: 'b',
+						path: 'id',
+						operation: '=',
+						value: 'b-1',
+						settings: {}
 					}
 				]
 			});
 
-			expect(res)
-			.to.deep.equal([{
-				bar: 'hello-world',
-				'exe_0': 'b-1'
-			}]);
+			expect(res).to.deep.equal([
+				{
+					bar: 'hello-world',
+					exe_0: 'b-1'
+				}
+			]);
 		});
 
-		it('should work with b leading', async function(){
+		it('should work with b leading', async function () {
 			query = new QueryStatement('b');
 
 			stubs.execute = {
@@ -361,38 +381,36 @@ describe('src/schema/services/querier.js', function(){
 			};
 
 			query.setModel('a-b', {
-				schema: 'schemaAtoB', 
+				schema: 'schemaAtoB',
 				incomingSettings: {
 					source: 's-1'
 				}
 			});
 
 			query.setModel('b', {
-				schema: 'schemaB', 
+				schema: 'schemaB',
 				incomingSettings: {
 					source: 's-2'
 				}
 			});
 
-			query.addFields('b', [
-				new StatementField('foo', 'bar')
+			query.addFields('b', [new StatementField('foo', 'bar')]);
+
+			query.addJoins('a-b', [new QueryJoin('b', [{from: 'bId', to: 'id'}])]);
+
+			query.addParams('a-b', [new StatementParam('aId', 567)]);
+
+			stubs.execute.a.onCall(0).resolves([
+				{
+					exe_0: 'b-1'
+				}
 			]);
 
-			query.addJoins('a-b', [
-				new QueryJoin('b', [{from:'bId', to:'id'}])
+			stubs.execute.b.onCall(0).resolves([
+				{
+					bar: 'hello-world'
+				}
 			]);
-
-			query.addParams('a-b', [
-				new StatementParam('aId', 567)
-			]);
-
-			stubs.execute.a.onCall(0).resolves([{
-				'exe_0': 'b-1'
-			}]);
-
-			stubs.execute.b.onCall(0).resolves([{
-				'bar': 'hello-world'
-			}]);
 
 			const exe = new sut.Querier('examp-3', query);
 			const ctx = {};
@@ -402,80 +420,79 @@ describe('src/schema/services/querier.js', function(){
 			const res = await exe.run(ctx);
 
 			const argsA = stubs.execute.a.getCall(0).args[0];
-			expect(argsA)
-			.to.deep.equal({
-				'method': 'read',
-				'sourceName': 's-1',
-				'models': [
+			expect(argsA).to.deep.equal({
+				method: 'read',
+				sourceName: 's-1',
+				models: [
 					{
-						'series': 'a-b',
-						'schema': 'schemaAtoB',
-						'joins': []
+						series: 'a-b',
+						schema: 'schemaAtoB',
+						joins: []
 					}
 				],
-				'fields': [
+				fields: [
 					{
-						'series': 'a-b',
-						'path': 'bId',
-						'as': 'exe_0'
+						series: 'a-b',
+						path: 'bId',
+						as: 'exe_0'
 					}
 				],
-				'filters': [],
-				'params': [
+				filters: [],
+				params: [
 					{
-						'series': 'a-b',
-						'path': 'aId',
-						'operation': '=',
-						'value': 567,
-						'settings': {}
+						series: 'a-b',
+						path: 'aId',
+						operation: '=',
+						value: 567,
+						settings: {}
 					}
 				]
 			});
 
 			const argsB = stubs.execute.b.getCall(0).args[0];
-			expect(argsB)
-			.to.deep.equal({
-				'method': 'read',
-				'sourceName': 's-2',
-				'models': [
+			expect(argsB).to.deep.equal({
+				method: 'read',
+				sourceName: 's-2',
+				models: [
 					{
-						'series': 'b',
-						'schema': 'schemaB',
-						'joins': []
+						series: 'b',
+						schema: 'schemaB',
+						joins: []
 					}
 				],
-				'fields': [
+				fields: [
 					{
-						'series': 'b',
-						'path': 'foo',
-						'as': 'bar'
+						series: 'b',
+						path: 'foo',
+						as: 'bar'
 					}
 				],
-				'filters': [],
-				'params': [
+				filters: [],
+				params: [
 					{
-						'series': 'b',
-						'path': 'id',
-						'operation': '=',
-						'value': 'b-1',
-						'settings': {}
+						series: 'b',
+						path: 'id',
+						operation: '=',
+						value: 'b-1',
+						settings: {}
 					}
 				]
 			});
 
-			expect(res)
-			.to.deep.equal([{
-				bar: 'hello-world',
-				'exe_0': 'b-1'
-			}]);
+			expect(res).to.deep.equal([
+				{
+					bar: 'hello-world',
+					exe_0: 'b-1'
+				}
+			]);
 		});
 	});
 
-	describe('multiple sources', function(){
+	describe('multiple sources', function () {
 		let query = null;
 		let nexus = null;
 
-		beforeEach(function(){
+		beforeEach(function () {
 			query = new QueryStatement('a');
 
 			stubs.execute = {
@@ -501,65 +518,61 @@ describe('src/schema/services/querier.js', function(){
 			};
 
 			query.setModel('a', {
-				schema: 'schemaA', 
+				schema: 'schemaA',
 				incomingSettings: {
 					source: 's-1'
 				}
 			});
 			query.setModel('b', {
-				schema: 'schemaB', 
+				schema: 'schemaB',
 				incomingSettings: {
 					source: 's-2'
 				}
 			});
 			query.setModel('c', {
-				schema: 'schemaC', 
+				schema: 'schemaC',
 				incomingSettings: {
 					source: 's-3'
 				}
 			});
 
-			query.addFields('b', [
-				new StatementField('cId', 'fooBar')
-			]);
+			query.addFields('b', [new StatementField('cId', 'fooBar')]);
 
 			query.addJoins('b', [
-				new QueryJoin('a', [{from:'aId', to:'id'}]),
-				new QueryJoin('c', [{from:'cId', to:'id'}])
+				new QueryJoin('a', [{from: 'aId', to: 'id'}]),
+				new QueryJoin('c', [{from: 'cId', to: 'id'}])
 			]);
 
-			query.addFilters('a', [
-				new StatementFilter('param1', 123)
-			]);
+			query.addFilters('a', [new StatementFilter('param1', 123)]);
 
-			query.addFilters('b', [
-				new StatementFilter('param2', 456)
-			]);
+			query.addFilters('b', [new StatementFilter('param2', 456)]);
 
-			query.addParams('b', [
-				new StatementParam('param3', 567)
-			]);
+			query.addParams('b', [new StatementParam('param3', 567)]);
 
-			query.addParams('c', [
-				new StatementParam('param4', 890)
-			]);
+			query.addParams('c', [new StatementParam('param4', 890)]);
 		});
 
-		describe('::query', function(){
-			it('should work', async function(){
-				stubs.execute.b.resolves([{
-					foo: 'bar',
-					fooBar: 'id-2',
-					'exe_0': 'id-1'
-				}]);
-				
-				stubs.execute.a.resolves([{
-					hello: 'world'
-				}]);
-				
-				stubs.execute.c.resolves([{
-					eins: 'zwei'
-				}]);
+		describe('::query', function () {
+			it('should work', async function () {
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar',
+						fooBar: 'id-2',
+						exe_0: 'id-1'
+					}
+				]);
+
+				stubs.execute.a.resolves([
+					{
+						hello: 'world'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei'
+					}
+				]);
 
 				const exe = new sut.Querier('examp-3', query);
 				const ctx = {};
@@ -569,462 +582,536 @@ describe('src/schema/services/querier.js', function(){
 				const res = await exe.run(ctx);
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				expect(argsB)
-				.to.deep.equal({
+				expect(argsB).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',
-					models: [{
-						series: 'b',
-						schema: 'schemaB',
-						joins: []
-					}],
-					fields: [{
-						series: 'b',
-						path: 'cId',
-						as: 'fooBar'
-					}, {
-						series: 'b',
-						path: 'aId',
-						as: 'exe_0'
-					}],
-					filters: [{
-						operation: '=',
-						path: 'param2',
-						series: 'b',
-						settings: {},
-						value: 456
-					}],
-					params: [{
-						operation: '=',
-						path: 'param3',
-						series: 'b',
-						settings: {},
-						value: 567
-					}]
+					models: [
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'b',
+							path: 'cId',
+							as: 'fooBar'
+						},
+						{
+							series: 'b',
+							path: 'aId',
+							as: 'exe_0'
+						}
+					],
+					filters: [
+						{
+							operation: '=',
+							path: 'param2',
+							series: 'b',
+							settings: {},
+							value: 456
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'param3',
+							series: 'b',
+							settings: {},
+							value: 567
+						}
+					]
 				});
 
 				const argsA = stubs.execute.a.getCall(0).args[0];
-				expect(argsA)
-				.to.deep.equal({
+				expect(argsA).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}
+					],
 					fields: [],
-					filters: [{
-						operation: '=',
-						path: 'param1',
-						series: 'a',
-						settings: {},
-						value: 123
-					}],
-					params: [{
-						operation: '=',
-						path: 'id',
-						series: 'a',
-						settings: {},
-						value: 'id-1'
-					}]
+					filters: [
+						{
+							operation: '=',
+							path: 'param1',
+							series: 'a',
+							settings: {},
+							value: 123
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'id',
+							series: 'a',
+							settings: {},
+							value: 'id-1'
+						}
+					]
 				});
 
 				const argsC = stubs.execute.c.getCall(0).args[0];
-				expect(argsC)
-				.to.deep.equal({
+				expect(argsC).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
-					models: [{
-						series: 'c',
-						schema: 'schemaC',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
 					fields: [],
 					filters: [],
-					params: [{
-						operation: '=',
-						path: 'param4',
-						series: 'c',
-						settings: {},
-						value: 890
-					}, {
-						operation: '=',
-						path: 'id',
-						series: 'c',
-						settings: {},
-						value: 'id-2'
-					}]
+					params: [
+						{
+							operation: '=',
+							path: 'param4',
+							series: 'c',
+							settings: {},
+							value: 890
+						},
+						{
+							operation: '=',
+							path: 'id',
+							series: 'c',
+							settings: {},
+							value: 'id-2'
+						}
+					]
 				});
 
-				expect(res)
-				.to.deep.equal([{
-					hello: 'world',
-					foo: 'bar',
-					eins: 'zwei',
-					'exe_0': 'id-1',
-					fooBar: 'id-2'
-				}]);
+				expect(res).to.deep.equal([
+					{
+						hello: 'world',
+						foo: 'bar',
+						eins: 'zwei',
+						exe_0: 'id-1',
+						fooBar: 'id-2'
+					}
+				]);
 			});
 
-			it('should work with combinations - no cache', async function(){
-				stubs.execute.b.resolves([{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1'
-				}, {
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2'
-				}, {
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1'
-				}]);
-				
-				stubs.execute.a.resolves([{
-					hello: 'world-1'
-				}, {
-					hello: 'world-2'
-				}]);
+			it('should work with combinations - no cache', async function () {
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1'
+					},
+					{
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2'
+					},
+					{
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1'
+					}
+				]);
 
-				stubs.execute.c.resolves([{
-					eins: 'zwei-1'
-				}, {
-					eins: 'zwei-2'
-				}]);
+				stubs.execute.a.resolves([
+					{
+						hello: 'world-1'
+					},
+					{
+						hello: 'world-2'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei-1'
+					},
+					{
+						eins: 'zwei-2'
+					}
+				]);
 
 				const exe = new sut.Querier('examp-4', query);
-				
+
 				await exe.link(nexus);
 
 				const ctx = {};
 				const res = await exe.run(ctx);
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				expect(argsB)
-				.to.deep.equal({
+				expect(argsB).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',
-					models: [{
-						series: 'b',
-						schema: 'schemaB',
-						joins: []
-					}],
-					fields: [{
-						series: 'b',
-						path: 'cId',
-						as: 'fooBar'
-					}, {
-						series: 'b',
-						path: 'aId',
-						as: 'exe_0'
-					}],
-					filters: [{
-						operation: '=',
-						path: 'param2',
-						series: 'b',
-						settings: {},
-						value: 456
-					}],
-					params: [{
-						operation: '=',
-						path: 'param3',
-						series: 'b',
-						settings: {},
-						value: 567
-					}]
+					models: [
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'b',
+							path: 'cId',
+							as: 'fooBar'
+						},
+						{
+							series: 'b',
+							path: 'aId',
+							as: 'exe_0'
+						}
+					],
+					filters: [
+						{
+							operation: '=',
+							path: 'param2',
+							series: 'b',
+							settings: {},
+							value: 456
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'param3',
+							series: 'b',
+							settings: {},
+							value: 567
+						}
+					]
 				});
 
-				expect(stubs.execute.b.getCall(2))
-				.to.equal(null);
+				expect(stubs.execute.b.getCall(2)).to.equal(null);
 
 				const argsA0 = stubs.execute.a.getCall(0).args[0];
-				expect(argsA0)
-				.to.deep.equal({
+				expect(argsA0).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}
+					],
 					fields: [],
-					filters: [{
-						operation: '=',
-						path: 'param1',
-						series: 'a',
-						settings: {},
-						value: 123
-					}],
-					params: [{
-						operation: '=',
-						path: 'id',
-						series: 'a',
-						settings: {},
-						value: 'id-1-1'
-					}]
+					filters: [
+						{
+							operation: '=',
+							path: 'param1',
+							series: 'a',
+							settings: {},
+							value: 123
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'id',
+							series: 'a',
+							settings: {},
+							value: 'id-1-1'
+						}
+					]
 				});
 
 				const argsA1 = stubs.execute.a.getCall(1).args[0];
-				expect(argsA1)
-				.to.deep.equal({
+				expect(argsA1).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}
+					],
 					fields: [],
-					filters: [{
-						operation: '=',
-						path: 'param1',
-						series: 'a',
-						settings: {},
-						value: 123
-					}],
-					params: [{
-						operation: '=',
-						path: 'id',
-						series: 'a',
-						settings: {},
-						value: 'id-1-1'
-					}]
+					filters: [
+						{
+							operation: '=',
+							path: 'param1',
+							series: 'a',
+							settings: {},
+							value: 123
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'id',
+							series: 'a',
+							settings: {},
+							value: 'id-1-1'
+						}
+					]
 				});
 
 				const argsA2 = stubs.execute.a.getCall(2).args[0];
-				expect(argsA2)
-				.to.deep.equal({
+				expect(argsA2).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}
+					],
 					fields: [],
-					filters: [{
-						operation: '=',
-						path: 'param1',
-						series: 'a',
-						settings: {},
-						value: 123
-					}],
-					params: [{
-						operation: '=',
-						path: 'id',
-						series: 'a',
-						settings: {},
-						value: 'id-1-2'
-					}]
+					filters: [
+						{
+							operation: '=',
+							path: 'param1',
+							series: 'a',
+							settings: {},
+							value: 123
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'id',
+							series: 'a',
+							settings: {},
+							value: 'id-1-2'
+						}
+					]
 				});
 
-				expect(stubs.execute.c.getCall(0).args[0])
-				.to.deep.equal({
+				expect(stubs.execute.c.getCall(0).args[0]).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
-					models: [{
-						series: 'c',
-						schema: 'schemaC',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
 					fields: [],
 					filters: [],
-					params: [{
-						operation: '=',
-						path: 'param4',
-						series: 'c',
-						settings: {},
-						value: 890
-					}, {
-						operation: '=',
-						path: 'id',
-						series: 'c',
-						settings: {},
-						value: 'id-2-1'
-					}]
+					params: [
+						{
+							operation: '=',
+							path: 'param4',
+							series: 'c',
+							settings: {},
+							value: 890
+						},
+						{
+							operation: '=',
+							path: 'id',
+							series: 'c',
+							settings: {},
+							value: 'id-2-1'
+						}
+					]
 				});
-				
-				expect(stubs.execute.c.getCall(1).args[0])
-				.to.deep.equal({
+
+				expect(stubs.execute.c.getCall(1).args[0]).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
-					models: [{
-						series: 'c',
-						schema: 'schemaC',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
 					fields: [],
 					filters: [],
-					params: [{
-						operation: '=',
-						path: 'param4',
-						series: 'c',
-						settings: {},
-						value: 890
-					}, {
-						operation: '=',
-						path: 'id',
-						series: 'c',
-						settings: {},
-						value: 'id-2-2'
-					}]
+					params: [
+						{
+							operation: '=',
+							path: 'param4',
+							series: 'c',
+							settings: {},
+							value: 890
+						},
+						{
+							operation: '=',
+							path: 'id',
+							series: 'c',
+							settings: {},
+							value: 'id-2-2'
+						}
+					]
 				});
 
-				expect(stubs.execute.c.getCall(2).args[0])
-				.to.deep.equal({
+				expect(stubs.execute.c.getCall(2).args[0]).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
-					models: [{
-						series: 'c',
-						schema: 'schemaC',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
 					fields: [],
 					filters: [],
-					params: [{
-						operation: '=',
-						path: 'param4',
-						series: 'c',
-						settings: {},
-						value: 890
-					}, {
-						operation: '=',
-						path: 'id',
-						series: 'c',
-						settings: {},
-						value: 'id-2-1'
-					}]
+					params: [
+						{
+							operation: '=',
+							path: 'param4',
+							series: 'c',
+							settings: {},
+							value: 890
+						},
+						{
+							operation: '=',
+							path: 'id',
+							series: 'c',
+							settings: {},
+							value: 'id-2-1'
+						}
+					]
 				});
 
-				expect(stubs.execute.c.getCall(3))
-				.to.equal(null);
+				expect(stubs.execute.c.getCall(3)).to.equal(null);
 
-				expect(res)
-				.to.deep.equal([
+				expect(res).to.deep.equal([
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-1'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-2'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-1'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-2'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-1',
-					hello: 'world-1'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-1',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-1',
-					hello: 'world-2'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-1',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-2',
-					hello: 'world-1'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-2',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-2',
-					hello: 'world-2'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-2',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-1'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-2'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-1'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-2'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-2'
 					}
 				]);
 			});
 
-			it('should work with combinations - with cache', async function(){
-				stubs.execute.b.resolves([{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1'
-				}, {
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2'
-				}, {
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1'
-				}]);
-				
-				stubs.execute.a.resolves([{
-					hello: 'world-1'
-				}, {
-					hello: 'world-2'
-				}]);
+			it('should work with combinations - with cache', async function () {
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1'
+					},
+					{
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2'
+					},
+					{
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1'
+					}
+				]);
 
-				stubs.execute.c.resolves([{
-					eins: 'zwei-1'
-				}, {
-					eins: 'zwei-2'
-				}]);
+				stubs.execute.a.resolves([
+					{
+						hello: 'world-1'
+					},
+					{
+						hello: 'world-2'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei-1'
+					},
+					{
+						eins: 'zwei-2'
+					}
+				]);
 
 				const exe = new sut.Querier('examp-4', query);
-				const ctx = new Context({}, {}, {
-					cache: new Cache({
-						default: {
-							ttl: 1 // 1s
-						}
-					})
-				});
+				const ctx = new Context(
+					{},
+					{},
+					{
+						cache: new Cache({
+							default: {
+								ttl: 1 // 1s
+							}
+						})
+					}
+				);
 
 				await exe.link(nexus);
 
@@ -1033,357 +1120,378 @@ describe('src/schema/services/querier.js', function(){
 				});
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				expect(argsB)
-				.to.deep.equal({
+				expect(argsB).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',
-					models: [{
-						series: 'b',
-						schema: 'schemaB',
-						joins: []
-					}],
-					fields: [{
-						series: 'b',
-						path: 'cId',
-						as: 'fooBar'
-					}, {
-						series: 'b',
-						path: 'aId',
-						as: 'exe_0'
-					}],
-					filters: [{
-						operation: '=',
-						path: 'param2',
-						series: 'b',
-						settings: {},
-						value: 456
-					}],
-					params: [{
-						operation: '=',
-						path: 'param3',
-						series: 'b',
-						settings: {},
-						value: 567
-					}]
+					models: [
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'b',
+							path: 'cId',
+							as: 'fooBar'
+						},
+						{
+							series: 'b',
+							path: 'aId',
+							as: 'exe_0'
+						}
+					],
+					filters: [
+						{
+							operation: '=',
+							path: 'param2',
+							series: 'b',
+							settings: {},
+							value: 456
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'param3',
+							series: 'b',
+							settings: {},
+							value: 567
+						}
+					]
 				});
 
-				expect(stubs.execute.b.getCall(2))
-				.to.equal(null);
+				expect(stubs.execute.b.getCall(2)).to.equal(null);
 
 				const argsA0 = stubs.execute.a.getCall(0).args[0];
-				expect(argsA0)
-				.to.deep.equal({
+				expect(argsA0).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}
+					],
 					fields: [],
-					filters: [{
-						operation: '=',
-						path: 'param1',
-						series: 'a',
-						settings: {},
-						value: 123
-					}],
-					params: [{
-						operation: '=',
-						path: 'id',
-						series: 'a',
-						settings: {},
-						value: 'id-1-1'
-					}]
+					filters: [
+						{
+							operation: '=',
+							path: 'param1',
+							series: 'a',
+							settings: {},
+							value: 123
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'id',
+							series: 'a',
+							settings: {},
+							value: 'id-1-1'
+						}
+					]
 				});
 
 				const argsA2 = stubs.execute.a.getCall(1).args[0];
-				expect(argsA2)
-				.to.deep.equal({
+				expect(argsA2).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
-					models: [{
-						series: 'a',
-						schema: 'schemaA',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}
+					],
 					fields: [],
-					filters: [{
-						operation: '=',
-						path: 'param1',
-						series: 'a',
-						settings: {},
-						value: 123
-					}],
-					params: [{
-						operation: '=',
-						path: 'id',
-						series: 'a',
-						settings: {},
-						value: 'id-1-2'
-					}]
+					filters: [
+						{
+							operation: '=',
+							path: 'param1',
+							series: 'a',
+							settings: {},
+							value: 123
+						}
+					],
+					params: [
+						{
+							operation: '=',
+							path: 'id',
+							series: 'a',
+							settings: {},
+							value: 'id-1-2'
+						}
+					]
 				});
 
-				expect(stubs.execute.a.getCall(2))
-				.to.equal(null);
+				expect(stubs.execute.a.getCall(2)).to.equal(null);
 
-				expect(stubs.execute.c.getCall(0).args[0])
-				.to.deep.equal({
+				expect(stubs.execute.c.getCall(0).args[0]).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
-					models: [{
-						series: 'c',
-						schema: 'schemaC',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
 					fields: [],
 					filters: [],
-					params: [{
-						operation: '=',
-						path: 'param4',
-						series: 'c',
-						settings: {},
-						value: 890
-					}, {
-						operation: '=',
-						path: 'id',
-						series: 'c',
-						settings: {},
-						value: 'id-2-1'
-					}]
+					params: [
+						{
+							operation: '=',
+							path: 'param4',
+							series: 'c',
+							settings: {},
+							value: 890
+						},
+						{
+							operation: '=',
+							path: 'id',
+							series: 'c',
+							settings: {},
+							value: 'id-2-1'
+						}
+					]
 				});
-				
-				expect(stubs.execute.c.getCall(1).args[0])
-				.to.deep.equal({
+
+				expect(stubs.execute.c.getCall(1).args[0]).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
-					models: [{
-						series: 'c',
-						schema: 'schemaC',
-						joins: []
-					}],
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
 					fields: [],
 					filters: [],
-					params: [{
-						operation: '=',
-						path: 'param4',
-						series: 'c',
-						settings: {},
-						value: 890
-					}, {
-						operation: '=',
-						path: 'id',
-						series: 'c',
-						settings: {},
-						value: 'id-2-2'
-					}]
+					params: [
+						{
+							operation: '=',
+							path: 'param4',
+							series: 'c',
+							settings: {},
+							value: 890
+						},
+						{
+							operation: '=',
+							path: 'id',
+							series: 'c',
+							settings: {},
+							value: 'id-2-2'
+						}
+					]
 				});
 
-				expect(stubs.execute.c.getCall(2))
-				.to.equal(null);
+				expect(stubs.execute.c.getCall(2)).to.equal(null);
 
-				expect(res)
-				.to.deep.equal([
+				expect(res).to.deep.equal([
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-1'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-2'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-1'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-1',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-2'
+						foo: 'bar-1',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-1',
-					hello: 'world-1'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-1',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-1',
-					hello: 'world-2'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-1',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-2',
-					hello: 'world-1'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-2',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-2',
-					'exe_0': 'id-1-1',
-					fooBar: 'id-2-2',
-					eins: 'zwei-2',
-					hello: 'world-2'
+						foo: 'bar-2',
+						exe_0: 'id-1-1',
+						fooBar: 'id-2-2',
+						eins: 'zwei-2',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-1'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-1',
-					hello: 'world-2'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-1',
+						hello: 'world-2'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-1'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-1'
 					},
 					{
-					foo: 'bar-3',
-					'exe_0': 'id-1-2',
-					fooBar: 'id-2-1',
-					eins: 'zwei-2',
-					hello: 'world-2'
+						foo: 'bar-3',
+						exe_0: 'id-1-2',
+						fooBar: 'id-2-1',
+						eins: 'zwei-2',
+						hello: 'world-2'
 					}
 				]);
 			});
 		});
 
-		describe('::toJSON', function(){
-			it('should work', async function(){
+		describe('::toJSON', function () {
+			it('should work', async function () {
 				const exe = new sut.Querier('examp-5', query);
 
 				console.log(JSON.stringify(exe.toJSON(), null, '\t'));
-				expect(exe.toJSON())
-				.to.deep.equal([
+				expect(exe.toJSON()).to.deep.equal([
 					{
-						'method': 'read',
-						'models': [
+						method: 'read',
+						models: [
 							{
-								'series': 'b',
-								'schema': 'schemaB',
-								'joins': []
+								series: 'b',
+								schema: 'schemaB',
+								joins: []
 							}
 						],
-						'fields': [
+						fields: [
 							{
-								'series': 'b',
-								'path': 'cId',
-								'as': 'fooBar'
+								series: 'b',
+								path: 'cId',
+								as: 'fooBar'
 							},
 							{
-								'series': 'b',
-								'path': 'aId',
-								'as': 'exe_0'
+								series: 'b',
+								path: 'aId',
+								as: 'exe_0'
 							}
 						],
-						'filters': [
+						filters: [
 							{
-								'series': 'b',
-								'path': 'param2',
-								'operation': '=',
-								'value': 456,
-								'settings': {}
+								series: 'b',
+								path: 'param2',
+								operation: '=',
+								value: 456,
+								settings: {}
 							}
 						],
-						'params': [
+						params: [
 							{
-								'series': 'b',
-								'path': 'param3',
-								'operation': '=',
-								'value': 567,
-								'settings': {}
+								series: 'b',
+								path: 'param3',
+								operation: '=',
+								value: 567,
+								settings: {}
 							}
 						],
-						'sourceName': 's-2',
-						'externals': []
+						sourceName: 's-2',
+						externals: []
 					},
 					{
-						'method': 'read',
-						'models': [
+						method: 'read',
+						models: [
 							{
-								'series': 'a',
-								'schema': 'schemaA',
-								'joins': []
+								series: 'a',
+								schema: 'schemaA',
+								joins: []
 							}
 						],
-						'fields': [],
-						'filters': [
+						fields: [],
+						filters: [
 							{
-								'series': 'a',
-								'path': 'param1',
-								'operation': '=',
-								'value': 123,
-								'settings': {}
+								series: 'a',
+								path: 'param1',
+								operation: '=',
+								value: 123,
+								settings: {}
 							}
 						],
-						'params': [],
-						'sourceName': 's-1',
-						'externals': [
+						params: [],
+						sourceName: 's-1',
+						externals: [
 							{
-								'name': 'a',
-								'mappings': [
+								name: 'a',
+								mappings: [
 									{
-										'from': 'exe_0',
-										'to': 'id',
-										'temp': true
+										from: 'exe_0',
+										to: 'id',
+										temp: true
 									}
 								]
 							}
 						]
 					},
 					{
-						'method': 'read',
-						'models': [
+						method: 'read',
+						models: [
 							{
-								'series': 'c',
-								'schema': 'schemaC',
-								'joins': []
+								series: 'c',
+								schema: 'schemaC',
+								joins: []
 							}
 						],
-						'fields': [],
-						'filters': [],
-						'params': [
+						fields: [],
+						filters: [],
+						params: [
 							{
-								'series': 'c',
-								'path': 'param4',
-								'operation': '=',
-								'value': 890,
-								'settings': {}
+								series: 'c',
+								path: 'param4',
+								operation: '=',
+								value: 890,
+								settings: {}
 							}
 						],
-						'sourceName': 's-3',
-						'externals': [
+						sourceName: 's-3',
+						externals: [
 							{
-								'name': 'c',
-								'mappings': [
+								name: 'c',
+								mappings: [
 									{
-										'from': 'fooBar',
-										'to': 'id',
-										'temp': false
+										from: 'fooBar',
+										to: 'id',
+										temp: false
 									}
 								]
 							}
@@ -1391,7 +1499,6 @@ describe('src/schema/services/querier.js', function(){
 					}
 				]);
 			});
-			
 		});
 	});
 });

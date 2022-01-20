@@ -1,13 +1,12 @@
-
 class Route {
-	constructor(path, method, action, settings = {}){
+	constructor(path, method, action, settings = {}) {
 		this.method = method;
 		this.path = path;
 		this.action = action;
 		this.settings = settings;
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			$schema: 'bmoor-crud:route',
 			method: this.method,

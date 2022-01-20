@@ -1,9 +1,7 @@
-
 const {Config} = require('bmoor/src/lib/config.js');
 const {makeGetter, makeSetter} = require('bmoor/src/core.js');
 
-const config = new Config({
-});
+const config = new Config({});
 
 class Field {
 	constructor(path, structure, settings) {
@@ -17,16 +15,16 @@ class Field {
 		this.reference = settings.reference || path;
 
 		this.structure = structure;
-		
+
 		/***
-	     * - create
-	     * - read
-	     * - update
-	     * - updateType
-	     * - index
-	     * - query
-	     * - key
-	     ***/
+		 * - create
+		 * - read
+		 * - update
+		 * - updateType
+		 * - index
+		 * - query
+		 * - key
+		 ***/
 		this.incomingSettings = settings;
 
 		this.externalGetter = makeGetter(this.path);
@@ -35,22 +33,18 @@ class Field {
 		this.internalSetter = makeSetter(this.storagePath);
 	}
 
-	extend(path, settings){
-		const ops = Object.assign({},this.incomingSettings, settings);
+	extend(path, settings) {
+		const ops = Object.assign({}, this.incomingSettings, settings);
 		ops.storagePath = this.storagePath;
 
-		const field = new Field(
-			path, 
-			this.structure,
-			ops	
-		);
+		const field = new Field(path, this.structure, ops);
 
 		field.original = this.original || this;
 
 		return field;
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			path: this.path,
 			storage: {

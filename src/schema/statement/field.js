@@ -1,6 +1,5 @@
-
 class StatementField {
-	constructor(path, alias = null){
+	constructor(path, alias = null) {
 		this.path = path;
 		this.as = alias;
 	}

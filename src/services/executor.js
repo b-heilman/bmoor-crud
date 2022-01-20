@@ -1,11 +1,10 @@
-
 class Executor {
-	constructor(name, executable){
+	constructor(name, executable) {
 		this.name = name;
 		this.executable = executable;
 	}
 
-	async link(nexus){
+	async link(nexus) {
 		// this means, for now, executables have to be simple... since I didn't
 		// allow joins, this is fine
 		const executable = this.executable;
@@ -17,11 +16,11 @@ class Executor {
 		return this;
 	}
 
-	async run(ctx){
+	async run(ctx) {
 		return this.source.execute(this.executable.toJSON(), ctx);
 	}
 
-	toJSON(){
+	toJSON() {
 		const rtn = this.executable.toJSON();
 
 		rtn.sourceName = this.models[this.base].model.incomingSettings.source;

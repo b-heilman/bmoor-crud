@@ -1,4 +1,3 @@
-
 const error = require('bmoor/src/lib/error.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -7,10 +6,10 @@ const config = new Config({
 });
 
 const connector = {
-	execute: function(stmt){
+	execute: function (stmt) {
 		const fetch = config.get('fetch');
 
-		if (!fetch){
+		if (!fetch) {
 			throw error('no knex connector configured', {
 				code: 'BMOOR_CRUD_CONNECTOR_KNEX'
 			});
@@ -25,7 +24,7 @@ module.exports = {
 
 	connector,
 
-	factory(){
+	factory() {
 		return connector;
 	}
 };

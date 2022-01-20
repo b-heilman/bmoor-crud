@@ -1,4 +1,3 @@
-   
 const error = require('bmoor/src/lib/error.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
@@ -32,14 +31,14 @@ const {Controller, parseQuery} = require('../server/controller.js');
 // query parameters:
 // params: query variables... what are we searching by
 // sort:
-// limit: 
+// limit:
 // join: allow a way to join into the table from another place
 
 // TODO: support pivot tables /model/id/[pivot]/[pivot]...
 //   - security is managed as either checked on request or post read
 // TODO: how would I handle pagination here?
 
-function operationNotAllowed(operation){
+function operationNotAllowed(operation) {
 	throw error.create(`Operation (${operation}) is blocked`, {
 		code: 'CRUD_CONTROLLER_GUARDED',
 		type: 'warn',
@@ -47,14 +46,10 @@ function operationNotAllowed(operation){
 	});
 }
 
-async function runUpdate(ids, service, delta, ctx){
-	let rtn = null;
-
-	if (ids.length > 1){
-		return Promise.all(ids.map(
-			key => service.update(key, delta, ctx)
-		));
-	} else if (ids.length === 1){
+async function runUpdate(ids, service, delta, ctx) {
+	if (ids.length > 1) {
+		return Promise.all(ids.map((key) => service.update(key, delta, ctx)));
+	} else if (ids.length === 1) {
 		const key = ids[0];
 
 		ctx.setInfo({key});
@@ -67,36 +62,33 @@ async function runUpdate(ids, service, delta, ctx){
 			status: 400
 		});
 	}
-
-	return rtn;
 }
 
 class Guard extends Controller {
-	async read(ctx){
-		if (ctx.getMethod() === 'get'){
-			if (!this.incomingSettings.read){
+	async read(ctx) {
+		if (ctx.getMethod() === 'get') {
+			if (!this.incomingSettings.read) {
 				operationNotAllowed('read');
 			}
 
-			if (ctx.hasParam()){
+			if (ctx.hasParam()) {
 				let ids = ctx.getParam('id');
 
-				if (ids){
+				if (ids) {
 					ids = ids.split(',');
 				}
 
-				if (!ids){
+				if (!ids) {
 					throw error.create('called read without id', {
 						code: 'CRUD_CONTROLLER_READ_ID',
 						type: 'warn',
 						status: 400
 					});
-				} else if (ids.length > 1){
+				} else if (ids.length > 1) {
 					return this.view.readMany(ids, ctx);
 				} else {
-					return this.view.read(ids[0], ctx)
-					.then(res => {
-						if (!res){
+					return this.view.read(ids[0], ctx).then((res) => {
+						if (!res) {
 							throw error.create('called read without result', {
 								code: 'CRUD_CONTROLLER_READ_ONE',
 								type: 'warn',
@@ -107,8 +99,8 @@ class Guard extends Controller {
 						return res;
 					});
 				}
-			} else if (ctx.hasQuery()){
-				if (!this.incomingSettings.query){
+			} else if (ctx.hasQuery()) {
+				if (!this.incomingSettings.query) {
 					operationNotAllowed('query');
 				}
 
@@ -117,7 +109,7 @@ class Guard extends Controller {
 				return this.view.readAll(ctx);
 			}
 		} else {
-			throw error.create('called read with method '+ctx.method, {
+			throw error.create('called read with method ' + ctx.method, {
 				code: 'CRUD_CONTROLLER_READ_UNAVAILABLE',
 				type: 'warn',
 				status: 405
@@ -125,15 +117,15 @@ class Guard extends Controller {
 		}
 	}
 
-	async write(ctx){
+	async write(ctx) {
 		const datum = await ctx.getContent();
 
 		ctx.setInfo({
 			model: this.view.structure.name
 		});
 
-		if (ctx.getMethod() === 'post'){
-			if (!this.incomingSettings.create){
+		if (ctx.getMethod() === 'post') {
+			if (!this.incomingSettings.create) {
 				operationNotAllowed('create');
 			}
 
@@ -142,10 +134,10 @@ class Guard extends Controller {
 			});
 
 			return this.view.create(datum, ctx);
-		} else if (ctx.getMethod() === 'put'){
-			const ids = (ctx.getParam('id')||'').trim();
+		} else if (ctx.getMethod() === 'put') {
+			const ids = (ctx.getParam('id') || '').trim();
 
-			if (!this.incomingSettings.update){
+			if (!this.incomingSettings.update) {
 				operationNotAllowed('update');
 			}
 
@@ -153,13 +145,13 @@ class Guard extends Controller {
 				action: 'update'
 			});
 
-			if (!ids){
+			if (!ids) {
 				throw error.create('called put without id', {
 					code: 'CRUD_CONTROLLER_PUT_ID',
 					type: 'warn',
 					status: 400
 				});
-			} else if (config.get('putIsPatch')){
+			} else if (config.get('putIsPatch')) {
 				return runUpdate(ids.split(','), this.view, datum, ctx);
 			} else {
 				throw error.create('called write and tried to put, not ready', {
@@ -168,11 +160,10 @@ class Guard extends Controller {
 					status: 404
 				});
 			}
-			
-		} else if (ctx.getMethod() === 'patch'){
-			const ids = (ctx.getParam('id')||'').trim();
+		} else if (ctx.getMethod() === 'patch') {
+			const ids = (ctx.getParam('id') || '').trim();
 
-			if (!this.incomingSettings.update){
+			if (!this.incomingSettings.update) {
 				operationNotAllowed('update');
 			}
 
@@ -180,7 +171,7 @@ class Guard extends Controller {
 				action: 'update'
 			});
 
-			if (!ids){
+			if (!ids) {
 				throw error.create('called put without id', {
 					code: 'CRUD_CONTROLLER_PATCH_ID',
 					type: 'warn',
@@ -190,7 +181,7 @@ class Guard extends Controller {
 				return runUpdate(ids.split(','), this.view, datum, ctx);
 			}
 		} else {
-			throw error.create('called write with method '+ctx.method, {
+			throw error.create('called write with method ' + ctx.method, {
 				code: 'CRUD_CONTROLLER_WRITE_UNAVAILABLE',
 				type: 'warn',
 				status: 405
@@ -198,33 +189,31 @@ class Guard extends Controller {
 		}
 	}
 
-	async delete(ctx){
+	async delete(ctx) {
 		ctx.setInfo({
 			model: this.view.structure.name,
 			action: 'delete'
 		});
 
-		if (ctx.getMethod() === 'delete'){
-			if (!this.incomingSettings.delete){
+		if (ctx.getMethod() === 'delete') {
+			if (!this.incomingSettings.delete) {
 				operationNotAllowed('delete');
 			}
 
-			if (ctx.hasQuery()){
-				if (!this.incomingSettings.query){
+			if (ctx.hasQuery()) {
+				if (!this.incomingSettings.query) {
 					operationNotAllowed('query');
 				}
 
-				const queriedIds = (await this.view.query(
-					await parseQuery(this.view, ctx), ctx)
-				).map(datum => this.view.structure.getKey(datum));
+				const queriedIds = (
+					await this.view.query(await parseQuery(this.view, ctx), ctx)
+				).map((datum) => this.view.structure.getKey(datum));
 
-				return Promise.all(queriedIds.map(
-					id => this.view.delete(id, ctx)
-				));
+				return Promise.all(queriedIds.map((id) => this.view.delete(id, ctx)));
 			} else {
-				let ids = (ctx.getParam('id')||'').trim();
+				let ids = (ctx.getParam('id') || '').trim();
 
-				if (!ids){
+				if (!ids) {
 					throw error.create('called update without id', {
 						code: 'CRUD_CONTROLLER_DELETE_ID',
 						type: 'warn',
@@ -233,17 +222,15 @@ class Guard extends Controller {
 				} else {
 					ids = ids.split(',');
 
-					if (ids.length > 1){
-						return Promise.all(ids.map(
-							id => this.view.delete(id, ctx)
-						));
+					if (ids.length > 1) {
+						return Promise.all(ids.map((id) => this.view.delete(id, ctx)));
 					} else {
 						return this.view.delete(ids[0], ctx);
 					}
 				}
 			}
 		} else {
-			throw error.create('called write with method '+ctx.method, {
+			throw error.create('called write with method ' + ctx.method, {
 				code: 'CRUD_CONTROLLER_DELETE_UNAVAILABLE',
 				type: 'warn',
 				status: 405
@@ -251,81 +238,89 @@ class Guard extends Controller {
 		}
 	}
 
-	async route(ctx){
-		if (ctx.getMethod() === 'get'){
+	async route(ctx) {
+		if (ctx.getMethod() === 'get') {
 			return this.read(ctx);
-		} else if (ctx.getMethod() === 'delete'){
+		} else if (ctx.getMethod() === 'delete') {
 			return this.delete(ctx);
 		} else {
 			return this.write(ctx);
 		}
 	}
 
-	_buildRoutes(){
-		return [{
-			// create
-			route: {
-				path: '',
-				method: 'post'
-			}, 
-			fn: (ctx) => this.write(ctx),
-			hidden: !this.incomingSettings.create,
-			structure: this.view.structure
-		}, {
-			// read / readMany
-			route: {
-				path: '/:id',
-				method: 'get'
+	_buildRoutes() {
+		return [
+			{
+				// create
+				route: {
+					path: '',
+					method: 'post'
+				},
+				fn: (ctx) => this.write(ctx),
+				hidden: !this.incomingSettings.create,
+				structure: this.view.structure
 			},
-			fn: (ctx) => this.read(ctx),
-			hidden: !this.incomingSettings.read,
-			structure: this.view.structure
-		}, {
-			// readAll, query
-			route: {
-				path: '',
-				method: 'get'
+			{
+				// read / readMany
+				route: {
+					path: '/:id',
+					method: 'get'
+				},
+				fn: (ctx) => this.read(ctx),
+				hidden: !this.incomingSettings.read,
+				structure: this.view.structure
 			},
-			fn: (ctx) => this.read(ctx),
-			hidden: !this.incomingSettings.read,
-			structure: this.view.structure
-		}, {
-			// update
-			route: {
-				path: '/:id',
-				method: 'put'
+			{
+				// readAll, query
+				route: {
+					path: '',
+					method: 'get'
+				},
+				fn: (ctx) => this.read(ctx),
+				hidden: !this.incomingSettings.read,
+				structure: this.view.structure
 			},
-			fn: (ctx) => this.write(ctx),
-			hidden: !this.incomingSettings.update,
-			structure: this.view.structure
-		}, {
-			// update
-			route: {
-				path: '/:id',
-				method: 'patch',
+			{
+				// update
+				route: {
+					path: '/:id',
+					method: 'put'
+				},
+				fn: (ctx) => this.write(ctx),
+				hidden: !this.incomingSettings.update,
+				structure: this.view.structure
 			},
-			fn: (ctx) => this.write(ctx),
-			hidden: !this.incomingSettings.update,
-			structure: this.view.structure
-		}, {
-			// delete
-			route: {
-				path: '/:id',
-				method: 'delete',
+			{
+				// update
+				route: {
+					path: '/:id',
+					method: 'patch'
+				},
+				fn: (ctx) => this.write(ctx),
+				hidden: !this.incomingSettings.update,
+				structure: this.view.structure
 			},
-			fn: (ctx) => this.delete(ctx),
-			hidden: !this.incomingSettings.delete,
-			structure: this.view.structure
-		}, {
-			// delete w/ query
-			route: {
-				path: '',
-				method: 'delete',
+			{
+				// delete
+				route: {
+					path: '/:id',
+					method: 'delete'
+				},
+				fn: (ctx) => this.delete(ctx),
+				hidden: !this.incomingSettings.delete,
+				structure: this.view.structure
 			},
-			fn: (ctx) => this.delete(ctx),
-			hidden: !(this.incomingSettings.delete && this.incomingSettings.query),
-			structure: this.view.structure
-		}];
+			{
+				// delete w/ query
+				route: {
+					path: '',
+					method: 'delete'
+				},
+				fn: (ctx) => this.delete(ctx),
+				hidden: !(this.incomingSettings.delete && this.incomingSettings.query),
+				structure: this.view.structure
+			}
+		];
 	}
 }
 
