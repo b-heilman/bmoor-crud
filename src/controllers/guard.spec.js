@@ -141,7 +141,7 @@ describe('src/controller/guard.js', function () {
 
 					const args = stubs.execute.getCall(0).args[0];
 
-					expect(args).to.deep.equal({
+					expect(args.toJSON()).to.deep.equal({
 						method: 'read',
 						sourceName: 'test-1',
 						models: [

@@ -1189,7 +1189,7 @@ describe('src/env/nexus.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1453,7 +1453,7 @@ describe('src/env/nexus.js', function () {
 
 				const args0 = stubs.execute.getCall(0).args[0];
 
-				expect(args0).to.deep.equal({
+				expect(args0.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [
@@ -1529,7 +1529,8 @@ describe('src/env/nexus.js', function () {
 					]
 				});
 
-				expect(stubs.doc2.getCall(0).args[0]).to.deep.equal({
+				const args20 = stubs.doc2.getCall(0).args[0];
+				expect(args20).to.deep.equal({
 					joins: [],
 					params: {
 						'$test-2-foo.id': 456
@@ -1537,7 +1538,7 @@ describe('src/env/nexus.js', function () {
 				});
 
 				const args1 = stubs.execute.getCall(1).args[0];
-				expect(args1).to.deep.equal({
+				expect(args1.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [
@@ -1600,7 +1601,7 @@ describe('src/env/nexus.js', function () {
 				});
 
 				const args2 = stubs.execute.getCall(2).args[0];
-				expect(args2).to.deep.equal({
+				expect(args2.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [
@@ -1713,8 +1714,7 @@ describe('src/env/nexus.js', function () {
 				const res = await doc3.read(1, {});
 
 				const args1 = stubs.execute.getCall(0).args[0];
-
-				expect(args1).to.deep.equal({
+				expect(args1.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [
@@ -1791,10 +1791,7 @@ describe('src/env/nexus.js', function () {
 				});
 
 				const args2 = stubs.execute.getCall(1).args[0];
-
-				expect(args2.method).to.equal('read');
-
-				expect(args2).to.deep.equal({
+				expect(args2.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [
@@ -1949,8 +1946,7 @@ describe('src/env/nexus.js', function () {
 				const res = await doc3.read(1, {});
 
 				const args1 = stubs.execute.getCall(0).args[0];
-
-				expect(args1).to.deep.equal({
+				expect(args1.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [
@@ -2027,8 +2023,7 @@ describe('src/env/nexus.js', function () {
 				});
 
 				const args2 = stubs.execute.getCall(1).args[0];
-
-				expect(args2).to.deep.equal({
+				expect(args2.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
 					models: [
@@ -2105,8 +2100,7 @@ describe('src/env/nexus.js', function () {
 				});
 
 				const args3 = stubs.execute.getCall(2).args[0];
-
-				expect(args3).to.deep.equal({
+				expect(args3.toJSON()).to.deep.equal({
 					sourceName: 'test-1',
 					method: 'read',
 					models: [

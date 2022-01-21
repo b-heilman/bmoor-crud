@@ -1,10 +1,4 @@
-const {Statement} = require('../statement.js');
-
-const methods = {
-	create: Symbol('create'),
-	update: Symbol('update'),
-	delete: Symbol('delete')
-};
+const {Statement, methods} = require('../statement.js');
 
 class ExecutableStatement extends Statement {
 	constructor(baseSeries) {
@@ -25,14 +19,6 @@ class ExecutableStatement extends Statement {
 		this.getSeries(series).payload = payload;
 
 		return this;
-	}
-
-	setMethod(method) {
-		if (!Object.values(methods).includes(method)) {
-			throw new Error('unknown method');
-		}
-
-		this.method = method;
 	}
 
 	importSeries(series, statement) {

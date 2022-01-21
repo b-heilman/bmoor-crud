@@ -568,9 +568,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(0).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(0).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2
 					});
@@ -590,9 +589,29 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(1).args;
+					const args0 = stubs.execute1.getCall(0).args[0];
+					expect(args0.toJSON()).to.deep.equal({
+						method: 'read',
+						models: [{series: 'service-1', schema: 'service-1', joins: []}],
+						fields: [
+							{series: 'service-1', path: 'zwei', as: 'zwei'},
+							{series: 'service-1', path: 'drei', as: 'drei'}
+						],
+						filters: [],
+						params: [
+							{
+								series: 'service-1',
+								path: 'null',
+								operation: '=',
+								value: 1,
+								settings: {}
+							}
+						],
+						sourceName: 'test-1'
+					});
 
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args1 = stubs.execute1.getCall(1).args[0];
+					expect(args1.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2
 					});
@@ -640,8 +659,7 @@ describe('src/env/forge.js', function () {
 					);
 
 					const args = stubs.execute1.getCall(0).args[0];
-
-					expect(args).to.deep.equal({
+					expect(args.toJSON()).to.deep.equal({
 						method: 'read',
 						sourceName: 'test-1',
 						models: [
@@ -695,9 +713,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(0).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(0).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2,
 						fier: 4
@@ -718,9 +735,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(1).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(1).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2,
 						fier: 4
@@ -743,8 +759,7 @@ describe('src/env/forge.js', function () {
 					);
 
 					const args = stubs.execute1.getCall(0).args[0];
-
-					expect(args).to.deep.equal({
+					expect(args.toJSON()).to.deep.equal({
 						method: 'read',
 						sourceName: 'test-1',
 						models: [
@@ -823,9 +838,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(0).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(0).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2,
 						fier: 4
@@ -845,9 +859,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(0).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(0).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2
 					});
@@ -869,9 +882,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(1).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(1).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2,
 						fier: 4
@@ -891,9 +903,8 @@ describe('src/env/forge.js', function () {
 						ctx
 					);
 
-					const args = stubs.execute1.getCall(0).args;
-
-					expect(args[0].models[0].payload).to.deep.equal({
+					const args = stubs.execute1.getCall(0).args[0];
+					expect(args.getSeries('service-1').payload).to.deep.equal({
 						eins: 1,
 						zwei: 2
 					});
@@ -917,8 +928,7 @@ describe('src/env/forge.js', function () {
 					);
 
 					const args = stubs.execute1.getCall(0).args[0];
-
-					expect(args).to.deep.equal({
+					expect(args.toJSON()).to.deep.equal({
 						method: 'read',
 						sourceName: 'test-1',
 						models: [
@@ -992,9 +1002,8 @@ describe('src/env/forge.js', function () {
 							ctx
 						);
 
-						const args = stubs.execute1.getCall(0).args;
-
-						expect(args[0].models[0].payload).to.deep.equal({
+						const args = stubs.execute1.getCall(0).args[0];
+						expect(args.getSeries('service-1').payload).to.deep.equal({
 							eins: 1,
 							zwei: 2
 						});

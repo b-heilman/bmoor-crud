@@ -17,7 +17,7 @@ class Executor {
 	}
 
 	async run(ctx) {
-		return this.source.execute(this.executable.toJSON(), ctx);
+		return this.source.execute(this.executable, ctx);
 	}
 
 	toJSON() {

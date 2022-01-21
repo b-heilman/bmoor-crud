@@ -1,9 +1,24 @@
+const methods = {
+	create: Symbol('create'),
+	read: Symbol('read'),
+	update: Symbol('update'),
+	delete: Symbol('delete')
+};
+
 class Statement {
 	constructor(baseSeries) {
 		this.base = baseSeries;
 		this.models = {};
 
 		this.getSeries(baseSeries);
+	}
+
+	setMethod(method) {
+		if (!Object.values(methods).includes(method)) {
+			throw new Error('unknown method');
+		}
+
+		this.method = method;
 	}
 
 	hasSeries(series) {
@@ -135,5 +150,6 @@ class Statement {
 }
 
 module.exports = {
+	methods,
 	Statement
 };

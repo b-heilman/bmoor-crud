@@ -33,7 +33,7 @@ function combine(arr) {
 async function executeQueriable(querier, queriable, ctx) {
 	const source = querier.sources[queriable.name];
 
-	return source.execute(queriable.toJSON(), ctx);
+	return source.execute(queriable, ctx);
 }
 
 async function runQueriable(querier, settings, queriable, ctx) {

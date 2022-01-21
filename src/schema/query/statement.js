@@ -1,10 +1,12 @@
-const {Statement} = require('../statement.js');
+const {Statement, methods} = require('../statement.js');
 
 class QueryStatement extends Statement {
 	constructor(baseSeries) {
 		super(baseSeries);
 
 		this.position = null;
+
+		this.setMethod(methods.read);
 	}
 
 	getSeries(series) {
@@ -169,39 +171,30 @@ class QueryStatement extends Statement {
 				agg.fields.push(
 					...model.fields.map((field) => ({
 						series,
-						path: field.path,
-						as: field.as
+						...field
 					}))
 				);
 
 				// We separate the two, the thought is that filters are defined
 				// by the base query and params are added dynamically
 				agg.filters.push(
-					...model.filters.map((param) => ({
+					...model.filters.map((filter) => ({
 						series,
-						path: param.path,
-						operation: param.operation,
-						value: param.value,
-						settings: param.settings
+						...filter
 					}))
 				);
 
 				agg.params.push(
 					...model.params.map((param) => ({
 						series,
-						path: param.path,
-						operation: param.operation,
-						value: param.value,
-						settings: param.settings
+						...param
 					}))
 				);
 
 				sorts = sorts.concat(
-					model.sorts.map((param) => ({
+					model.sorts.map((sort) => ({
 						series,
-						pos: param.pos,
-						path: param.path,
-						ascending: param.ascending
+						...sort
 					}))
 				);
 

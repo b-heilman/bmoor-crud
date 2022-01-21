@@ -12,8 +12,9 @@ const scalarMethods = {
 };
 
 function translateSelect(query) {
-	// order of the values should be set by the incoming model
-	const settings = Object.values(query.models).reduce(
+	const sorts = [];
+
+	const settings = query.getInOrder().reduce(
 		(agg, model) => {
 			const modelName = model.schema;
 			const modelRef = model.series;
@@ -65,6 +66,13 @@ function translateSelect(query) {
 				}
 			});
 
+			sorts.push(
+				...model.sorts.map((sort) => ({
+					series: modelRef,
+					...sort
+				}))
+			);
+
 			return agg;
 		},
 		{
@@ -81,8 +89,9 @@ function translateSelect(query) {
 		from: `${settings.from.join('\n\t')}`,
 		where: settings.where.length ? settings.where.join('\n\tAND ') : null,
 		params: settings.params,
-		orderBy: query.sorts
-			? query.sorts
+		orderBy: sorts.length
+			? sorts
+					.sort((a, b) => a.pos - b.pos)
 					.map(
 						(order) =>
 							`\`${order.series}\`.\`${order.path}\` ` +

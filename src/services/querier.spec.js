@@ -84,7 +84,8 @@ describe('src/schema/services/querier.js', function () {
 
 				const res = await exe.run(ctx);
 
-				expect(stubs.execute.getCall(0).args[0]).to.deep.equal({
+				const args = stubs.execute.getCall(0).args[0];
+				expect(args.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'ok',
 					models: [
@@ -292,7 +293,7 @@ describe('src/schema/services/querier.js', function () {
 			const res = await exe.run(ctx);
 
 			const argsA = stubs.execute.a.getCall(0).args[0];
-			expect(argsA).to.deep.equal({
+			expect(argsA.toJSON()).to.deep.equal({
 				method: 'read',
 				sourceName: 's-1',
 				models: [
@@ -322,7 +323,7 @@ describe('src/schema/services/querier.js', function () {
 			});
 
 			const argsB = stubs.execute.b.getCall(0).args[0];
-			expect(argsB).to.deep.equal({
+			expect(argsB.toJSON()).to.deep.equal({
 				method: 'read',
 				sourceName: 's-2',
 				models: [
@@ -420,7 +421,7 @@ describe('src/schema/services/querier.js', function () {
 			const res = await exe.run(ctx);
 
 			const argsA = stubs.execute.a.getCall(0).args[0];
-			expect(argsA).to.deep.equal({
+			expect(argsA.toJSON()).to.deep.equal({
 				method: 'read',
 				sourceName: 's-1',
 				models: [
@@ -450,7 +451,7 @@ describe('src/schema/services/querier.js', function () {
 			});
 
 			const argsB = stubs.execute.b.getCall(0).args[0];
-			expect(argsB).to.deep.equal({
+			expect(argsB.toJSON()).to.deep.equal({
 				method: 'read',
 				sourceName: 's-2',
 				models: [
@@ -582,7 +583,7 @@ describe('src/schema/services/querier.js', function () {
 				const res = await exe.run(ctx);
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				expect(argsB).to.deep.equal({
+				expect(argsB.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',
 					models: [
@@ -625,7 +626,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsA = stubs.execute.a.getCall(0).args[0];
-				expect(argsA).to.deep.equal({
+				expect(argsA.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
 					models: [
@@ -657,7 +658,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsC = stubs.execute.c.getCall(0).args[0];
-				expect(argsC).to.deep.equal({
+				expect(argsC.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
 					models: [
@@ -743,7 +744,7 @@ describe('src/schema/services/querier.js', function () {
 				const res = await exe.run(ctx);
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				expect(argsB).to.deep.equal({
+				expect(argsB.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',
 					models: [
@@ -788,7 +789,7 @@ describe('src/schema/services/querier.js', function () {
 				expect(stubs.execute.b.getCall(2)).to.equal(null);
 
 				const argsA0 = stubs.execute.a.getCall(0).args[0];
-				expect(argsA0).to.deep.equal({
+				expect(argsA0.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
 					models: [
@@ -820,7 +821,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsA1 = stubs.execute.a.getCall(1).args[0];
-				expect(argsA1).to.deep.equal({
+				expect(argsA1.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
 					models: [
@@ -852,7 +853,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsA2 = stubs.execute.a.getCall(2).args[0];
-				expect(argsA2).to.deep.equal({
+				expect(argsA2.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
 					models: [
@@ -883,7 +884,8 @@ describe('src/schema/services/querier.js', function () {
 					]
 				});
 
-				expect(stubs.execute.c.getCall(0).args[0]).to.deep.equal({
+				const argsC0 = stubs.execute.c.getCall(0).args[0];
+				expect(argsC0.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
 					models: [
@@ -913,7 +915,8 @@ describe('src/schema/services/querier.js', function () {
 					]
 				});
 
-				expect(stubs.execute.c.getCall(1).args[0]).to.deep.equal({
+				const argsC1 = stubs.execute.c.getCall(1).args[0];
+				expect(argsC1.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
 					models: [
@@ -943,7 +946,8 @@ describe('src/schema/services/querier.js', function () {
 					]
 				});
 
-				expect(stubs.execute.c.getCall(2).args[0]).to.deep.equal({
+				const argsC2 = stubs.execute.c.getCall(2).args[0];
+				expect(argsC2.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
 					models: [
@@ -1120,7 +1124,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				expect(argsB).to.deep.equal({
+				expect(argsB.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',
 					models: [
@@ -1165,7 +1169,7 @@ describe('src/schema/services/querier.js', function () {
 				expect(stubs.execute.b.getCall(2)).to.equal(null);
 
 				const argsA0 = stubs.execute.a.getCall(0).args[0];
-				expect(argsA0).to.deep.equal({
+				expect(argsA0.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
 					models: [
@@ -1197,7 +1201,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsA2 = stubs.execute.a.getCall(1).args[0];
-				expect(argsA2).to.deep.equal({
+				expect(argsA2.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-1',
 					models: [
@@ -1230,7 +1234,8 @@ describe('src/schema/services/querier.js', function () {
 
 				expect(stubs.execute.a.getCall(2)).to.equal(null);
 
-				expect(stubs.execute.c.getCall(0).args[0]).to.deep.equal({
+				const argsC0 = stubs.execute.c.getCall(0).args[0];
+				expect(argsC0.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
 					models: [
@@ -1260,7 +1265,8 @@ describe('src/schema/services/querier.js', function () {
 					]
 				});
 
-				expect(stubs.execute.c.getCall(1).args[0]).to.deep.equal({
+				const argsC1 = stubs.execute.c.getCall(1).args[0];
+				expect(argsC1.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-3',
 					models: [
@@ -1385,7 +1391,6 @@ describe('src/schema/services/querier.js', function () {
 			it('should work', async function () {
 				const exe = new sut.Querier('examp-5', query);
 
-				console.log(JSON.stringify(exe.toJSON(), null, '\t'));
 				expect(exe.toJSON()).to.deep.equal([
 					{
 						method: 'read',

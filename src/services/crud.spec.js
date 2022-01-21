@@ -250,7 +250,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'create',
 					models: [
 						{
@@ -359,7 +359,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'create',
 					models: [
 						{
@@ -464,7 +464,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
 					models: [
@@ -665,7 +665,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
 					models: [
@@ -889,7 +889,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
 					models: [
@@ -1033,7 +1033,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
 					models: [
@@ -1133,7 +1133,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 'test-1',
 					models: [
@@ -1312,7 +1312,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'update',
 					models: [
 						{
@@ -1421,7 +1421,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'update',
 					models: [
 						{
@@ -1540,7 +1540,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'delete',
 					models: [
 						{
@@ -1631,7 +1631,7 @@ describe('src/services/crud.js', function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
-				expect(request).to.deep.equal({
+				expect(request.toJSON()).to.deep.equal({
 					method: 'delete',
 					models: [
 						{

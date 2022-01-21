@@ -371,7 +371,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [
 					{
@@ -434,7 +434,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [
 					{
@@ -482,7 +482,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [
 					{
@@ -523,7 +523,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [
 					{
@@ -601,7 +601,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -719,7 +719,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -823,7 +823,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -929,7 +929,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1047,7 +1047,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1180,7 +1180,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1285,7 +1285,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1414,7 +1414,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1463,7 +1463,7 @@ describe('src/services/document.js', function () {
 
 			const args2 = stubs.execute.getCall(1).args[0];
 
-			expect(args2).to.deep.equal({
+			expect(args2.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1564,7 +1564,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1618,7 +1618,7 @@ describe('src/services/document.js', function () {
 
 			const args2 = stubs.execute.getCall(1).args[0];
 
-			expect(args2).to.deep.equal({
+			expect(args2.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1665,7 +1665,7 @@ describe('src/services/document.js', function () {
 
 			const args3 = stubs.execute.getCall(2).args[0];
 
-			expect(args3).to.deep.equal({
+			expect(args3.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -1907,7 +1907,7 @@ describe('src/services/document.js', function () {
 				]
 			};
 
-			expect(args).to.deep.equal(target);
+			expect(args.toJSON()).to.deep.equal(target);
 
 			expect(res).to.deep.equal([
 				{
@@ -2116,7 +2116,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -2229,7 +2229,7 @@ describe('src/services/document.js', function () {
 
 			const args = stubs.execute.getCall(0).args[0];
 
-			expect(args).to.deep.equal({
+			expect(args.toJSON()).to.deep.equal({
 				sourceName: 'test-1',
 				method: 'read',
 				models: [
@@ -4416,7 +4416,7 @@ describe('src/services/document.js', function () {
 			const res = await doc.query({}, context);
 
 			const args0 = stubs.execute.getCall(0).args[0];
-			expect(args0).to.deep.equal({
+			expect(args0.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [{series: 'test-team', schema: 'test-team', joins: []}],
 				fields: [
@@ -4430,7 +4430,7 @@ describe('src/services/document.js', function () {
 			});
 
 			const args1 = stubs.execute.getCall(1).args[0];
-			expect(args1).to.deep.equal({
+			expect(args1.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [{series: 'test-user', schema: 'test-user', joins: []}],
 				fields: [{series: 'test-user', path: 'name', as: 'owner'}],
@@ -4448,7 +4448,7 @@ describe('src/services/document.js', function () {
 			});
 
 			const args2 = stubs.execute.getCall(2).args[0];
-			expect(args2).to.deep.equal({
+			expect(args2.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [
 					{series: 'test-team-user', schema: 'test-team-user', joins: []}
@@ -4468,7 +4468,7 @@ describe('src/services/document.js', function () {
 			});
 
 			const args3 = stubs.execute.getCall(3).args[0];
-			expect(args3).to.deep.equal({
+			expect(args3.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [{series: 'test-user', schema: 'test-user', joins: []}],
 				fields: [{series: 'test-user', path: 'name', as: 'name'}],
@@ -4486,7 +4486,7 @@ describe('src/services/document.js', function () {
 			});
 
 			const args4 = stubs.execute.getCall(4).args[0];
-			expect(args4).to.deep.equal({
+			expect(args4.toJSON()).to.deep.equal({
 				method: 'read',
 				models: [{series: 'test-user', schema: 'test-user', joins: []}],
 				fields: [{series: 'test-user', path: 'name', as: 'name'}],
