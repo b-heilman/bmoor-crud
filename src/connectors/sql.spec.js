@@ -1,25 +1,38 @@
-// const {expect} = require('chai');
+const {expect} = require('chai');
 
-xdescribe('src/interfaces/knex.js', function () {
-	/*
+describe('src/interfaces/knex.js', function () {
 	const sut = require('./sql.js');
-
-	const {Query, StatementParam, StatementField, QueryJoin} = require('../schema/query.js');
 
 	describe('::translateSelect', function(){
 		it('should translate a basic query', function(){
 			const stmt = {
 				method: 'read',
-				query: (new Query('model-1'))
-				.addFields('model-1', [
-					new StatementField('id'),
-					new StatementField('name'),
-					new StatementField('title'),
-					new StatementField('json')
-				])
-				.addParams('model-1', [
-					new StatementParam('id', 123)
-				])
+				models: [{
+					series: 'model-1',
+					schema: 'schema-1',
+					joins: []
+				}],
+				fields: [{
+					series: 'model-1',
+					path: 'id',
+					as: null
+				}, {
+					series: 'model-1',
+					path: 'name'
+				}, {
+					series: 'model-1',
+					path: 'title'
+				}, {
+					series: 'model-1',
+					path: 'json'
+				}],
+				filters: [],
+				params: [{
+					series: 'model-1',
+					path: 'id',
+					operation: '=',
+					value: 123
+				}]
 			};
 
 			const res = sut.translateSelect(stmt);
@@ -34,7 +47,7 @@ xdescribe('src/interfaces/knex.js', function () {
 
 			expect(res.from.replace(/\s+/g, ''))
 			.to.equal(`
-				\`model-1\` AS \`model-1\`
+				\`schema-1\` AS \`model-1\`
 			`.replace(/\s+/g, ''));
 
 			expect(res.where.replace(/\s+/g, ''))
@@ -51,13 +64,27 @@ xdescribe('src/interfaces/knex.js', function () {
 		it('should handle a null query', function(){
 			const stmt = {
 				method: 'read',
-				query: (new Query('model-1'))
-				.addFields('model-1', [
-					new StatementField('id'),
-					new StatementField('name'),
-					new StatementField('title'),
-					new StatementField('json')
-				])
+				models: [{
+					series: 'model-1',
+					schema: 'schema-1',
+					joins: []
+				}],
+				fields: [{
+					series: 'model-1',
+					path: 'id',
+					as: null
+				}, {
+					series: 'model-1',
+					path: 'name'
+				}, {
+					series: 'model-1',
+					path: 'title'
+				}, {
+					series: 'model-1',
+					path: 'json'
+				}],
+				filters: [],
+				params: []
 			};
 
 			const res = sut.translateSelect(stmt);
@@ -85,13 +112,32 @@ xdescribe('src/interfaces/knex.js', function () {
 		it('should handle aliases', function(){
 			const stmt = {
 				method: 'read',
-				query: (new Query('model-1'))
-				.addFields('model-1', [
-					new StatementField('id', 'key'),
-					new StatementField('name'),
-					new StatementField('title'),
-					new StatementField('json')
-				])
+				models: [{
+					series: 'model-1',
+					schema: 'schema-1',
+					joins: []
+				}],
+				fields: [{
+					series: 'model-1',
+					path: 'id',
+					as: 'key'
+				}, {
+					series: 'model-1',
+					path: 'name'
+				}, {
+					series: 'model-1',
+					path: 'title'
+				}, {
+					series: 'model-1',
+					path: 'json'
+				}],
+				filters: [],
+				params: [{
+					series: 'model-1',
+					path: 'id',
+					operation: '=',
+					value: 123
+				}]
 			};
 
 			const res = sut.translateSelect(stmt);
@@ -119,30 +165,74 @@ xdescribe('src/interfaces/knex.js', function () {
 		it('should translate a complex query', function(){
 			const stmt = {
 				'method': 'read',
-				query: (new Query('test-item'))
-				.setModel('test-item', {schema:'foo-bar'})
-				.addFields('test-item', [
-					new StatementField('name', 'test-item_0')
-				])
-				.addParams('test-item', [
-					new StatementParam('id', 1)
-				])
-				.addFields('test-person', [
-					new StatementField('name', 'test-person_1')
-				])
-				.addParams('test-person', [
-					new StatementParam('foo', 'bar')
-				])
-				.addJoins('test-person', [
-					new QueryJoin('test-item', [{from:'itemId', to:'id'}])
-				])
-				.addFields('test-category', [
-					new StatementField('name'),
-					new StatementField('fooId')
-				])
-				.addJoins('test-category', [
-					new QueryJoin('test-item', [{from:'itemId', to:'id'}], true)
-				])
+				models: [
+					{
+						series: 'test-item',
+						schema: 'foo-bar',
+						joins: []
+					},
+					{
+						series: 'test-person',
+						schema: 'test-person',
+						joins: [
+							{
+								name: 'test-item',
+								optional: false,
+								mappings: [
+									{
+										from: 'itemId',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'test-category',
+						schema: 'test-category',
+						joins: [
+							{
+								name: 'test-item',
+								optional: true,
+								mappings: [
+									{
+										from: 'itemId',
+										to: 'id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [{
+					series: 'test-item',
+					path: 'name',
+					as: 'test-item_0'
+				}, {
+					series: 'test-person',
+					path: 'name',
+					as: 'test-item_0'
+				}, {
+					series: 'test-category',
+					path: 'name'
+				}, {
+					series: 'test-category',
+					path: 'fooId'
+				}],
+				filters: [],
+				params: [{
+					series: 'test-item',
+					path: 'id',
+					operation: '=',
+					value: 1,
+					settings: {}
+				}, {
+					series: 'test-person_1',
+					path: 'foo',
+					operation: '=',
+					value: 'bar',
+					settings: {}
+				}]
 			};
 
 			const res = sut.translateSelect(stmt);
@@ -177,5 +267,4 @@ xdescribe('src/interfaces/knex.js', function () {
 			]);
 		});
 	});
-	*/
 });

@@ -11,10 +11,9 @@ const scalarMethods = {
 	gte: '>='
 };
 
-function translateSelect(stmt) {
-	const query = stmt.query;
-
-	const settings = query.getInOrder().reduce(
+function translateSelect(query) {
+	// order of the values should be set by the incoming model
+	const settings = Object.values(query.models).reduce(
 		(agg, model) => {
 			const modelName = model.schema;
 			const modelRef = model.series;

@@ -1,9 +1,12 @@
-// const sinon = require('sinon');
-// const {expect} = require('chai');
+const sinon = require('sinon');
+const {expect} = require('chai');
 
-xdescribe('src/interfaces/knex.js', function () {
-	/*
-	const {Query, StatementParam, StatementField, QueryPosition, QuerySort} = require('../schema/query.js');
+describe('src/interfaces/knex.js', function () {
+	const {Query} = require('../schema/query.js');
+	const {StatementParam} = require('../schema/query.js');
+	const {StatementField} = require('../schema/query.js');
+	const {QueryPosition} = require('../schema/query.js');
+	const {QuerySort} = require('../schema/query.js');
 
 	const sut = require('./knex.js');
 
@@ -24,6 +27,7 @@ xdescribe('src/interfaces/knex.js', function () {
 		it('should translate with a sort', async function(){
 			const stmt = {
 				method: 'read',
+				
 				query: (new Query('model-1'))
 				.addFields('model-1', [
 					new StatementField('id'),
@@ -107,5 +111,4 @@ xdescribe('src/interfaces/knex.js', function () {
     		);
 		});
 	});
-	*/
 });
