@@ -1,3 +1,5 @@
+const {Expression} = require('./statement/expression.js');
+
 const methods = {
 	create: Symbol('create'),
 	read: Symbol('read'),
@@ -9,6 +11,8 @@ class Statement {
 	constructor(baseSeries) {
 		this.base = baseSeries;
 		this.models = {};
+		this.filters = new Expression();
+		this.params = new Expression();
 
 		this.getSeries(baseSeries);
 	}
@@ -32,9 +36,7 @@ class Statement {
 			rtn = {
 				series,
 				schema: series,
-				fields: [],
-				filters: [],
-				params: []
+				fields: []
 			};
 
 			this.models[series] = rtn;
@@ -58,14 +60,14 @@ class Statement {
 		return this;
 	}
 
-	addFilters(series, filters) {
-		this.getSeries(series).filters.push(...filters.flat());
+	addFilter(filter) {
+		this.filters.addParam(filter);
 
 		return this;
 	}
 
-	addParams(series, params) {
-		this.getSeries(series).params.push(...params.flat());
+	addParam(param) {
+		this.params.push(param);
 
 		return this;
 	}
@@ -74,9 +76,7 @@ class Statement {
 		const incoming = statement.getSeries(series);
 
 		this.setModel(series, incoming.model)
-			.addFields(series, incoming.fields)
-			.addFilters(series, incoming.filters)
-			.addParams(series, incoming.params);
+			.addFields(series, incoming.fields);
 
 		return incoming;
 	}
@@ -86,6 +86,14 @@ class Statement {
 		// that situation, I will need to put a more complex solution in here
 		Object.keys(statement.models).forEach((series) => {
 			this.importSeries(series, statement);
+		});
+
+		statement.filters.forEach(filter => {
+			this.addFilter(filter);
+		});
+
+		statement.params.forEach(param => {
+			this.addParam(param);
 		});
 	}
 
@@ -115,35 +123,13 @@ class Statement {
 					}))
 				);
 
-				// We separate the two, the thought is that filters are defined
-				// by the base query and params are added dynamically
-				agg.filters.push(
-					...model.filters.map((param) => ({
-						series,
-						path: param.path,
-						operation: param.operation,
-						value: param.value,
-						settings: param.settings
-					}))
-				);
-
-				agg.params.push(
-					...model.params.map((param) => ({
-						series,
-						path: param.path,
-						operation: param.operation,
-						value: param.value,
-						settings: param.settings
-					}))
-				);
-
 				return agg;
 			},
 			{
 				models: [],
 				fields: [],
-				filters: [],
-				params: []
+				filters: this.filters.toJSON(),
+				params: this.params.toJSON()
 			}
 		);
 	}

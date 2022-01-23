@@ -1,3 +1,5 @@
+const {Expression, joiners} = require('../schema/statement/expression.js');
+
 const arrayMethods = {
 	'=': 'IN'
 };
@@ -10,6 +12,40 @@ const scalarMethods = {
 	gt: '>',
 	gte: '>='
 };
+
+function translateWhere(modelRef, exps, agg){
+	exps.forEach((exp) => {
+		if (exp instanceof Expression){
+			const myCtx = {
+				where: [],
+				params: []
+			};
+
+			translateWhere(modelRef, exp.params, myCtx);
+
+			const where = '('+myCtx.where.join(exp.joiner === joiners.and ? ' AND ': ' OR ')+')';
+
+			agg.where.push(where);
+			agg.params.push(...myCtx.params);
+		} else {
+			const path = exp.path;
+			const op = exp.operation;
+
+			// has to be a param
+			if (Array.isArray(exp.value)) {
+				const comp = arrayMethods[op];
+
+				agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}(?)`);
+				agg.params.push(exp.value);
+			} else {
+				const comp = scalarMethods[op];
+
+				agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}?`);
+				agg.params.push(exp.value);
+			}
+		}
+	});
+}
 
 function translateSelect(query) {
 	const sorts = [];
@@ -49,22 +85,8 @@ function translateSelect(query) {
 				agg.from.push(`\`${modelName}\` AS \`${modelRef}\``);
 			}
 
-			model.params.forEach((param) => {
-				const path = param.path;
-				const op = param.operation;
-
-				if (Array.isArray(param.value)) {
-					const comp = arrayMethods[op];
-
-					agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}(?)`);
-					agg.params.push(param.value);
-				} else {
-					const comp = scalarMethods[op];
-
-					agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}?`);
-					agg.params.push(param.value);
-				}
-			});
+			
+			translateWhere(modelRef, model.params, agg);
 
 			sorts.push(
 				...model.sorts.map((sort) => ({
