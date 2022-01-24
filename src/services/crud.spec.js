@@ -285,8 +285,14 @@ describe('src/services/crud.js', function () {
 							path: 'json'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 
 				return Promise.resolve([
@@ -393,8 +399,14 @@ describe('src/services/crud.js', function () {
 							path: 'json'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 
 				return Promise.resolve([
@@ -496,16 +508,22 @@ describe('src/services/crud.js', function () {
 							path: 'json'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: 123,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: 123,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -692,8 +710,14 @@ describe('src/services/crud.js', function () {
 							path: 'json'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 
 				return Promise.resolve([
@@ -776,8 +800,14 @@ describe('src/services/crud.js', function () {
 							path: 'json'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 
 				return Promise.resolve([
@@ -916,16 +946,22 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: [1, 2, 3],
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: [1, 2, 3],
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -1060,16 +1096,22 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'name',
-							operation: '=',
-							value: 'test-1',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'name',
+								operation: '=',
+								value: 'test-1',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -1160,37 +1202,43 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: 1,
-							settings: {}
-						},
-						{
-							series: 'model-1',
-							path: 'name',
-							operation: 'gt',
-							value: 'test-1.1',
-							settings: {}
-						},
-						{
-							series: 'model-1',
-							path: 'name',
-							operation: 'lt',
-							value: 'test-1.9',
-							settings: {}
-						},
-						{
-							series: 'model-1',
-							path: 'title',
-							operation: '=',
-							value: 'title-1',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: 1,
+								settings: {}
+							},
+							{
+								series: 'model-1',
+								path: 'name',
+								operation: 'gt',
+								value: 'test-1.1',
+								settings: {}
+							},
+							{
+								series: 'model-1',
+								path: 'name',
+								operation: 'lt',
+								value: 'test-1.9',
+								settings: {}
+							},
+							{
+								series: 'model-1',
+								path: 'title',
+								operation: '=',
+								value: 'title-1',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -1341,16 +1389,22 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: '1',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: '1',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -1451,16 +1505,22 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: '1',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: '1',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -1565,16 +1625,22 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: '1',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: '1',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([
@@ -1656,16 +1722,22 @@ describe('src/services/crud.js', function () {
 							path: 'title'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'model-1',
-							path: 'id',
-							operation: '=',
-							value: '1',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: '1',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				return Promise.resolve([

@@ -312,15 +312,15 @@ function buildDeflate(baseDeflate, fields) {
 }
 
 // TODO: do I want to want to create a builder class?
-function buildParam(field, v, Class) {
+function buildParams(series, field, v, Class) {
 	if (v && typeof v === 'object') {
 		if (Array.isArray(v)) {
-			return new Class(field, v, '=');
+			return [new Class(series, field, v, '=')];
 		} else {
-			return Object.keys(v).map((op) => new Class(field, v[op], op));
+			return Object.keys(v).map((op) => new Class(series, field, v[op], op));
 		}
 	} else {
-		return new Class(field, v, '=');
+		return [new Class(series, field, v, '=')];
 	}
 }
 
@@ -348,7 +348,7 @@ function buildSorts(query, sorts) {
 			option = option.substr(1);
 		}
 
-		query.addSorts(base, [new QuerySort(option, pos, ascending)]);
+		query.addSort(new QuerySort(base, option, ascending));
 	});
 }
 
@@ -675,7 +675,7 @@ class Structure {
 				}
 
 				statement.addFilters(series, [
-					buildParam(path, param, StatementFilter)
+					buildParams(path, param, StatementFilter)
 				]);
 			});
 		}
@@ -734,7 +734,9 @@ class Structure {
 					path = field;
 				}
 
-				statement.addParams(series, [buildParam(path, param, StatementParam)]);
+				buildParams(series, path, param, StatementParam).map((param) =>
+					statement.addParam(param)
+				);
 			});
 		}
 	}
@@ -830,7 +832,7 @@ module.exports = {
 	buildActions,
 	buildInflate,
 	buildDeflate,
-	buildParam,
+	buildParams,
 	compareChanges,
 	addAccessorsToQuery,
 	Structure

@@ -1,10 +1,11 @@
-const {Statement, methods} = require('../statement.js');
+const {Statement, methods, reduceExpression} = require('../statement.js');
 
 class QueryStatement extends Statement {
 	constructor(baseSeries) {
 		super(baseSeries);
 
 		this.position = null;
+		this.sorts = [];
 
 		this.setMethod(methods.read);
 	}
@@ -14,19 +15,16 @@ class QueryStatement extends Statement {
 
 		if (!rtn.joins) {
 			rtn.joins = {};
-			rtn.sorts = [];
 			rtn.links = {};
 		}
 
 		return rtn;
 	}
 
-	addParams(series, params) {
-		if (params.length) {
-			this.hasParams = true;
-		}
+	addParam(param) {
+		this.hasParams = true;
 
-		return super.addParams(series, params);
+		return super.addParam(param);
 	}
 
 	addJoins(series, joins) {
@@ -49,8 +47,8 @@ class QueryStatement extends Statement {
 		return this;
 	}
 
-	addSorts(series, sorts) {
-		this.getSeries(series).sorts.push(...sorts.flat());
+	addSort(sort) {
+		this.sorts.push(sort);
 
 		return this;
 	}
@@ -58,12 +56,17 @@ class QueryStatement extends Statement {
 	importSeries(series, statement) {
 		const incoming = super.importSeries(series, statement);
 
-		this.addJoins(series, Object.values(incoming.joins)).addSorts(
-			series,
-			incoming.sorts
-		);
+		this.addJoins(series, Object.values(incoming.joins));
 
 		return incoming;
+	}
+
+	import(statement) {
+		super.import(statement);
+
+		statement.sorts.forEach((sort) => {
+			this.addSort(sort);
+		});
 	}
 
 	setPosition(position) {
@@ -77,14 +80,16 @@ class QueryStatement extends Statement {
 
 		// if a statement is used, which two different sources, I want the source
 		// with parameters to be run first.
-		if (this.hasParams && !this.models[this.base].params.length) {
+		const paramDex = reduceExpression(this.params);
+
+		if (this.hasParams && !paramDex[this.base]) {
 			const targetSource = this.models[this.base].model.incomingSettings.source;
 			let sameSource = false;
 			let betterSeries = null;
 
 			Object.keys(this.models).forEach((series) => {
 				const info = this.models[series];
-				if (info.params.length) {
+				if (paramDex[series]) {
 					if (info.model.incomingSettings.source === targetSource) {
 						sameSource = true;
 					} else if (!betterSeries) {
@@ -156,9 +161,7 @@ class QueryStatement extends Statement {
 	}
 
 	toJSON() {
-		let sorts = [];
-
-		const res = this.getInOrder().reduce(
+		const rtn = this.getInOrder().reduce(
 			(agg, model) => {
 				const series = model.series;
 
@@ -175,49 +178,27 @@ class QueryStatement extends Statement {
 					}))
 				);
 
-				// We separate the two, the thought is that filters are defined
-				// by the base query and params are added dynamically
-				agg.filters.push(
-					...model.filters.map((filter) => ({
-						series,
-						...filter
-					}))
-				);
-
-				agg.params.push(
-					...model.params.map((param) => ({
-						series,
-						...param
-					}))
-				);
-
-				sorts = sorts.concat(
-					model.sorts.map((sort) => ({
-						series,
-						...sort
-					}))
-				);
-
 				return agg;
 			},
 			{
 				method: 'read',
 				models: [],
 				fields: [],
-				filters: [],
-				params: []
+				filters: this.filters.toJSON(),
+				params: this.params.toJSON()
 			}
 		);
 
-		if (sorts.length) {
-			res.sorts = sorts.sort((a, b) => a.pos - b.pos);
+		// order does matter, order is set
+		if (this.sorts.length) {
+			rtn.sorts = this.sorts.map((sort) => sort.toJSON());
 		}
 
 		if (this.position) {
-			res.position = this.position;
+			rtn.position = this.position;
 		}
 
-		return res;
+		return rtn;
 	}
 }
 

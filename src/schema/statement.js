@@ -61,13 +61,13 @@ class Statement {
 	}
 
 	addFilter(filter) {
-		this.filters.addParam(filter);
+		this.filters.addExpressable(filter);
 
 		return this;
 	}
 
 	addParam(param) {
-		this.params.push(param);
+		this.params.addExpressable(param);
 
 		return this;
 	}
@@ -75,8 +75,7 @@ class Statement {
 	importSeries(series, statement) {
 		const incoming = statement.getSeries(series);
 
-		this.setModel(series, incoming.model)
-			.addFields(series, incoming.fields);
+		this.setModel(series, incoming.model).addFields(series, incoming.fields);
 
 		return incoming;
 	}
@@ -88,11 +87,11 @@ class Statement {
 			this.importSeries(series, statement);
 		});
 
-		statement.filters.forEach(filter => {
+		statement.filters.expressables.forEach((filter) => {
 			this.addFilter(filter);
 		});
 
-		statement.params.forEach(param => {
+		statement.params.expressables.forEach((param) => {
 			this.addParam(param);
 		});
 	}
@@ -135,7 +134,24 @@ class Statement {
 	}
 }
 
+function reduceExpression(expression, paramDex = {}) {
+	return expression.expressables.reduce((agg, exp) => {
+		if (exp instanceof Expression) {
+			reduceExpression(exp, agg);
+		} else {
+			if (agg[exp.series]) {
+				agg[exp.series]++;
+			} else {
+				agg[exp.series] = 1;
+			}
+		}
+
+		return agg;
+	}, paramDex);
+}
+
 module.exports = {
 	methods,
+	reduceExpression,
 	Statement
 };

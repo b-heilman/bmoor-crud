@@ -268,23 +268,29 @@ describe('src/schema/composite.js', function () {
 							path: 'test2Id'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							operation: '=',
-							path: 'doo',
-							series: 'test-3',
-							settings: {},
-							value: 5
-						},
-						{
-							operation: '=',
-							path: 'boom',
-							series: 'test-pivot',
-							settings: {},
-							value: true
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'doo',
+								series: 'test-3',
+								settings: {},
+								value: 5
+							},
+							{
+								operation: '=',
+								path: 'boom',
+								series: 'test-pivot',
+								settings: {},
+								value: true
+							}
+						]
+					}
 				});
 
 				const subs = lookup.subs;
@@ -343,8 +349,14 @@ describe('src/schema/composite.js', function () {
 							path: 'test2Id'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 
 				const subs = lookup.subs;
@@ -409,8 +421,14 @@ describe('src/schema/composite.js', function () {
 							path: 'id'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 		});
@@ -896,23 +914,29 @@ describe('src/schema/composite.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-1',
-						path: 'name',
-						operation: '=',
-						value: 'foo-bar',
-						settings: {}
-					},
-					{
-						series: 'test-3',
-						path: 'name',
-						operation: 'eq',
-						value: 'hello-world',
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-1',
+							path: 'name',
+							operation: '=',
+							value: 'foo-bar',
+							settings: {}
+						},
+						{
+							series: 'test-3',
+							path: 'name',
+							operation: 'eq',
+							value: 'hello-world',
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 
@@ -1017,8 +1041,14 @@ describe('src/schema/composite.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: []
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 		});
 
@@ -1132,30 +1162,36 @@ describe('src/schema/composite.js', function () {
 						path: 'title'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'creator',
-						path: 'id',
-						operation: '=',
-						value: 123,
-						settings: {}
-					},
-					{
-						series: 'junk',
-						path: 'foo',
-						operation: 'gt',
-						value: 456,
-						settings: {}
-					},
-					{
-						series: 'junk',
-						path: 'foo',
-						operation: 'lt',
-						value: 789,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'creator',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						},
+						{
+							series: 'junk',
+							path: 'foo',
+							operation: 'gt',
+							value: 456,
+							settings: {}
+						},
+						{
+							series: 'junk',
+							path: 'foo',
+							operation: 'lt',
+							value: 789,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
@@ -1313,16 +1349,22 @@ describe('src/schema/composite.js', function () {
 						path: 'id'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-1',
-						path: 'id',
-						operation: '=',
-						value: 1,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-1',
+							path: 'id',
+							operation: '=',
+							value: 1,
+							settings: {}
+						}
+					]
+				}
 			});
 
 			query = await lookup.getKeyQueryByModel('test-2', 2, {});
@@ -1359,16 +1401,22 @@ describe('src/schema/composite.js', function () {
 						path: 'id'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-2',
-						path: 'id',
-						operation: '=',
-						value: 2,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-2',
+							path: 'id',
+							operation: '=',
+							value: 2,
+							settings: {}
+						}
+					]
+				}
 			});
 
 			query = await lookup.getKeyQueryByModel('test-3', 3, {});
@@ -1421,16 +1469,22 @@ describe('src/schema/composite.js', function () {
 						path: 'id'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-3',
-						path: 'id',
-						operation: '=',
-						value: 3,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-3',
+							path: 'id',
+							operation: '=',
+							value: 3,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 
@@ -1499,23 +1553,29 @@ describe('src/schema/composite.js', function () {
 						path: 'id'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'owner',
-						path: 'id',
-						operation: '=',
-						value: 123,
-						settings: {}
-					},
-					{
-						series: 'creator',
-						path: 'id',
-						operation: '=',
-						value: 123,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'owner',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						},
+						{
+							series: 'creator',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
@@ -1634,16 +1694,22 @@ describe('src/schema/composite.js', function () {
 						as: 'key'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'sub',
-						path: 'id',
-						operation: '=',
-						value: 3,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'sub',
+							path: 'id',
+							operation: '=',
+							value: 3,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
@@ -1991,8 +2057,14 @@ describe('src/schema/composite.js', function () {
 							as: 'parent.name'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 
@@ -2088,8 +2160,14 @@ describe('src/schema/composite.js', function () {
 							as: 'stuff.extend.name'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 
@@ -2169,8 +2247,14 @@ describe('src/schema/composite.js', function () {
 							as: 'sub_0'
 						}
 					],
-					filters: [],
-					params: []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 		});

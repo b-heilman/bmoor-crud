@@ -597,16 +597,22 @@ describe('src/env/forge.js', function () {
 							{series: 'service-1', path: 'zwei', as: 'zwei'},
 							{series: 'service-1', path: 'drei', as: 'drei'}
 						],
-						filters: [],
-						params: [
-							{
-								series: 'service-1',
-								path: 'null',
-								operation: '=',
-								value: 1,
-								settings: {}
-							}
-						],
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'null',
+									operation: '=',
+									value: 1,
+									settings: {}
+								}
+							]
+						},
 						sourceName: 'test-1'
 					});
 
@@ -681,16 +687,22 @@ describe('src/env/forge.js', function () {
 								as: 'drei'
 							}
 						],
-						filters: [],
-						params: [
-							{
-								series: 'service-1',
-								path: 'eins',
-								operation: '=',
-								value: 1,
-								settings: {}
-							}
-						]
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'eins',
+									operation: '=',
+									value: 1,
+									settings: {}
+								}
+							]
+						}
 					});
 				});
 			});
@@ -781,37 +793,43 @@ describe('src/env/forge.js', function () {
 								as: 'drei'
 							}
 						],
-						filters: [],
-						params: [
-							{
-								series: 'service-1',
-								path: 'eins',
-								operation: '=',
-								settings: {},
-								value: 1
-							},
-							{
-								series: 'service-1',
-								path: 'zwei',
-								operation: '=',
-								settings: {},
-								value: 2
-							},
-							{
-								series: 'service-1',
-								path: 'drei',
-								operation: '=',
-								settings: {},
-								value: 3
-							},
-							{
-								series: 'service-1',
-								path: 'fier',
-								operation: '=',
-								settings: {},
-								value: 4
-							}
-						]
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'eins',
+									operation: '=',
+									settings: {},
+									value: 1
+								},
+								{
+									series: 'service-1',
+									path: 'zwei',
+									operation: '=',
+									settings: {},
+									value: 2
+								},
+								{
+									series: 'service-1',
+									path: 'drei',
+									operation: '=',
+									settings: {},
+									value: 3
+								},
+								{
+									series: 'service-1',
+									path: 'fier',
+									operation: '=',
+									settings: {},
+									value: 4
+								}
+							]
+						}
 					});
 				});
 			});
@@ -950,37 +968,43 @@ describe('src/env/forge.js', function () {
 								as: 'drei'
 							}
 						],
-						filters: [],
-						params: [
-							{
-								series: 'service-1',
-								path: 'eins',
-								operation: '=',
-								settings: {},
-								value: 1
-							},
-							{
-								series: 'service-1',
-								path: 'zwei',
-								operation: '=',
-								settings: {},
-								value: 2
-							},
-							{
-								series: 'service-1',
-								path: 'drei',
-								operation: '=',
-								settings: {},
-								value: 3
-							},
-							{
-								series: 'service-1',
-								path: 'fier',
-								operation: '=',
-								settings: {},
-								value: 4
-							}
-						]
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'eins',
+									operation: '=',
+									settings: {},
+									value: 1
+								},
+								{
+									series: 'service-1',
+									path: 'zwei',
+									operation: '=',
+									settings: {},
+									value: 2
+								},
+								{
+									series: 'service-1',
+									path: 'drei',
+									operation: '=',
+									settings: {},
+									value: 3
+								},
+								{
+									series: 'service-1',
+									path: 'fier',
+									operation: '=',
+									settings: {},
+									value: 4
+								}
+							]
+						}
 					});
 				});
 

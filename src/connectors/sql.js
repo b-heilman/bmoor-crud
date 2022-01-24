@@ -13,17 +13,23 @@ const scalarMethods = {
 	gte: '>='
 };
 
-function translateWhere(modelRef, exps, agg){
-	exps.forEach((exp) => {
-		if (exp instanceof Expression){
+function translateWhere(expression, agg) {
+	expression.expressables.forEach((exp) => {
+		if (exp instanceof Expression) {
 			const myCtx = {
 				where: [],
-				params: []
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			};
 
-			translateWhere(modelRef, exp.params, myCtx);
+			translateWhere(exp, myCtx);
 
-			const where = '('+myCtx.where.join(exp.joiner === joiners.and ? ' AND ': ' OR ')+')';
+			const where =
+				'(' +
+				myCtx.where.join(exp.joiner === joiners.and ? ' AND ' : ' OR ') +
+				')';
 
 			agg.where.push(where);
 			agg.params.push(...myCtx.params);
@@ -35,12 +41,12 @@ function translateWhere(modelRef, exps, agg){
 			if (Array.isArray(exp.value)) {
 				const comp = arrayMethods[op];
 
-				agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}(?)`);
+				agg.where.push(`\`${exp.series}\`.\`${path}\`${comp}(?)`);
 				agg.params.push(exp.value);
 			} else {
 				const comp = scalarMethods[op];
 
-				agg.where.push(`\`${modelRef}\`.\`${path}\`${comp}?`);
+				agg.where.push(`\`${exp.series}\`.\`${path}\`${comp}?`);
 				agg.params.push(exp.value);
 			}
 		}
@@ -48,8 +54,6 @@ function translateWhere(modelRef, exps, agg){
 }
 
 function translateSelect(query) {
-	const sorts = [];
-
 	const settings = query.getInOrder().reduce(
 		(agg, model) => {
 			const modelName = model.schema;
@@ -85,16 +89,6 @@ function translateSelect(query) {
 				agg.from.push(`\`${modelName}\` AS \`${modelRef}\``);
 			}
 
-			
-			translateWhere(modelRef, model.params, agg);
-
-			sorts.push(
-				...model.sorts.map((sort) => ({
-					series: modelRef,
-					...sort
-				}))
-			);
-
 			return agg;
 		},
 		{
@@ -104,6 +98,10 @@ function translateSelect(query) {
 			params: []
 		}
 	);
+
+	const params = translateWhere(query.params, settings);
+
+	const sorts = query.sorts;
 
 	const position = query.position;
 	return {

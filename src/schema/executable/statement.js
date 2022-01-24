@@ -58,7 +58,7 @@ class ExecutableStatement extends Statement {
 		} else if (this.method === methods.update) {
 			method = 'update';
 
-			if (!json.params.length) {
+			if (!json.params.expressables.length) {
 				throw new Error('update without a target');
 			}
 		} else if (this.method === methods.delete) {

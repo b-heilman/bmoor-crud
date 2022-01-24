@@ -1,32 +1,41 @@
-
 const joiners = {
 	and: Symbol('and'),
 	or: Symbol('or')
-}
+};
 
 class Expression {
-	constructor(joiner=joiners.and){
-		if (!joiners[joiner]){
-			throw new Error('unknown joiner');
-		}
-
-		this.joiner = joiner;
+	constructor() {
+		this.joiner = joiners.and;
 		this.expressables = [];
 	}
 
-	addExpressable(expressable){
+	setJoin(joiner) {
+		this.joiner = joiner;
+	}
+
+	addExpressable(expressable) {
 		this.expressables.push(expressable);
 	}
 
-	toJSON(){
+	clone() {
+		const rtn = new Expression();
+
+		rtn.setJoin(this.joiner);
+
+		rtn.expressables = this.expressables.slice(0);
+
+		return rtn;
+	}
+
+	toJSON() {
 		return {
 			join: this.joiner === joiners.and ? 'and' : 'or',
-			expressables: this.expressables.map(exp => exp.toJSON())
+			expressables: this.expressables.map((exp) => exp.toJSON())
 		};
 	}
 }
 
 module.exports = {
-	joiners
+	joiners,
 	Expression
 };

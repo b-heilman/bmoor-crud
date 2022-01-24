@@ -1,6 +1,6 @@
 const {expect} = require('chai');
 
-describe('src/interfaces/knex.js', function () {
+describe('src/connectors/sql.js', function () {
 	const sut = require('./sql.js');
 
 	const {QueryStatement} = require('../schema/query/statement.js');
@@ -17,7 +17,7 @@ describe('src/interfaces/knex.js', function () {
 					new StatementField('title'),
 					new StatementField('json')
 				])
-				.addParams('model-1', [new StatementParam('id', 123)]);
+				.addParam(new StatementParam('model-1', 'id', 123));
 
 			const res = sut.translateSelect(stmt);
 
@@ -108,20 +108,20 @@ describe('src/interfaces/knex.js', function () {
 		it('should translate a complex query', function () {
 			const stmt = new QueryStatement('test-item')
 				.setModel('test-item', {schema: 'foo-bar'})
-				.addFields('test-item', [new StatementField('name', 'test-item_0')])
-				.addParams('test-item', [new StatementParam('id', 1)])
-				.addFields('test-person', [new StatementField('name', 'test-person_1')])
-				.addParams('test-person', [new StatementParam('foo', 'bar')])
 				.addJoins('test-person', [
 					new QueryJoin('test-item', [{from: 'itemId', to: 'id'}])
 				])
+				.addJoins('test-category', [
+					new QueryJoin('test-item', [{from: 'itemId', to: 'id'}], true)
+				])
+				.addFields('test-item', [new StatementField('name', 'test-item_0')])
+				.addFields('test-person', [new StatementField('name', 'test-person_1')])
 				.addFields('test-category', [
 					new StatementField('name'),
 					new StatementField('fooId')
 				])
-				.addJoins('test-category', [
-					new QueryJoin('test-item', [{from: 'itemId', to: 'id'}], true)
-				]);
+				.addParam(new StatementParam('test-item', 'id', 1))
+				.addParam(new StatementParam('test-person', 'foo', 'bar'));
 
 			const res = sut.translateSelect(stmt);
 

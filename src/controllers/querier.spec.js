@@ -210,30 +210,36 @@ describe('src/controller/querier.js', function () {
 							path: 'name'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-user',
-							path: 'name',
-							operation: '~',
-							value: 'something%like',
-							settings: {}
-						},
-						{
-							series: 'test-user',
-							path: 'title',
-							operation: '~',
-							value: '%oye',
-							settings: {}
-						},
-						{
-							series: 'test-group',
-							path: 'name',
-							operation: '=',
-							value: 'woot',
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-user',
+								path: 'name',
+								operation: '~',
+								value: 'something%like',
+								settings: {}
+							},
+							{
+								series: 'test-user',
+								path: 'title',
+								operation: '~',
+								value: '%oye',
+								settings: {}
+							},
+							{
+								series: 'test-group',
+								path: 'name',
+								operation: '=',
+								value: 'woot',
+								settings: {}
+							}
+						]
+					}
 				});
 
 				expect(res).to.deep.equal([

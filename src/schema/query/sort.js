@@ -1,8 +1,16 @@
 class QuerySort {
-	constructor(path, pos, ascending = true) {
+	constructor(series, path, ascending = true) {
+		this.series = series;
 		this.path = path;
-		this.pos = pos;
 		this.ascending = ascending;
+	}
+
+	toJSON() {
+		return {
+			series: this.series,
+			path: this.path,
+			ascending: this.ascending
+		};
 	}
 }
 

@@ -2,7 +2,7 @@ const {implode} = require('bmoor/src/object.js');
 const {create, addTrace} = require('bmoor/src/lib/error.js');
 const {makeSetter} = require('bmoor/src/core.js');
 
-const {Structure, buildParam} = require('./structure.js');
+const {Structure, buildParams} = require('./structure.js');
 
 const {StatementParam} = require('./statement/param.js');
 const {StatementField} = require('./statement/field.js');
@@ -626,9 +626,12 @@ class Composite extends Structure {
 
 					query.setModel(compositeName, model);
 
-					query.addParams(compositeName, [
-						buildParam(model.getKeyField(), key, StatementParam)
-					]);
+					buildParams(
+						compositeName,
+						model.getKeyField(),
+						key,
+						StatementParam
+					).map((param) => query.addParam(param));
 				}
 
 				if (incoming) {
@@ -674,9 +677,9 @@ class Composite extends Structure {
 				query.setModel(series, model);
 
 				if (byModelName === modelName) {
-					query.addParams(series, [
-						buildParam(model.getKeyField(), key, StatementParam)
-					]);
+					buildParams(series, model.getKeyField(), key, StatementParam).map(
+						(param) => query.addParam(param)
+					);
 				}
 
 				if (incoming) {

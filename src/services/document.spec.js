@@ -403,16 +403,22 @@ describe('src/services/document.js', function () {
 						as: 'key'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-category',
-						path: 'id',
-						operation: '=',
-						value: 987,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-category',
+							path: 'id',
+							operation: '=',
+							value: 987,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 
@@ -450,16 +456,22 @@ describe('src/services/document.js', function () {
 						as: 'key'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						value: 987,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							value: 987,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 
@@ -498,8 +510,14 @@ describe('src/services/document.js', function () {
 						as: 'key'
 					}
 				],
-				filters: [],
-				params: []
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 		});
 	});
@@ -555,16 +573,22 @@ describe('src/services/document.js', function () {
 						as: 'key'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-composite-tag',
-						path: 'id',
-						operation: '=',
-						value: 987,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-composite-tag',
+							path: 'id',
+							operation: '=',
+							value: 987,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
@@ -660,16 +684,22 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						settings: {},
-						value: 1
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							settings: {},
+							value: 1
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal({
@@ -778,16 +808,22 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						settings: {},
-						value: 1
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							settings: {},
+							value: 1
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal({foo: 'bar'});
@@ -877,16 +913,22 @@ describe('src/services/document.js', function () {
 						path: 'json'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						settings: {},
-						value: 1
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							settings: {},
+							value: 1
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal({
@@ -988,16 +1030,22 @@ describe('src/services/document.js', function () {
 						path: 'json'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						settings: {},
-						value: 1
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							settings: {},
+							value: 1
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal({
@@ -1127,16 +1175,22 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						settings: {},
-						value: 1
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							settings: {},
+							value: 1
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal({
@@ -1239,8 +1293,14 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: []
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 
 			expect(res).to.deep.equal([
@@ -1344,16 +1404,22 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						settings: {},
-						value: [1, 2, 3]
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							settings: {},
+							value: [1, 2, 3]
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal([
@@ -1457,8 +1523,14 @@ describe('src/services/document.js', function () {
 						as: 'categoryName'
 					}
 				],
-				filters: [],
-				params: []
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 
 			const args2 = stubs.execute.getCall(1).args[0];
@@ -1485,23 +1557,29 @@ describe('src/services/document.js', function () {
 						as: 'mask'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item-material',
-						path: 'tag',
-						operation: '=',
-						settings: {},
-						value: 'foo-bar'
-					},
-					{
-						series: 'test-item-material',
-						path: 'itemId',
-						operation: '=',
-						settings: {},
-						value: 123
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item-material',
+							path: 'tag',
+							operation: '=',
+							settings: {},
+							value: 'foo-bar'
+						},
+						{
+							series: 'test-item-material',
+							path: 'itemId',
+							operation: '=',
+							settings: {},
+							value: 123
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal([
@@ -1612,8 +1690,14 @@ describe('src/services/document.js', function () {
 						as: 'categoryName'
 					}
 				],
-				filters: [],
-				params: []
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 
 			const args2 = stubs.execute.getCall(1).args[0];
@@ -1651,16 +1735,22 @@ describe('src/services/document.js', function () {
 						as: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item-material',
-						path: 'itemId',
-						operation: '=',
-						settings: {},
-						value: 123
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item-material',
+							path: 'itemId',
+							operation: '=',
+							settings: {},
+							value: 123
+						}
+					]
+				}
 			});
 
 			const args3 = stubs.execute.getCall(2).args[0];
@@ -1698,16 +1788,22 @@ describe('src/services/document.js', function () {
 						as: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item-material',
-						path: 'itemId',
-						operation: '=',
-						settings: {},
-						value: 456
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item-material',
+							path: 'itemId',
+							operation: '=',
+							settings: {},
+							value: 456
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal([
@@ -1861,46 +1957,49 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'name',
-						operation: '~',
-						value: '%foo%',
-						settings: {}
-					},
-					{
-						series: 'test-category',
-						path: 'name',
-						operation: '=',
-						value: 'ok',
-						settings: {}
-					},
-					{
-						series: 'test-material',
-						path: 'name',
-						operation: '=',
-						value: 'hello',
-						settings: {}
-					}
-				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'name',
+							operation: '~',
+							value: '%foo%',
+							settings: {}
+						},
+						{
+							series: 'test-category',
+							path: 'name',
+							operation: '=',
+							value: 'ok',
+							settings: {}
+						},
+						{
+							series: 'test-material',
+							path: 'name',
+							operation: '=',
+							value: 'hello',
+							settings: {}
+						}
+					]
+				},
 				sorts: [
 					{
 						series: 'test-item',
-						pos: 0,
 						path: 'name',
 						ascending: true
 					},
 					{
 						series: 'test-category',
-						pos: 1,
 						path: 'name',
 						ascending: false
 					},
 					{
 						series: 'test-person',
-						pos: 2,
 						path: 'name',
 						ascending: true
 					}
@@ -2170,16 +2269,22 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-user',
-						path: 'name',
-						operation: '=',
-						settings: {},
-						value: 'shoup'
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-user',
+							path: 'name',
+							operation: '=',
+							settings: {},
+							value: 'shoup'
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal([
@@ -2267,23 +2372,29 @@ describe('src/services/document.js', function () {
 						path: 'name'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-category',
-						path: 'foo',
-						operation: '=',
-						settings: {},
-						value: 'bar'
-					},
-					{
-						series: 'test-category',
-						path: 'name',
-						operation: '=',
-						settings: {},
-						value: 'foo-bar'
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-category',
+							path: 'foo',
+							operation: '=',
+							settings: {},
+							value: 'bar'
+						},
+						{
+							series: 'test-category',
+							path: 'name',
+							operation: '=',
+							settings: {},
+							value: 'foo-bar'
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal([
@@ -4424,8 +4535,14 @@ describe('src/services/document.js', function () {
 					{series: 'test-team', path: 'name', as: 'name'},
 					{series: 'test-team', path: 'ownerId', as: 'exe_0'}
 				],
-				filters: [],
-				params: [],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				},
 				sourceName: 'test-2'
 			});
 
@@ -4434,16 +4551,22 @@ describe('src/services/document.js', function () {
 				method: 'read',
 				models: [{series: 'test-user', schema: 'test-user', joins: []}],
 				fields: [{series: 'test-user', path: 'name', as: 'owner'}],
-				filters: [],
-				params: [
-					{
-						series: 'test-user',
-						path: 'id',
-						operation: '=',
-						value: 'u-1',
-						settings: {}
-					}
-				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-user',
+							path: 'id',
+							operation: '=',
+							value: 'u-1',
+							settings: {}
+						}
+					]
+				},
 				sourceName: 'test-1'
 			});
 
@@ -4454,16 +4577,22 @@ describe('src/services/document.js', function () {
 					{series: 'test-team-user', schema: 'test-team-user', joins: []}
 				],
 				fields: [{series: 'test-team-user', path: 'userId', as: 'exe_0'}],
-				filters: [],
-				params: [
-					{
-						series: 'test-team-user',
-						path: 'teamId',
-						operation: '=',
-						value: 't-1',
-						settings: {}
-					}
-				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-team-user',
+							path: 'teamId',
+							operation: '=',
+							value: 't-1',
+							settings: {}
+						}
+					]
+				},
 				sourceName: 'test-2'
 			});
 
@@ -4472,16 +4601,22 @@ describe('src/services/document.js', function () {
 				method: 'read',
 				models: [{series: 'test-user', schema: 'test-user', joins: []}],
 				fields: [{series: 'test-user', path: 'name', as: 'name'}],
-				filters: [],
-				params: [
-					{
-						series: 'test-user',
-						path: 'id',
-						operation: '=',
-						value: 'u-1',
-						settings: {}
-					}
-				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-user',
+							path: 'id',
+							operation: '=',
+							value: 'u-1',
+							settings: {}
+						}
+					]
+				},
 				sourceName: 'test-1'
 			});
 
@@ -4490,16 +4625,22 @@ describe('src/services/document.js', function () {
 				method: 'read',
 				models: [{series: 'test-user', schema: 'test-user', joins: []}],
 				fields: [{series: 'test-user', path: 'name', as: 'name'}],
-				filters: [],
-				params: [
-					{
-						series: 'test-user',
-						path: 'id',
-						operation: '=',
-						value: 'u-2',
-						settings: {}
-					}
-				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-user',
+							path: 'id',
+							operation: '=',
+							value: 'u-2',
+							settings: {}
+						}
+					]
+				},
 				sourceName: 'test-1'
 			});
 

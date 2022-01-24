@@ -158,16 +158,22 @@ describe('src/controller/guard.js', function () {
 								series: 'service-1'
 							}
 						],
-						filters: [],
-						params: [
-							{
-								series: 'service-1',
-								path: 'zwei',
-								operation: '=',
-								value: 'foo',
-								settings: {}
-							}
-						]
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'zwei',
+									operation: '=',
+									value: 'foo',
+									settings: {}
+								}
+							]
+						}
 					});
 				});
 

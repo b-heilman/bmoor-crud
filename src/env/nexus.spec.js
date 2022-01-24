@@ -1248,16 +1248,22 @@ describe('src/env/nexus.js', function () {
 						as: 'categoryName'
 					}
 				],
-				filters: [],
-				params: [
-					{
-						series: 'test-item',
-						path: 'id',
-						operation: '=',
-						value: 1,
-						settings: {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-item',
+							path: 'id',
+							operation: '=',
+							value: 1,
+							settings: {}
+						}
+					]
+				}
 			});
 
 			expect(res).to.deep.equal({
@@ -1517,16 +1523,22 @@ describe('src/env/nexus.js', function () {
 							as: 'sub_0'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-item',
-							path: 'id',
-							operation: '=',
-							value: 1,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-item',
+								path: 'id',
+								operation: '=',
+								value: 1,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				const args20 = stubs.doc2.getCall(0).args[0];
@@ -1581,16 +1593,22 @@ describe('src/env/nexus.js', function () {
 							as: 'barName'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-2-foo',
-							path: 'id',
-							operation: '=',
-							value: 456,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-2-foo',
+								path: 'id',
+								operation: '=',
+								value: 456,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				expect(stubs.doc1.getCall(0).args[0]).to.deep.equal({
@@ -1639,16 +1657,22 @@ describe('src/env/nexus.js', function () {
 							as: 'world.name'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-3-hello',
-							path: 'fooId',
-							operation: '=',
-							value: 123,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-3-hello',
+								path: 'fooId',
+								operation: '=',
+								value: 123,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				expect(res).to.deep.equal({
@@ -1778,16 +1802,22 @@ describe('src/env/nexus.js', function () {
 							as: 'sub_0'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-item',
-							path: 'id',
-							operation: '=',
-							value: 1,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-item',
+								path: 'id',
+								operation: '=',
+								value: 1,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				const args2 = stubs.execute.getCall(1).args[0];
@@ -1845,16 +1875,22 @@ describe('src/env/nexus.js', function () {
 							as: 'world.name'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-2-foo',
-							path: 'id',
-							operation: '=',
-							value: 456,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-2-foo',
+								path: 'id',
+								operation: '=',
+								value: 456,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				expect(stubs.doc1.getCall(0).args[0]).to.deep.equal({
@@ -2010,16 +2046,22 @@ describe('src/env/nexus.js', function () {
 							as: 'categoryName'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-item',
-							path: 'id',
-							operation: '=',
-							value: 1,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-item',
+								path: 'id',
+								operation: '=',
+								value: 1,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				const args2 = stubs.execute.getCall(1).args[0];
@@ -2087,16 +2129,22 @@ describe('src/env/nexus.js', function () {
 							as: 'sub_0'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-item',
-							path: 'id',
-							operation: '=',
-							value: 789,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-item',
+								path: 'id',
+								operation: '=',
+								value: 789,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				const args3 = stubs.execute.getCall(2).args[0];
@@ -2154,16 +2202,22 @@ describe('src/env/nexus.js', function () {
 							as: 'world.name'
 						}
 					],
-					filters: [],
-					params: [
-						{
-							series: 'test-2-foo',
-							path: 'id',
-							operation: '=',
-							value: 456,
-							settings: {}
-						}
-					]
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'test-2-foo',
+								path: 'id',
+								operation: '=',
+								value: 456,
+								settings: {}
+							}
+						]
+					}
 				});
 
 				expect(stubs.doc1.getCall(0).args[0]).to.deep.equal({

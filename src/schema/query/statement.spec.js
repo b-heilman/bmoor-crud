@@ -148,17 +148,17 @@ describe('src/schema/query.js', function () {
 			query.addFields('b', [new StatementField('foo.bar', 'test')]);
 			query.addFields('c', [new StatementField('eins', 'zwei')]);
 
-			query.addParams('a', [new StatementParam('param1', 123)]);
-			query.addParams('b', [new StatementParam('param2', '456')]);
-			query.addParams('c', [new StatementParam('param3', [1, 2], '=')]);
+			query.addFilter(new StatementFilter('a', 'param1', 123));
+			query.addFilter(new StatementFilter('b', 'param2', '456'));
+			query.addFilter(new StatementFilter('c', 'param3', [1, 2], '='));
 
-			query.addFilters('a', [new StatementFilter('param1', 123)]);
-			query.addFilters('b', [new StatementFilter('param2', '456')]);
-			query.addFilters('c', [new StatementFilter('param3', [1, 2], '=')]);
+			query.addParam(new StatementParam('a', 'param1', 123));
+			query.addParam(new StatementParam('b', 'param2', '456'));
+			query.addParam(new StatementParam('c', 'param3', [1, 2], '='));
 
-			query.addSorts('a', [new QuerySort('unos', 1)]);
-			query.addSorts('b', [new QuerySort('tres', 3, false)]);
-			query.addSorts('c', [new QuerySort('dos', 2, true)]);
+			query.addSort(new QuerySort('a', 'unos'));
+			query.addSort(new QuerySort('c', 'dos', true));
+			query.addSort(new QuerySort('b', 'tres', false));
 
 			expect(query.toJSON()).to.deep.equal({
 				method: 'read',
@@ -218,69 +218,72 @@ describe('src/schema/query.js', function () {
 						as: 'zwei'
 					}
 				],
-				filters: [
-					{
-						series: 'a',
-						path: 'param1',
-						operation: '=',
-						value: 123,
-						settings: {}
-					},
-					{
-						series: 'b',
-						path: 'param2',
-						operation: '=',
-						value: '456',
-						settings: {}
-					},
-					{
-						series: 'c',
-						path: 'param3',
-						operation: '=',
-						value: [1, 2],
-						settings: {}
-					}
-				],
-				params: [
-					{
-						series: 'a',
-						path: 'param1',
-						operation: '=',
-						value: 123,
-						settings: {}
-					},
-					{
-						series: 'b',
-						path: 'param2',
-						operation: '=',
-						value: '456',
-						settings: {}
-					},
-					{
-						series: 'c',
-						path: 'param3',
-						operation: '=',
-						value: [1, 2],
-						settings: {}
-					}
-				],
+				filters: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'a',
+							path: 'param1',
+							operation: '=',
+							value: 123,
+							settings: {}
+						},
+						{
+							series: 'b',
+							path: 'param2',
+							operation: '=',
+							value: '456',
+							settings: {}
+						},
+						{
+							series: 'c',
+							path: 'param3',
+							operation: '=',
+							value: [1, 2],
+							settings: {}
+						}
+					]
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'a',
+							path: 'param1',
+							operation: '=',
+							value: 123,
+							settings: {}
+						},
+						{
+							series: 'b',
+							path: 'param2',
+							operation: '=',
+							value: '456',
+							settings: {}
+						},
+						{
+							series: 'c',
+							path: 'param3',
+							operation: '=',
+							value: [1, 2],
+							settings: {}
+						}
+					]
+				},
 				sorts: [
 					{
-						path: 'unos',
-						pos: 1,
 						series: 'a',
+						path: 'unos',
 						ascending: true
 					},
 					{
-						path: 'dos',
-						pos: 2,
 						series: 'c',
+						path: 'dos',
 						ascending: true
 					},
 					{
-						path: 'tres',
-						pos: 3,
 						series: 'b',
+						path: 'tres',
 						ascending: false
 					}
 				]
@@ -341,8 +344,14 @@ describe('src/schema/query.js', function () {
 					}
 				],
 				fields: [],
-				filters: [],
-				params: []
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 		});
 	});

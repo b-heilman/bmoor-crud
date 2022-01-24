@@ -63,13 +63,10 @@ async function processDatum(querier, settings, stmts, datum, ctx) {
 
 			// TODO: process the externals
 			stmt.externals.forEach(({name, mappings}) =>
-				queriable.addParams(
-					name,
-					mappings.map((mapping) => {
-						const val = datum[mapping.from];
-
-						return new StatementParam(mapping.to, val, '=');
-					})
+				mappings.map((mapping) =>
+					queriable.addParam(
+						new StatementParam(name, mapping.to, datum[mapping.from], '=')
+					)
 				)
 			);
 
@@ -97,118 +94,120 @@ class Querier {
 		this.name = name;
 
 		const sourceMemory = {};
-		/* series 
-		{
-			series,
-			schema: series,
-			fields: [],
-			params: [],
-			joins: {},
-			sorts: [],
-			links: {}
-		}
-		*/
+
 		let tempCount = 0;
-		this.statements = Object.values(
-			query.getInOrder().reduce((agg, info) => {
-				const series = info.series;
-				const sourceName = info.model.incomingSettings.source;
 
-				sourceMemory[series] = sourceName;
-				// The thing I know is series always join left here.  So
-				// I am able to figure out of the join is internal or external
-				let order = 0;
-				const joins = Object.values(info.joins).reduce(
-					(joins, join) => {
-						const otherSeries = join.name;
-						const otherSource = sourceMemory[otherSeries];
-						const other = agg[otherSource];
+		const sourceDex = query.getInOrder().reduce((agg, info) => {
+			const series = info.series;
+			const sourceName = info.model.incomingSettings.source;
 
-						// if the other series uses the same source...
-						if (otherSource === sourceName) {
-							joins.internal.push(join);
-						} else {
-							const otherOrder = other.order;
-							if (order <= otherOrder) {
-								order = otherOrder + 1;
-							}
+			sourceMemory[series] = sourceName;
+			// The thing I know is series always join left here.  So
+			// I am able to figure out of the join is internal or external
+			let order = 0;
+			const joins = Object.values(info.joins).reduce(
+				(joins, join) => {
+					const otherSeries = join.name;
+					const otherSource = sourceMemory[otherSeries];
+					const other = agg[otherSource];
 
-							const mappings = join.mappings.map((mapping) => {
-								// We need to check to see if the joining field has been added to the
-								// query.  If not, it has to be added to the other query so we can
-								// reference it here.
-								let temp = false;
-								let fieldAs = other.queriable.getField(join.name, mapping.to);
-
-								if (!fieldAs) {
-									fieldAs = other.queriable.addTempField(
-										join.name,
-										'exe_' + tempCount++,
-										mapping.to
-									);
-									temp = true;
-								}
-
-								return {
-									from: fieldAs,
-									to: mapping.from,
-									temp
-								};
-							});
-
-							joins.external.push({
-								name: series,
-								mappings
-							});
+					// if the other series uses the same source...
+					if (otherSource === sourceName) {
+						joins.internal.push(join);
+					} else {
+						const otherOrder = other.order;
+						if (order <= otherOrder) {
+							order = otherOrder + 1;
 						}
 
-						return joins;
-					},
-					{
-						internal: [],
-						external: []
+						const mappings = join.mappings.map((mapping) => {
+							// We need to check to see if the joining field has been added to the
+							// query.  If not, it has to be added to the other query so we can
+							// reference it here.
+							let temp = false;
+							let fieldAs = other.queriable.getField(join.name, mapping.to);
+
+							if (!fieldAs) {
+								fieldAs = other.queriable.addTempField(
+									join.name,
+									'exe_' + tempCount++,
+									mapping.to
+								);
+								temp = true;
+							}
+
+							return {
+								from: fieldAs,
+								to: mapping.from,
+								temp
+							};
+						});
+
+						joins.external.push({
+							name: series,
+							mappings
+						});
 					}
+
+					return joins;
+				},
+				{
+					internal: [],
+					external: []
+				}
+			);
+
+			let queriable = null;
+			let statement = agg[sourceName];
+			if (statement) {
+				queriable = statement.queriable;
+			} else {
+				// these should all be in order, so the first series should be the
+				// base series
+				queriable = new Queriable(
+					'fragment-' + Object.keys(agg).length,
+					series
 				);
 
-				let queriable = null;
-				let statement = agg[sourceName];
-				if (statement) {
-					queriable = statement.queriable;
-				} else {
-					// these should all be in order, so the first series should be the
-					// base series
-					queriable = new Queriable(
-						'fragment-' + Object.keys(agg).length,
-						series
-					);
+				statement = {
+					queriable,
+					externals: [],
+					order
+				};
+				agg[sourceName] = statement;
+			}
 
-					statement = {
-						queriable,
-						externals: [],
-						order
-					};
-					agg[sourceName] = statement;
-				}
+			queriable.setModel(series, info.model);
 
-				queriable.setModel(series, info.model);
+			joins.external.forEach((join) => {
+				statement.externals.push(join);
+			});
 
-				joins.external.forEach((join) => {
-					statement.externals.push(join);
-				});
+			queriable.addJoins(series, joins.internal);
 
-				queriable.addJoins(series, joins.internal);
+			queriable.addFields(series, info.fields);
 
-				queriable.addFields(series, info.fields);
+			return agg;
+		}, {});
 
-				queriable.addFilters(series, info.filters);
+		// TODO: I still need to solve for expression
+		// TODO: consolidate filter and param to be variable, but use those
+		//   properties still in statement
+		query.filters.expressables.forEach((filter) => {
+			sourceDex[sourceMemory[filter.series]].queriable.addFilter(filter);
+		});
 
-				queriable.addParams(series, info.params);
+		query.params.expressables.forEach((param) => {
+			sourceDex[sourceMemory[param.series]].queriable.addParam(param);
+		});
 
-				queriable.addSorts(series, info.sorts);
+		// incoming sorts are in order, so it's expected the order will
+		// be maintained when passed to sub queries this way
+		query.sorts.forEach((sort) => {
+			sourceDex[sourceMemory[sort.series]].queriable.addSort(sort);
+		});
 
-				return agg;
-			}, {})
-		);
+		this.statements = Object.values(sourceDex);
 
 		if (this.position) {
 			// first source should always be the root

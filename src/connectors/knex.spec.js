@@ -1,7 +1,7 @@
 const sinon = require('sinon');
 const {expect} = require('chai');
 
-describe('src/interfaces/knex.js', function () {
+describe('src/connectors/knex.js', function () {
 	const sut = require('./knex.js');
 
 	const {QueryStatement} = require('../schema/query/statement.js');
@@ -30,11 +30,9 @@ describe('src/interfaces/knex.js', function () {
 					new StatementField('id'),
 					new StatementField('name')
 				])
-				.addParams('model-1', [new StatementParam('id', 123)])
-				.addSorts('model-1', [
-					new QuerySort('world', 2, false),
-					new QuerySort('bar', 1, true)
-				]);
+				.addParam(new StatementParam('model-1', 'id', 123))
+				.addSort(new QuerySort('model-1', 'bar', true))
+				.addSort(new QuerySort('model-1', 'world', false));
 
 			await sut.connector.execute(stmt);
 
@@ -56,7 +54,7 @@ describe('src/interfaces/knex.js', function () {
 					new StatementField('id'),
 					new StatementField('name')
 				])
-				.addParams('model-1', [new StatementParam('id', 123)])
+				.addParam(new StatementParam('model-1', 'id', 123))
 				.setPosition(new QueryPosition(0, 10));
 
 			await sut.connector.execute(stmt);
@@ -76,12 +74,12 @@ describe('src/interfaces/knex.js', function () {
 					new StatementField('id'),
 					new StatementField('name')
 				])
-				.addParams('model-1', [new StatementParam('id', 123)])
+				.addParam(new StatementParam('model-1', 'id', 123))
 				.addJoins('model-2', [
 					new QueryJoin('model-1', [{from: 'model1Id', to: 'id'}])
 				])
-				.addSorts('model-1', [new QuerySort('bar', 1, true)])
-				.addSorts('model-2', [new QuerySort('world', 2, false)])
+				.addSort(new QuerySort('model-1', 'bar', true))
+				.addSort(new QuerySort('model-2', 'world', false))
 				.setPosition(new QueryPosition(0, 10));
 
 			await sut.connector.execute(stmt);

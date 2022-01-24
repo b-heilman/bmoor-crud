@@ -14,7 +14,7 @@ class StatementParam {
 		this.settings = settings;
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			series: this.series,
 			path: this.path,
