@@ -1,4 +1,4 @@
-class StatementParam {
+class StatementVariable {
 	/***
 	 * values
 	 * op
@@ -26,5 +26,5 @@ class StatementParam {
 }
 
 module.exports = {
-	StatementParam
+	StatementVariable
 };

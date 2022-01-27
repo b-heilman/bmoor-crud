@@ -4,7 +4,7 @@ describe('src/connectors/sql.js', function () {
 	const sut = require('./sql.js');
 
 	const {QueryStatement} = require('../schema/query/statement.js');
-	const {StatementParam} = require('../schema/statement/param.js');
+	const {StatementVariable} = require('../schema/statement/variable.js');
 	const {StatementField} = require('../schema/statement/field.js');
 	const {QueryJoin} = require('../schema/query/join.js');
 
@@ -17,7 +17,7 @@ describe('src/connectors/sql.js', function () {
 					new StatementField('title'),
 					new StatementField('json')
 				])
-				.addParam(new StatementParam('model-1', 'id', 123));
+				.addParam(new StatementVariable('model-1', 'id', 123));
 
 			const res = sut.translateSelect(stmt);
 
@@ -120,8 +120,8 @@ describe('src/connectors/sql.js', function () {
 					new StatementField('name'),
 					new StatementField('fooId')
 				])
-				.addParam(new StatementParam('test-item', 'id', 1))
-				.addParam(new StatementParam('test-person', 'foo', 'bar'));
+				.addParam(new StatementVariable('test-item', 'id', 1))
+				.addParam(new StatementVariable('test-person', 'foo', 'bar'));
 
 			const res = sut.translateSelect(stmt);
 

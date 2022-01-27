@@ -1,4 +1,4 @@
-const {Expression, joiners} = require('../schema/statement/expression.js');
+const {StatementExpression, joiners} = require('../schema/statement/expression.js');
 
 const arrayMethods = {
 	'=': 'IN'
@@ -15,7 +15,7 @@ const scalarMethods = {
 
 function translateWhere(expression, agg) {
 	expression.expressables.forEach((exp) => {
-		if (exp instanceof Expression) {
+		if (exp instanceof StatementExpression) {
 			const myCtx = {
 				where: [],
 				params: {
@@ -99,7 +99,7 @@ function translateSelect(query) {
 		}
 	);
 
-	const params = translateWhere(query.params, settings);
+	translateWhere(query.params, settings);
 
 	const sorts = query.sorts;
 

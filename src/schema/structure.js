@@ -5,8 +5,7 @@ const {apply, create} = require('bmoor/src/lib/error.js');
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
 const {StatementField} = require('./statement/field.js');
-const {StatementFilter} = require('./statement/filter.js');
-const {StatementParam} = require('./statement/param.js');
+const {StatementVariable} = require('./statement/variable.js');
 const {QueryJoin} = require('./query/join.js');
 const {QuerySort} = require('./query/sort.js');
 const {QueryPosition} = require('./query/position.js');
@@ -325,7 +324,7 @@ function buildParams(series, field, v, Class) {
 }
 
 function buildSorts(query, sorts) {
-	sorts.split(',').map((option, pos) => {
+	sorts.split(',').map((option) => {
 		option = option.trimStart();
 
 		let ascending = true;
@@ -675,7 +674,7 @@ class Structure {
 				}
 
 				statement.addFilters(series, [
-					buildParams(path, param, StatementFilter)
+					buildParams(path, param, StatementVariable)
 				]);
 			});
 		}
@@ -734,7 +733,7 @@ class Structure {
 					path = field;
 				}
 
-				buildParams(series, path, param, StatementParam).map((param) =>
+				buildParams(series, path, param, StatementVariable).map((param) =>
 					statement.addParam(param)
 				);
 			});

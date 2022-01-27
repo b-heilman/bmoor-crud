@@ -2,9 +2,9 @@ const {expect} = require('chai');
 
 const sut = require('./statement.js');
 
-const {StatementFilter} = require('../statement/filter.js');
-const {StatementParam} = require('../statement/param.js');
+const {StatementVariable} = require('../statement/variable.js');
 const {StatementField} = require('../statement/field.js');
+const {StatementExpression, joiners} = require('../statement/expression.js');
 const {QueryJoin} = require('./join.js');
 const {QuerySort} = require('./sort.js');
 
@@ -148,13 +148,13 @@ describe('src/schema/query.js', function () {
 			query.addFields('b', [new StatementField('foo.bar', 'test')]);
 			query.addFields('c', [new StatementField('eins', 'zwei')]);
 
-			query.addFilter(new StatementFilter('a', 'param1', 123));
-			query.addFilter(new StatementFilter('b', 'param2', '456'));
-			query.addFilter(new StatementFilter('c', 'param3', [1, 2], '='));
+			query.addFilter(new StatementVariable('a', 'param1', 123));
+			query.addFilter(new StatementVariable('b', 'param2', '456'));
+			query.addFilter(new StatementVariable('c', 'param3', [1, 2], '='));
 
-			query.addParam(new StatementParam('a', 'param1', 123));
-			query.addParam(new StatementParam('b', 'param2', '456'));
-			query.addParam(new StatementParam('c', 'param3', [1, 2], '='));
+			query.addParam(new StatementVariable('a', 'param1', 123));
+			query.addParam(new StatementVariable('b', 'param2', '456'));
+			query.addParam(new StatementVariable('c', 'param3', [1, 2], '='));
 
 			query.addSort(new QuerySort('a', 'unos'));
 			query.addSort(new QuerySort('c', 'dos', true));
@@ -297,6 +297,17 @@ describe('src/schema/query.js', function () {
 			query.setModel('c', {schema: 'schemaC'});
 			query.setModel('b', {schema: 'schemaB'});
 
+			const expression1 = new StatementExpression();
+			expression1.addExpressable(new StatementVariable('a', 'param1', 100, 'gt'));
+			expression1.addExpressable(new StatementVariable('a', 'param1', 125, 'lt'));
+			query.addFilter(expression1);
+
+			const expression2 = new StatementExpression();
+			expression2.addExpressable(new StatementVariable('b', 'param2', 200));
+			expression2.addExpressable(new StatementVariable('b', 'param3', 300));
+			expression2.setJoin(joiners.or);
+			query.addParam(expression2);
+
 			query.addJoins('b', [
 				new QueryJoin('a', [{from: 'aId', to: 'id'}]),
 				new QueryJoin('c', [{from: 'cId', to: 'id'}])
@@ -345,11 +356,41 @@ describe('src/schema/query.js', function () {
 				],
 				fields: [],
 				filters: {
-					expressables: [],
+					expressables: [{
+						expressables: [{
+							series: 'a',
+							path: 'param1',
+							operation: 'gt',
+							value: 100,
+							settings: {}
+						},{
+							series: 'a',
+							path: 'param1',
+							operation: 'lt',
+							value: 125,
+							settings: {}
+						}],
+						join: 'and'
+					}],
 					join: 'and'
 				},
 				params: {
-					expressables: [],
+					expressables: [{
+						expressables: [{
+							series: 'b',
+							path: 'param2',
+							operation: '=',
+							value: 200,
+							settings: {}
+						},{
+							series: 'b',
+							path: 'param3',
+							operation: '=',
+							value: 300,
+							settings: {}
+						}],
+						join: 'or'
+					}],
 					join: 'and'
 				}
 			});

@@ -4,7 +4,7 @@ const {makeSetter} = require('bmoor/src/core.js');
 
 const {Structure, buildParams} = require('./structure.js');
 
-const {StatementParam} = require('./statement/param.js');
+const {StatementVariable} = require('./statement/variable.js');
 const {StatementField} = require('./statement/field.js');
 const {QueryJoin} = require('./query/join.js');
 const {QueryStatement} = require('./query/statement.js');
@@ -630,7 +630,7 @@ class Composite extends Structure {
 						compositeName,
 						model.getKeyField(),
 						key,
-						StatementParam
+						StatementVariable
 					).map((param) => query.addParam(param));
 				}
 
@@ -677,7 +677,7 @@ class Composite extends Structure {
 				query.setModel(series, model);
 
 				if (byModelName === modelName) {
-					buildParams(series, model.getKeyField(), key, StatementParam).map(
+					buildParams(series, model.getKeyField(), key, StatementVariable).map(
 						(param) => query.addParam(param)
 					);
 				}

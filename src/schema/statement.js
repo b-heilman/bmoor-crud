@@ -1,4 +1,4 @@
-const {Expression} = require('./statement/expression.js');
+const {StatementExpression} = require('./statement/expression.js');
 
 const methods = {
 	create: Symbol('create'),
@@ -11,8 +11,8 @@ class Statement {
 	constructor(baseSeries) {
 		this.base = baseSeries;
 		this.models = {};
-		this.filters = new Expression();
-		this.params = new Expression();
+		this.filters = new StatementExpression();
+		this.params = new StatementExpression();
 
 		this.getSeries(baseSeries);
 	}
@@ -136,7 +136,7 @@ class Statement {
 
 function reduceExpression(expression, paramDex = {}) {
 	return expression.expressables.reduce((agg, exp) => {
-		if (exp instanceof Expression) {
+		if (exp instanceof StatementExpression) {
 			reduceExpression(exp, agg);
 		} else {
 			if (agg[exp.series]) {

@@ -7,8 +7,7 @@ const {Cache} = require('../server/cache.js');
 const {Context} = require('../server/context.js');
 
 const {StatementField} = require('../schema/statement/field.js');
-const {StatementFilter} = require('../schema/statement/filter.js');
-const {StatementParam} = require('../schema/statement/param.js');
+const {StatementVariable} = require('../schema/statement/variable.js');
 
 const {QueryJoin} = require('../schema/query/join.js');
 const {QuerySort} = require('../schema/query/sort.js');
@@ -271,7 +270,7 @@ describe('src/schema/services/querier.js', function () {
 
 			query.addJoins('a-b', [new QueryJoin('b', [{from: 'bId', to: 'id'}])]);
 
-			query.addParam(new StatementParam('a-b', 'aId', 567));
+			query.addParam(new StatementVariable('a-b', 'aId', 567));
 
 			stubs.execute.a.onCall(0).resolves([
 				{
@@ -418,7 +417,7 @@ describe('src/schema/services/querier.js', function () {
 
 			query.addJoins('a-b', [new QueryJoin('b', [{from: 'bId', to: 'id'}])]);
 
-			query.addParam(new StatementParam('a-b', 'aId', 567));
+			query.addParam(new StatementVariable('a-b', 'aId', 567));
 
 			stubs.execute.a.onCall(0).resolves([
 				{
@@ -575,13 +574,13 @@ describe('src/schema/services/querier.js', function () {
 				new QueryJoin('c', [{from: 'cId', to: 'id'}])
 			]);
 
-			query.addFilter(new StatementFilter('a', 'param1', 123));
+			query.addFilter(new StatementVariable('a', 'param1', 123));
 
-			query.addFilter(new StatementFilter('b', 'param2', 456));
+			query.addFilter(new StatementVariable('b', 'param2', 456));
 
-			query.addParam(new StatementParam('b', 'param3', 567));
+			query.addParam(new StatementVariable('b', 'param3', 567));
 
-			query.addParam(new StatementParam('c', 'param4', 890));
+			query.addParam(new StatementVariable('c', 'param4', 890));
 		});
 
 		describe('::query', function () {

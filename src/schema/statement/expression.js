@@ -3,7 +3,7 @@ const joiners = {
 	or: Symbol('or')
 };
 
-class Expression {
+class StatementExpression {
 	constructor() {
 		this.joiner = joiners.and;
 		this.expressables = [];
@@ -18,7 +18,7 @@ class Expression {
 	}
 
 	clone() {
-		const rtn = new Expression();
+		const rtn = new StatementExpression();
 
 		rtn.setJoin(this.joiner);
 
@@ -37,5 +37,5 @@ class Expression {
 
 module.exports = {
 	joiners,
-	Expression
+	StatementExpression
 };

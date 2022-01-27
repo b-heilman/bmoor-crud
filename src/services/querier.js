@@ -1,4 +1,4 @@
-const {StatementParam} = require('../schema/statement/param.js');
+const {StatementVariable} = require('../schema/statement/variable.js');
 const {Queriable} = require('../schema/query/queriable.js');
 
 function canExecute(statement, datum) {
@@ -65,7 +65,7 @@ async function processDatum(querier, settings, stmts, datum, ctx) {
 			stmt.externals.forEach(({name, mappings}) =>
 				mappings.map((mapping) =>
 					queriable.addParam(
-						new StatementParam(name, mapping.to, datum[mapping.from], '=')
+						new StatementVariable(name, mapping.to, datum[mapping.from], '=')
 					)
 				)
 			);
