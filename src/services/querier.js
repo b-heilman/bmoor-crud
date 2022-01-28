@@ -196,6 +196,7 @@ class Querier {
 		console.log('source-memory', sourceMemory);
 		console.log('source-dex', sourceDex);
 		query.filters.expressables.forEach((filter) => {
+			// if expression, expression.getSeries() > make sure all same source
 			sourceDex[sourceMemory[filter.series]].queriable.addFilter(filter);
 		});
 

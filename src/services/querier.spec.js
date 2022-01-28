@@ -850,19 +850,22 @@ describe('src/schema/services/querier.js', function () {
 							series: 'a',
 							schema: 'schemaA',
 							joins: []
-						}, {
+						},
+						{
 							series: 'a-2',
 							schema: 'schemaA2',
-							joins: [{
-										name: 'a',
-										optional: false,
-										mappings: [
-											{
-												from: 'aId',
-												to: 'id'
-											}
-										]
-									}]
+							joins: [
+								{
+									name: 'a',
+									optional: false,
+									mappings: [
+										{
+											from: 'aId',
+											to: 'id'
+										}
+									]
+								}
+							]
 						}
 					],
 					fields: [],
