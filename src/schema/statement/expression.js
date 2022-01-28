@@ -4,9 +4,9 @@ const joiners = {
 };
 
 class StatementExpression {
-	constructor() {
+	constructor(expressables = []) {
 		this.joiner = joiners.and;
-		this.expressables = [];
+		this.expressables = expressables;
 	}
 
 	setJoin(joiner) {

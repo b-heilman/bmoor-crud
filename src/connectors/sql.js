@@ -1,4 +1,7 @@
-const {StatementExpression, joiners} = require('../schema/statement/expression.js');
+const {
+	StatementExpression,
+	joiners
+} = require('../schema/statement/expression.js');
 
 const arrayMethods = {
 	'=': 'IN'

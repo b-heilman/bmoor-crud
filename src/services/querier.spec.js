@@ -7,6 +7,7 @@ const {Cache} = require('../server/cache.js');
 const {Context} = require('../server/context.js');
 
 const {StatementField} = require('../schema/statement/field.js');
+const {StatementExpression} = require('../schema/statement/expression.js');
 const {StatementVariable} = require('../schema/statement/variable.js');
 
 const {QueryJoin} = require('../schema/query/join.js');
@@ -635,16 +636,18 @@ describe('src/schema/services/querier.js', function () {
 							as: 'exe_0'
 						}
 					],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param2',
-							series: 'b',
-							settings: {},
-							value: 456
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param2',
+								series: 'b',
+								settings: {},
+								value: 456
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -671,16 +674,18 @@ describe('src/schema/services/querier.js', function () {
 						}
 					],
 					fields: [],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param1',
-							series: 'a',
-							settings: {},
-							value: 123
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -742,6 +747,211 @@ describe('src/schema/services/querier.js', function () {
 					}
 				]);
 			});
+
+			it.only('should work with an expression - params', async function () {
+				query.setModel('a-2', {
+					schema: 'schemaA_2',
+					incomingSettings: {
+						source: 's-1'
+					}
+				});
+
+				query.addJoins('a-2', [new QueryJoin('a', [{from: 'aId', to: 'id'}])]);
+
+				query.addParam(
+					new StatementExpression([
+						new StatementVariable('a', 'v1', 100, 'gt'),
+						new StatementVariable('a-2', 'v2', 125, 'lt')
+					])
+				);
+
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar',
+						fooBar: 'id-2',
+						exe_0: 'id-1'
+					}
+				]);
+
+				stubs.execute.a.resolves([
+					{
+						hello: 'world'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei'
+					}
+				]);
+
+				const exe = new sut.Querier('examp-3', query);
+				const ctx = {};
+
+				await exe.link(nexus);
+
+				await exe.run(ctx);
+
+				const argsB = stubs.execute.b.getCall(0).args[0];
+				expect(argsB.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 's-2',
+					models: [
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'b',
+							path: 'cId',
+							as: 'fooBar'
+						},
+						{
+							series: 'b',
+							path: 'aId',
+							as: 'exe_0'
+						}
+					],
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param2',
+								series: 'b',
+								settings: {},
+								value: 456
+							}
+						]
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param3',
+								series: 'b',
+								settings: {},
+								value: 567
+							}
+						]
+					}
+				});
+
+				const argsA = stubs.execute.a.getCall(0).args[0];
+				expect(argsA.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 's-1',
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						}, {
+							series: 'a-2',
+							schema: 'schemaA2',
+							joins: [{
+										name: 'a',
+										optional: false,
+										mappings: [
+											{
+												from: 'aId',
+												to: 'id'
+											}
+										]
+									}]
+						}
+					],
+					fields: [],
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'id',
+								series: 'a',
+								settings: {},
+								value: 'id-1'
+							},
+							{
+								join: 'and',
+								expressables: [
+									{
+										operation: 'gt',
+										path: 'param2',
+										series: 'a',
+										settings: {},
+										value: 100
+									},
+									{
+										operation: 'lt',
+										path: 'param2',
+										series: 'a-2',
+										settings: {},
+										value: 125
+									}
+								]
+							}
+						]
+					}
+				});
+
+				const argsC = stubs.execute.c.getCall(0).args[0];
+				expect(argsC.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 's-3',
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
+					fields: [],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param4',
+								series: 'c',
+								settings: {},
+								value: 890
+							},
+							{
+								operation: '=',
+								path: 'id',
+								series: 'c',
+								settings: {},
+								value: 'id-2'
+							}
+						]
+					}
+				});
+			});
+
+			it('should work with an expression - filters', async function () {});
+
+			xit('should fail with an expression that crosses sources', async function () {});
 
 			it('should work with combinations - no cache', async function () {
 				stubs.execute.b.resolves([
@@ -810,16 +1020,18 @@ describe('src/schema/services/querier.js', function () {
 							as: 'exe_0'
 						}
 					],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param2',
-							series: 'b',
-							settings: {},
-							value: 456
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param2',
+								series: 'b',
+								settings: {},
+								value: 456
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -848,16 +1060,18 @@ describe('src/schema/services/querier.js', function () {
 						}
 					],
 					fields: [],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param1',
-							series: 'a',
-							settings: {},
-							value: 123
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -884,16 +1098,18 @@ describe('src/schema/services/querier.js', function () {
 						}
 					],
 					fields: [],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param1',
-							series: 'a',
-							settings: {},
-							value: 123
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -920,16 +1136,18 @@ describe('src/schema/services/querier.js', function () {
 						}
 					],
 					fields: [],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param1',
-							series: 'a',
-							settings: {},
-							value: 123
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -1224,16 +1442,18 @@ describe('src/schema/services/querier.js', function () {
 							as: 'exe_0'
 						}
 					],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param2',
-							series: 'b',
-							settings: {},
-							value: 456
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param2',
+								series: 'b',
+								settings: {},
+								value: 456
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -1262,16 +1482,18 @@ describe('src/schema/services/querier.js', function () {
 						}
 					],
 					fields: [],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param1',
-							series: 'a',
-							settings: {},
-							value: 123
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -1298,16 +1520,18 @@ describe('src/schema/services/querier.js', function () {
 						}
 					],
 					fields: [],
-					filters: {   join: 'and',
-		expressables: [
-						{
-							operation: '=',
-							path: 'param1',
-							series: 'a',
-							settings: {},
-							value: 123
-						}
-					]},
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
 					params: {
 						join: 'and',
 						expressables: [
@@ -1515,16 +1739,18 @@ describe('src/schema/services/querier.js', function () {
 								as: 'exe_0'
 							}
 						],
-						filters: {   join: 'and',
-		expressables: [
-							{
-								series: 'b',
-								path: 'param2',
-								operation: '=',
-								value: 456,
-								settings: {}
-							}
-						]},
+						filters: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'b',
+									path: 'param2',
+									operation: '=',
+									value: 456,
+									settings: {}
+								}
+							]
+						},
 						params: {
 							join: 'and',
 							expressables: [
@@ -1550,16 +1776,18 @@ describe('src/schema/services/querier.js', function () {
 							}
 						],
 						fields: [],
-						filters: {   join: 'and',
-		expressables: [
-							{
-								series: 'a',
-								path: 'param1',
-								operation: '=',
-								value: 123,
-								settings: {}
-							}
-						]},
+						filters: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'a',
+									path: 'param1',
+									operation: '=',
+									value: 123,
+									settings: {}
+								}
+							]
+						},
 						params: {
 							expressables: [],
 							join: 'and'

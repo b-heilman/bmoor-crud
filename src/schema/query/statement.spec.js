@@ -293,13 +293,26 @@ describe('src/schema/query.js', function () {
 		it('should fix a query that has two 0 joins', function () {
 			const query = new sut.QueryStatement('a');
 
-			query.setModel('a', {schema: 'schemaA'});
-			query.setModel('c', {schema: 'schemaC'});
-			query.setModel('b', {schema: 'schemaB'});
+			query.setModel('a', {
+				schema: 'schemaA',
+				incomingSettings: {source: 'eins'}
+			});
+			query.setModel('c', {
+				schema: 'schemaC',
+				incomingSettings: {source: 'eins'}
+			});
+			query.setModel('b', {
+				schema: 'schemaB',
+				incomingSettings: {source: 'eins'}
+			});
 
 			const expression1 = new StatementExpression();
-			expression1.addExpressable(new StatementVariable('a', 'param1', 100, 'gt'));
-			expression1.addExpressable(new StatementVariable('a', 'param1', 125, 'lt'));
+			expression1.addExpressable(
+				new StatementVariable('a', 'param1', 100, 'gt')
+			);
+			expression1.addExpressable(
+				new StatementVariable('a', 'param1', 125, 'lt')
+			);
 			query.addFilter(expression1);
 
 			const expression2 = new StatementExpression();
@@ -356,41 +369,51 @@ describe('src/schema/query.js', function () {
 				],
 				fields: [],
 				filters: {
-					expressables: [{
-						expressables: [{
-							series: 'a',
-							path: 'param1',
-							operation: 'gt',
-							value: 100,
-							settings: {}
-						},{
-							series: 'a',
-							path: 'param1',
-							operation: 'lt',
-							value: 125,
-							settings: {}
-						}],
-						join: 'and'
-					}],
+					expressables: [
+						{
+							expressables: [
+								{
+									series: 'a',
+									path: 'param1',
+									operation: 'gt',
+									value: 100,
+									settings: {}
+								},
+								{
+									series: 'a',
+									path: 'param1',
+									operation: 'lt',
+									value: 125,
+									settings: {}
+								}
+							],
+							join: 'and'
+						}
+					],
 					join: 'and'
 				},
 				params: {
-					expressables: [{
-						expressables: [{
-							series: 'b',
-							path: 'param2',
-							operation: '=',
-							value: 200,
-							settings: {}
-						},{
-							series: 'b',
-							path: 'param3',
-							operation: '=',
-							value: 300,
-							settings: {}
-						}],
-						join: 'or'
-					}],
+					expressables: [
+						{
+							expressables: [
+								{
+									series: 'b',
+									path: 'param2',
+									operation: '=',
+									value: 200,
+									settings: {}
+								},
+								{
+									series: 'b',
+									path: 'param3',
+									operation: '=',
+									value: 300,
+									settings: {}
+								}
+							],
+							join: 'or'
+						}
+					],
 					join: 'and'
 				}
 			});

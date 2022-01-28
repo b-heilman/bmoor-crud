@@ -193,11 +193,14 @@ class Querier {
 		// TODO: I still need to solve for expression
 		// TODO: consolidate filter and param to be variable, but use those
 		//   properties still in statement
+		console.log('source-memory', sourceMemory);
+		console.log('source-dex', sourceDex);
 		query.filters.expressables.forEach((filter) => {
 			sourceDex[sourceMemory[filter.series]].queriable.addFilter(filter);
 		});
 
 		query.params.expressables.forEach((param) => {
+			console.log('->', param.series);
 			sourceDex[sourceMemory[param.series]].queriable.addParam(param);
 		});
 

@@ -62,17 +62,20 @@ class Queriable extends QueryStatement {
 		return (
 			this.name +
 			'>' +
-			this.params.expressables.map((param) => {
-				return (
-					param.series +
-					':' +
-					param.path +
-					':' +
-					param.operation +
-					':' +
-					param.value
-				);
-			}).flat().join()
+			this.params.expressables
+				.map((param) => {
+					return (
+						param.series +
+						':' +
+						param.path +
+						':' +
+						param.operation +
+						':' +
+						param.value
+					);
+				})
+				.flat()
+				.join()
 		);
 	}
 
