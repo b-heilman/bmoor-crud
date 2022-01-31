@@ -1,8 +1,10 @@
+const {StatementExpression} = require('../schema/statement/expression.js');
 const {StatementVariable} = require('../schema/statement/variable.js');
 const {Queriable} = require('../schema/query/queriable.js');
 
 function canExecute(statement, datum) {
 	let ok = true;
+	
 	const checks = statement.externals.flatMap(({mappings}) =>
 		mappings.map((mapping) => mapping.from)
 	);
@@ -89,11 +91,36 @@ async function processStatements(querier, settings, stmts, datums, ctx) {
 	).flat();
 }
 
+function buildExpressableSwitch(sourceDex, seriesToSource, method){
+	return function(filter){
+		// if expression, expression.getSeries() > make sure all same source
+		if (filter instanceof StatementExpression){
+			const series = filter.getSeries();
+			const sources = {};
+			for (let seriesName of series){
+				sources[seriesToSource[seriesName]] = true;
+			}
+
+			const names = Object.keys(sources);
+
+			if (names.length > 1){
+				throw new Error('Expression with mixed sources');
+			} else {
+				const name = names[0];
+
+				sourceDex[name].queriable[method](filter);
+			}
+		} else {
+			sourceDex[seriesToSource[filter.series]].queriable[method](filter);
+		}
+	};
+}
+
 class Querier {
 	constructor(name, query) {
 		this.name = name;
 
-		const sourceMemory = {};
+		const seriesToSource = {};
 
 		let tempCount = 0;
 
@@ -101,14 +128,14 @@ class Querier {
 			const series = info.series;
 			const sourceName = info.model.incomingSettings.source;
 
-			sourceMemory[series] = sourceName;
+			seriesToSource[series] = sourceName;
 			// The thing I know is series always join left here.  So
 			// I am able to figure out of the join is internal or external
 			let order = 0;
 			const joins = Object.values(info.joins).reduce(
 				(joins, join) => {
 					const otherSeries = join.name;
-					const otherSource = sourceMemory[otherSeries];
+					const otherSource = seriesToSource[otherSeries];
 					const other = agg[otherSource];
 
 					// if the other series uses the same source...
@@ -193,22 +220,18 @@ class Querier {
 		// TODO: I still need to solve for expression
 		// TODO: consolidate filter and param to be variable, but use those
 		//   properties still in statement
-		console.log('source-memory', sourceMemory);
-		console.log('source-dex', sourceDex);
-		query.filters.expressables.forEach((filter) => {
-			// if expression, expression.getSeries() > make sure all same source
-			sourceDex[sourceMemory[filter.series]].queriable.addFilter(filter);
-		});
+		query.filters.expressables.forEach(
+			buildExpressableSwitch(sourceDex, seriesToSource, 'addFilter')
+		);
 
-		query.params.expressables.forEach((param) => {
-			console.log('->', param.series);
-			sourceDex[sourceMemory[param.series]].queriable.addParam(param);
-		});
+		query.params.expressables.forEach(
+			buildExpressableSwitch(sourceDex, seriesToSource, 'addParam')
+		);
 
 		// incoming sorts are in order, so it's expected the order will
 		// be maintained when passed to sub queries this way
 		query.sorts.forEach((sort) => {
-			sourceDex[sourceMemory[sort.series]].queriable.addSort(sort);
+			sourceDex[seriesToSource[sort.series]].queriable.addSort(sort);
 		});
 
 		this.statements = Object.values(sourceDex);
@@ -248,6 +271,7 @@ class Querier {
 				}
 
 				if (stmts.length === check) {
+					// TODO: can I say what is missing?
 					throw new Error('TODO: no way to reduce?');
 				}
 

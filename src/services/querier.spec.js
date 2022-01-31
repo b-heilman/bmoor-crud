@@ -748,7 +748,7 @@ describe('src/schema/services/querier.js', function () {
 				]);
 			});
 
-			it.only('should work with an expression - params', async function () {
+			it('should work with an expression - params', async function () {
 				query.setModel('a-2', {
 					schema: 'schemaA_2',
 					incomingSettings: {
@@ -759,6 +759,211 @@ describe('src/schema/services/querier.js', function () {
 				query.addJoins('a-2', [new QueryJoin('a', [{from: 'aId', to: 'id'}])]);
 
 				query.addParam(
+					new StatementExpression([
+						new StatementVariable('a', 'v1', 100, 'gt'),
+						new StatementVariable('a-2', 'v2', 125, 'lt')
+					])
+				);
+
+				// a runs first now, because I have query params on it now
+				stubs.execute.a.resolves([
+					{
+						hello: 'world',
+						exe_0: 'id-1'
+					}
+				]);
+
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar',
+						fooBar: 'id-2'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei'
+					}
+				]);
+
+				const exe = new sut.Querier('examp-3', query);
+				const ctx = {};
+
+				await exe.link(nexus);
+
+				await exe.run(ctx);
+
+				const argsA = stubs.execute.a.getCall(0).args[0];
+				expect(argsA.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 's-1',
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						},
+						{
+							series: 'a-2',
+							schema: 'schemaA_2',
+							joins: [
+								{
+									name: 'a',
+									optional: false,
+									mappings: [
+										{
+											from: 'aId',
+											to: 'id'
+										}
+									]
+								}
+							]
+						}
+					],
+					fields: [
+						{
+							series: 'a',
+							path: 'id',
+							as: 'exe_0'
+						}],
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param1',
+								series: 'a',
+								settings: {},
+								value: 123
+							}
+						]
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								join: 'and',
+								expressables: [
+									{
+										operation: 'gt',
+										path: 'v1',
+										series: 'a',
+										settings: {},
+										value: 100
+									},
+									{
+										operation: 'lt',
+										path: 'v2',
+										series: 'a-2',
+										settings: {},
+										value: 125
+									}
+								]
+							}
+						]
+					}
+				});
+
+				const argsB = stubs.execute.b.getCall(0).args[0];
+				expect(argsB.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 's-2',
+					models: [
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'b',
+							path: 'cId',
+							as: 'fooBar'
+						}
+					],
+					filters: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param2',
+								series: 'b',
+								settings: {},
+								value: 456
+							}
+						]
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param3',
+								series: 'b',
+								settings: {},
+								value: 567
+							},
+							{
+								operation: '=',
+								path: 'aId',
+								series: 'b',
+								settings: {},
+								value: 'id-1'
+							}
+						]
+					}
+				});
+
+				const argsC = stubs.execute.c.getCall(0).args[0];
+				expect(argsC.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 's-3',
+					models: [
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: []
+						}
+					],
+					fields: [],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'param4',
+								series: 'c',
+								settings: {},
+								value: 890
+							},
+							{
+								operation: '=',
+								path: 'id',
+								series: 'c',
+								settings: {},
+								value: 'id-2'
+							}
+						]
+					}
+				});
+			});
+
+			it('should work with an expression - filters', async function () {
+				query.setModel('a-2', {
+					schema: 'schemaA_2',
+					incomingSettings: {
+						source: 's-1'
+					}
+				});
+
+				query.addJoins('a-2', [new QueryJoin('a', [{from: 'aId', to: 'id'}])]);
+
+				query.addFilter(
 					new StatementExpression([
 						new StatementVariable('a', 'v1', 100, 'gt'),
 						new StatementVariable('a-2', 'v2', 125, 'lt')
@@ -790,7 +995,7 @@ describe('src/schema/services/querier.js', function () {
 
 				await exe.link(nexus);
 
-				await exe.run(ctx);
+				const res = await exe.run(ctx);
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
 				expect(argsB.toJSON()).to.deep.equal({
@@ -853,7 +1058,7 @@ describe('src/schema/services/querier.js', function () {
 						},
 						{
 							series: 'a-2',
-							schema: 'schemaA2',
+							schema: 'schemaA_2',
 							joins: [
 								{
 									name: 'a',
@@ -878,6 +1083,25 @@ describe('src/schema/services/querier.js', function () {
 								series: 'a',
 								settings: {},
 								value: 123
+							},
+							{
+								join: 'and',
+								expressables: [
+									{
+										operation: 'gt',
+										path: 'v1',
+										series: 'a',
+										settings: {},
+										value: 100
+									},
+									{
+										operation: 'lt',
+										path: 'v2',
+										series: 'a-2',
+										settings: {},
+										value: 125
+									}
+								]
 							}
 						]
 					},
@@ -890,25 +1114,6 @@ describe('src/schema/services/querier.js', function () {
 								series: 'a',
 								settings: {},
 								value: 'id-1'
-							},
-							{
-								join: 'and',
-								expressables: [
-									{
-										operation: 'gt',
-										path: 'param2',
-										series: 'a',
-										settings: {},
-										value: 100
-									},
-									{
-										operation: 'lt',
-										path: 'param2',
-										series: 'a-2',
-										settings: {},
-										value: 125
-									}
-								]
 							}
 						]
 					}
@@ -950,11 +1155,121 @@ describe('src/schema/services/querier.js', function () {
 						]
 					}
 				});
+
+				expect(res).to.deep.equal([
+					{
+						hello: 'world',
+						foo: 'bar',
+						eins: 'zwei',
+						exe_0: 'id-1',
+						fooBar: 'id-2'
+					}
+				]);
 			});
 
-			it('should work with an expression - filters', async function () {});
+			it('should fail with an expression that crosses sources - param', async function () {
+				query.setModel('a-2', {
+					schema: 'schemaA_2',
+					incomingSettings: {
+						source: 's-3'
+					}
+				});
 
-			xit('should fail with an expression that crosses sources', async function () {});
+				query.addJoins('a-2', [new QueryJoin('a', [{from: 'aId', to: 'id'}])]);
+
+				query.addParam(
+					new StatementExpression([
+						new StatementVariable('a', 'v1', 100, 'gt'),
+						new StatementVariable('a-2', 'v2', 125, 'lt')
+					])
+				);
+
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar',
+						fooBar: 'id-2',
+						exe_0: 'id-1'
+					}
+				]);
+
+				stubs.execute.a.resolves([
+					{
+						hello: 'world'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei'
+					}
+				]);
+
+				try {
+					const exe = new sut.Querier('examp-3', query);
+
+					console.log(exe);
+				} catch(ex){
+					expect(ex.message)
+					.to.equal('Expression with mixed sources');
+
+					failed = true;
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
+
+			it('should fail with an expression that crosses sources - filter', async function () {
+				query.setModel('a-2', {
+					schema: 'schemaA_2',
+					incomingSettings: {
+						source: 's-3'
+					}
+				});
+
+				query.addJoins('a-2', [new QueryJoin('a', [{from: 'aId', to: 'id'}])]);
+
+				query.addFilter(
+					new StatementExpression([
+						new StatementVariable('a', 'v1', 100, 'gt'),
+						new StatementVariable('a-2', 'v2', 125, 'lt')
+					])
+				);
+
+				stubs.execute.b.resolves([
+					{
+						foo: 'bar',
+						fooBar: 'id-2',
+						exe_0: 'id-1'
+					}
+				]);
+
+				stubs.execute.a.resolves([
+					{
+						hello: 'world'
+					}
+				]);
+
+				stubs.execute.c.resolves([
+					{
+						eins: 'zwei'
+					}
+				]);
+
+				try {
+					const exe = new sut.Querier('examp-3', query);
+
+					console.log(exe);
+				} catch(ex){
+					expect(ex.message)
+					.to.equal('Expression with mixed sources');
+					
+					failed = true;
+				}
+
+				expect(failed)
+				.to.equal(true);
+			});
 
 			it('should work with combinations - no cache', async function () {
 				stubs.execute.b.resolves([

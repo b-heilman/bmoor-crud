@@ -3,6 +3,16 @@ const joiners = {
 	or: Symbol('or')
 };
 
+function calculateExpressionSet(expression, set){
+	expression.expressables.forEach((exp) => {
+		if (exp instanceof StatementExpression){
+			calculateExpressionSet(exp, set);
+		} else { // this is a variables
+			set.add(exp.series);
+		}
+	});
+}
+
 class StatementExpression {
 	constructor(expressables = []) {
 		this.joiner = joiners.and;
@@ -15,6 +25,14 @@ class StatementExpression {
 
 	addExpressable(expressable) {
 		this.expressables.push(expressable);
+	}
+
+	getSeries(){
+		const set = new Set();
+
+		calculateExpressionSet(this, set);
+
+		return set;
 	}
 
 	clone() {
