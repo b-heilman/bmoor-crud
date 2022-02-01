@@ -4,7 +4,7 @@ const {Queriable} = require('../schema/query/queriable.js');
 
 function canExecute(statement, datum) {
 	let ok = true;
-	
+
 	const checks = statement.externals.flatMap(({mappings}) =>
 		mappings.map((mapping) => mapping.from)
 	);
@@ -91,19 +91,19 @@ async function processStatements(querier, settings, stmts, datums, ctx) {
 	).flat();
 }
 
-function buildExpressableSwitch(sourceDex, seriesToSource, method){
-	return function(filter){
+function buildExpressableSwitch(sourceDex, seriesToSource, method) {
+	return function (filter) {
 		// if expression, expression.getSeries() > make sure all same source
-		if (filter instanceof StatementExpression){
+		if (filter instanceof StatementExpression) {
 			const series = filter.getSeries();
 			const sources = {};
-			for (let seriesName of series){
+			for (let seriesName of series) {
 				sources[seriesToSource[seriesName]] = true;
 			}
 
 			const names = Object.keys(sources);
 
-			if (names.length > 1){
+			if (names.length > 1) {
 				throw new Error('Expression with mixed sources');
 			} else {
 				const name = names[0];

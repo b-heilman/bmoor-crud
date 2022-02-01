@@ -825,7 +825,8 @@ describe('src/schema/services/querier.js', function () {
 							series: 'a',
 							path: 'id',
 							as: 'exe_0'
-						}],
+						}
+					],
 					filters: {
 						join: 'and',
 						expressables: [
@@ -1204,19 +1205,18 @@ describe('src/schema/services/querier.js', function () {
 					}
 				]);
 
+				let failed = false;
 				try {
 					const exe = new sut.Querier('examp-3', query);
 
 					console.log(exe);
-				} catch(ex){
-					expect(ex.message)
-					.to.equal('Expression with mixed sources');
+				} catch (ex) {
+					expect(ex.message).to.equal('Expression with mixed sources');
 
 					failed = true;
 				}
 
-				expect(failed)
-				.to.equal(true);
+				expect(failed).to.equal(true);
 			});
 
 			it('should fail with an expression that crosses sources - filter', async function () {
@@ -1256,19 +1256,18 @@ describe('src/schema/services/querier.js', function () {
 					}
 				]);
 
+				let failed = false;
 				try {
 					const exe = new sut.Querier('examp-3', query);
 
 					console.log(exe);
-				} catch(ex){
-					expect(ex.message)
-					.to.equal('Expression with mixed sources');
-					
+				} catch (ex) {
+					expect(ex.message).to.equal('Expression with mixed sources');
+
 					failed = true;
 				}
 
-				expect(failed)
-				.to.equal(true);
+				expect(failed).to.equal(true);
 			});
 
 			it('should work with combinations - no cache', async function () {

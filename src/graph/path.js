@@ -172,8 +172,6 @@ const parsings = new Config({
 	}
 });
 
-const expressions = null;
-
 const composites = new Config({
 	// $foo.bar
 	path: {
@@ -210,6 +208,8 @@ const composites = new Config({
 		}
 	}
 });
+
+const expressions = null;
 
 const compiler = new Compiler(parsings, expressions, composites);
 
