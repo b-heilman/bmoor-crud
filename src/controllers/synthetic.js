@@ -48,7 +48,7 @@ class Synthetic extends Controller {
 			} else {
 				await this.view.link();
 
-				return this.view.query(await parseQuery(this.view.base, ctx), ctx);
+				return this.view.query(await parseQuery(ctx, this.view), ctx);
 			}
 		} else {
 			throw error.create('called read with method ' + ctx.method, {

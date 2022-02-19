@@ -1853,12 +1853,10 @@ describe('src/services/document.js', function () {
 				{
 					joins: ['$test-material > $test-item-material > $test-item'],
 					params: {
-						'.name': {
-							'~': '%foo%'
-						},
 						'$test-category.name': 'ok',
 						'$test-material.name': 'hello'
 					},
+					query: '$test-item.name~"%foo%"',
 					sort: '.name, -$test-category.name,+$test-person.name'
 				},
 				context

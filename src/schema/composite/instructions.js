@@ -368,6 +368,24 @@ class Instructions {
 		return !!instructions.subs.length;
 	}
 
+	// this method will take an array of series which are the leafs
+	// and it figures out all series needed 
+	getNeeded(seriesArr){
+		const rtn = new Set();
+
+		const addSeries = (series) => {
+			if (!rtn.has(series)){
+				rtn.add(series);
+
+				this.getSeries(series).incoming.map(addSeries);
+			}
+		};
+
+		seriesArr.map(addSeries);
+
+		return rtn;
+	}
+
 	getAllSeries() {
 		return Object.keys(this.index);
 	}

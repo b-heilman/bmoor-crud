@@ -2,7 +2,7 @@ const {implode} = require('bmoor/src/object.js');
 const {create, addTrace} = require('bmoor/src/lib/error.js');
 const {makeSetter} = require('bmoor/src/core.js');
 
-const {Structure, buildParams} = require('./structure.js');
+const {Structure} = require('./structure.js');
 
 const {StatementVariable} = require('./statement/variable.js');
 const {StatementField} = require('./statement/field.js');
@@ -296,6 +296,8 @@ class Composite extends Structure {
 			// a foreign reference.  It's ok to precalculate the joins even if
 			// the fields won't be in the actual query, because I use the joins
 			// other places if needed
+			//-----
+			//MARK: 
 			await Promise.all(
 				this.instructions.getAllSeries().map(async (series) => {
 					const info = this.instructions.getSeries(series);
@@ -543,39 +545,52 @@ class Composite extends Structure {
 		return new QueryStatement(this.instructions.model);
 	}
 
-	async prepareBaseQuery(ctx) {
-		const query = await super.prepareBaseQuery(ctx);
+	async prepareBaseQuery() {
+		const query = await super.prepareBaseQuery();
 
+		// WORKING
+		
+		// a unique array of used series between fields and filters
+		const names = Array.from(new Set([
+			// we use the model's fields, _subs should have been added, but the 
+			// query hasn't had them added because it require requires a ctx, which
+			// comes at call time
+			...this.getFieldSeries(),
+			// I don't like that I need to do this, but I put the filters
+			// direcly into the query.  I probably need to rethink this in 
+			// the next refactor, but getting this done
+			...query.getNeededSeries()
+		]));
+		const needed = this.instructions.getNeeded(names);
+		
 		this.instructions.forEach((series, seriesInfo) => {
-			if (!seriesInfo.isNeeded) {
-				return;
-			}
+			// At this point the params and filters have been added, so I can
+			// assume I need to add only leafs (hasSeries) or models with a join
+			if (needed.has(series)) {
+				query.setModel(series, this.nexus.getModel(seriesInfo.model));
 
-			query.setModel(series, this.nexus.getModel(seriesInfo.model));
+				const joinsTo = seriesInfo.join;
 
-			const joinsTo = seriesInfo.join;
+				if (joinsTo) {
+					const todo = Object.keys(joinsTo);
+					if (todo.length) {
+						query.addJoins(
+							series,
+							todo
+								.filter((nextSeries) => needed.has(nextSeries))
+								.map((nextSeries) => {
+									const join = joinsTo[nextSeries];
 
-			if (joinsTo) {
-				const todo = Object.keys(joinsTo);
-				if (todo.length) {
-					query.addJoins(
-						series,
-						todo
-							.filter(
-								(nextSeries) => this.instructions.getSeries(nextSeries).isNeeded
-							)
-							.map((nextSeries) => {
-								const join = joinsTo[nextSeries];
+									const subSeries = this.instructions.getSeries(nextSeries);
 
-								const subSeries = this.instructions.getSeries(nextSeries);
-
-								return new QueryJoin(
-									nextSeries,
-									[{from: join.from, to: join.to}],
-									subSeries.optional
-								);
-							})
-					);
+									return new QueryJoin(
+										nextSeries,
+										[{from: join.from, to: join.to}],
+										subSeries.optional
+									);
+								})
+						);
+					}
 				}
 			}
 		});
@@ -591,7 +606,8 @@ class Composite extends Structure {
 			query,
 			{
 				joins: settings.joins,
-				params: {...settings.params, ...this.instructions.params},
+				params: settings.params, // params only come from joins
+				query: settings.query,
 				sort: settings.sort,
 				position: settings.position
 			},
@@ -626,12 +642,10 @@ class Composite extends Structure {
 
 					query.setModel(compositeName, model);
 
-					buildParams(
-						compositeName,
+					query.addParam(new StatementVariable(compositeName,
 						model.getKeyField(),
-						key,
-						StatementVariable
-					).map((param) => query.addParam(param));
+						key)
+					);
 				}
 
 				if (incoming) {
@@ -677,9 +691,7 @@ class Composite extends Structure {
 				query.setModel(series, model);
 
 				if (byModelName === modelName) {
-					buildParams(series, model.getKeyField(), key, StatementVariable).map(
-						(param) => query.addParam(param)
-					);
+					query.addParam(new StatementVariable(series, model.getKeyField(), key));
 				}
 
 				if (incoming) {

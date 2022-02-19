@@ -21,10 +21,20 @@ class QueryStatement extends Statement {
 		return rtn;
 	}
 
+	addFilterExpression(expression){
+		return this.filters.join(expression);
+	}
+
 	addParam(param) {
 		this.hasParams = true;
 
 		return super.addParam(param);
+	}
+
+	addParamExpression(expression){
+		this.hasParams = true;
+
+		return this.params.join(expression);
 	}
 
 	addJoins(series, joins) {
@@ -102,14 +112,13 @@ class QueryStatement extends Statement {
 				if (betterSeries) {
 					this.base = betterSeries;
 				} else {
-					console.log(this.models);
+					console.log(this.models, paramDex);
 					throw new Error('well, this is bad');
 				}
 			}
 		}
 
 		let toProcess = Object.values(this.models);
-
 		const extraRoots = toProcess.filter(
 			(link) => !Object.values(link.joins).length && link.series !== this.base
 		);

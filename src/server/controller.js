@@ -2,24 +2,68 @@ const {Route} = require('./route.js');
 const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
-async function parseQuery(view, ctx) {
+const opTranslation = new Config({
+	'eq': '=',
+	'gt': '>',
+	'lt': '<',
+	'like': '~'
+});
+
+function convertParams(params, view){
+	if (params){
+		return Object.keys(params).map(field => {
+			const value = params[field];
+
+			let path = null;
+
+			if (field[0] === '$'){
+				path = field;
+			} else {
+				if (view){
+					const structure = view.structure;
+					const name = structure.instructions ? 
+						structure.instructions.model : structure.name;
+
+					path = '$'+name+'.'+field;
+				} else {
+					throw new Error('need to fully define path:'+field);
+				}
+			}
+
+			if (typeof(value) === 'object'){
+				return Object.keys(value).map(op => {
+					const o = opTranslation.get(op) || op;
+
+					return `${path} ${op} ${value}`;
+				}).join(' & ');
+			} else {
+				return `${path} = ${value}`;
+			}
+		}, []).join(' & ');
+	} else {
+		return null;
+	}
+}
+
+async function parseQuery(ctx, view=null) {
 	const sort = ctx.getQuery('sort') || null;
 	const joins = ctx.getQuery('join') || [];
 	const limit = ctx.getQuery('limit') || null;
-	const params = ctx.getQuery('param') || {};
+	const query = ctx.getQuery('query') || null;
+	const params = ctx.getQuery('param') || null;
 
 	// ? param[name]=hello & param[foo.bar][gt]=123
-	// ? join[$foo.id > $world] = 12 & join[$hello.name > @worldId$world] = woof
+	// ? join[]=$foo.id > $world] & join[]=$hello.name > @worldId$world
 	// ? sort=-$foo.name,+bar
 	// ? limit=100
 	// TODO: pagination?
-	let parsedParams = params;
-	if (view) {
-		parsedParams = await view.structure.clean('query', params, ctx);
-	}
 
+	console.log('-> query :', query);
+	console.log('-> params :', params);
+	let runQuery = query || convertParams(params, view);
+	console.log('runQuery', runQuery);
 	return {
-		params: parsedParams,
+		query: runQuery,
 		joins,
 		sort,
 		position: {limit}
@@ -171,6 +215,7 @@ class Controller {
 
 module.exports = {
 	config,
+	opTranslation,
 	handleRollback,
 	formatResponse,
 	parseQuery,

@@ -1211,23 +1211,23 @@ describe('src/services/crud.js', function () {
 						expressables: [
 							{
 								series: 'model-1',
+								path: 'value',
+								operation: '<',
+								value: 1.9,
+								settings: {}
+							},
+							{
+								series: 'model-1',
+								path: 'value',
+								operation: '>',
+								value: 1.1,
+								settings: {}
+							},
+							{
+								series: 'model-1',
 								path: 'id',
 								operation: '=',
 								value: 1,
-								settings: {}
-							},
-							{
-								series: 'model-1',
-								path: 'name',
-								operation: 'gt',
-								value: 'test-1.1',
-								settings: {}
-							},
-							{
-								series: 'model-1',
-								path: 'name',
-								operation: 'lt',
-								value: 'test-1.9',
 								settings: {}
 							},
 							{
@@ -1281,12 +1281,9 @@ describe('src/services/crud.js', function () {
 					{
 						params: {
 							id: 1,
-							name: {
-								gt: 'test-1.1',
-								lt: 'test-1.9'
-							},
 							title: 'title-1'
-						}
+						},
+						query: '$model-1.value<1.9 & $model-1.value>1.1'
 					},
 					context
 				)

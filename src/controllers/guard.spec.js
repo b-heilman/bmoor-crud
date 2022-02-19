@@ -100,18 +100,16 @@ describe('src/controller/guard.js', function () {
 
 					const args = stubs.query.getCall(0).args;
 					expect(args[0]).to.deep.equal({
-						sort: null,
+						query: '$service-1.eins = bar & $service-1.zwei = foo',
 						joins: [],
+						sort: null,
 						position: {
 							limit: null
-						},
-						params: {
-							zwei: 'foo'
 						}
 					});
 				});
 
-				it('should call query and properly decode', async function () {
+				it('should call query with a param', async function () {
 					const content = [
 						{
 							hello: 'world',
@@ -126,8 +124,7 @@ describe('src/controller/guard.js', function () {
 							method: 'get',
 							query: {
 								param: {
-									eins: 'bar',
-									zwei: 'foo'
+									foo: '"bar"'
 								}
 							}
 						})
@@ -167,9 +164,72 @@ describe('src/controller/guard.js', function () {
 							expressables: [
 								{
 									series: 'service-1',
-									path: 'zwei',
+									path: 'foo',
 									operation: '=',
-									value: 'foo',
+									value: 'bar',
+									settings: {}
+								}
+							]
+						}
+					});
+				});
+
+				it('should call query with a query', async function () {
+					const content = [
+						{
+							hello: 'world',
+							eins: 1
+						}
+					];
+
+					stubs.execute.resolves(content);
+
+					const res = await controller.read(
+						new Context({
+							method: 'get',
+							query: {
+								query: '$service-1.foo = 123'
+							}
+						})
+					);
+
+					expect(res).to.deep.equal([
+						{
+							eins: 1
+						}
+					]);
+
+					const args = stubs.execute.getCall(0).args[0];
+
+					expect(args.toJSON()).to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
+						models: [
+							{
+								series: 'service-1',
+								schema: 'service-1',
+								joins: []
+							}
+						],
+						fields: [
+							{
+								as: 'eins',
+								path: 'eins',
+								series: 'service-1'
+							}
+						],
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'foo',
+									operation: '=',
+									value: 123,
 									settings: {}
 								}
 							]
@@ -541,9 +601,7 @@ describe('src/controller/guard.js', function () {
 
 					const args = stubs.query.getCall(0).args;
 					expect(args[0]).to.deep.equal({
-						params: {
-							zwei: 'bar'
-						},
+						query: '$service-1.eins = foo & $service-1.zwei = bar',
 						joins: [],
 						sort: null,
 						position: {

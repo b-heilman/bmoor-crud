@@ -216,9 +216,7 @@ describe('src/schema/composite.js', function () {
 				const lookup = await nexus.configureComposite('hello-world-2', {
 					base: 'test-3',
 					joins: ['> $test-pivot', '> #hello-world-1'],
-					params: {
-						'$test-pivot.boom': true
-					},
+					filters: '$test-pivot.boom=true',
 					fields: {
 						name: '.name',
 						version: '#hello-world-1'
@@ -269,7 +267,14 @@ describe('src/schema/composite.js', function () {
 						}
 					],
 					filters: {
-						expressables: [],
+						expressables: [
+							{
+								operation: '=',
+								path: 'boom',
+								series: 'test-pivot',
+								settings: {},
+								value: true
+							}],
 						join: 'and'
 					},
 					params: {
@@ -281,13 +286,6 @@ describe('src/schema/composite.js', function () {
 								series: 'test-3',
 								settings: {},
 								value: 5
-							},
-							{
-								operation: '=',
-								path: 'boom',
-								series: 'test-pivot',
-								settings: {},
-								value: true
 							}
 						]
 					}
@@ -781,11 +779,9 @@ describe('src/schema/composite.js', function () {
 
 			const query = await lookup.getQuery({
 				params: {
-					'$test-1.name': 'foo-bar',
-					'$test-3.name': {
-						eq: 'hello-world'
-					}
-				}
+					'$test-1.name': 'foo-bar'
+				},
+				query: '$test-3.name="hello-world"'
 			});
 
 			expect(query.toJSON()).to.deep.equal({
@@ -922,17 +918,16 @@ describe('src/schema/composite.js', function () {
 					join: 'and',
 					expressables: [
 						{
+							series: 'test-3',
+							path: 'name',
+							operation: '=',
+							value: 'hello-world',
+							settings: {}
+						},{
 							series: 'test-1',
 							path: 'name',
 							operation: '=',
 							value: 'foo-bar',
-							settings: {}
-						},
-						{
-							series: 'test-3',
-							path: 'name',
-							operation: 'eq',
-							value: 'hello-world',
 							settings: {}
 						}
 					]
@@ -1070,12 +1065,9 @@ describe('src/schema/composite.js', function () {
 			const query = await lookup.getQuery({
 				joins: ['$junk:test-6 > .id$test-5'],
 				params: {
-					'$creator.id': 123,
-					'$junk.foo': {
-						gt: 456,
-						lt: 789
-					}
-				}
+					'$creator.id': 123
+				},
+				query: '$junk.foo>456&$junk.foo<789'
 			});
 
 			expect(query.toJSON()).to.deep.equal({
@@ -1170,24 +1162,23 @@ describe('src/schema/composite.js', function () {
 					join: 'and',
 					expressables: [
 						{
-							series: 'creator',
-							path: 'id',
-							operation: '=',
-							value: 123,
-							settings: {}
-						},
-						{
 							series: 'junk',
 							path: 'foo',
-							operation: 'gt',
+							operation: '>',
 							value: 456,
 							settings: {}
 						},
 						{
 							series: 'junk',
 							path: 'foo',
-							operation: 'lt',
+							operation: '<',
 							value: 789,
+							settings: {}
+						},{
+							series: 'creator',
+							path: 'id',
+							operation: '=',
+							value: 123,
 							settings: {}
 						}
 					]
@@ -2200,8 +2191,6 @@ describe('src/schema/composite.js', function () {
 						stuff: '#extends'
 					}
 				});
-
-				await comp.build();
 
 				const query = await comp.getQuery();
 

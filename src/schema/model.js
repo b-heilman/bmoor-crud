@@ -198,6 +198,7 @@ class Model extends Structure {
 			query,
 			{
 				joins: settings.joins,
+				query: settings.query,
 				params: settings.params,
 				sort: settings.sort
 			},

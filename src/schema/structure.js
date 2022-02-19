@@ -6,6 +6,7 @@ const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
 const {StatementField} = require('./statement/field.js');
 const {StatementVariable} = require('./statement/variable.js');
+const {buildExpression} = require('./statement/expression/compiler.js');
 const {QueryJoin} = require('./query/join.js');
 const {QuerySort} = require('./query/sort.js');
 const {QueryPosition} = require('./query/position.js');
@@ -307,19 +308,6 @@ function buildDeflate(baseDeflate, fields) {
 		};
 	} else {
 		return (datum) => datum;
-	}
-}
-
-// TODO: do I want to want to create a builder class?
-function buildParams(series, field, v, Class) {
-	if (v && typeof v === 'object') {
-		if (Array.isArray(v)) {
-			return [new Class(series, field, v, '=')];
-		} else {
-			return Object.keys(v).map((op) => new Class(series, field, v[op], op));
-		}
-	} else {
-		return [new Class(series, field, v, '=')];
 	}
 }
 
@@ -628,6 +616,16 @@ class Structure {
 		}, []);
 	}
 
+	getFieldSeries(){
+		const rtn = new Set();
+
+		this.fields.forEach(field => {
+			rtn.add(field.series);
+		});
+
+		return rtn;
+	}
+
 	deflate(datum, ctx) {
 		if (!this.actions) {
 			this.build();
@@ -654,29 +652,7 @@ class Structure {
 	async extendBaseStatement(statement) {
 		const filters = this.incomingSettings.filters;
 		if (filters) {
-			Object.keys(filters).map((field) => {
-				let path = null;
-				let series = statement.base;
-
-				const param = filters[field];
-
-				if (field[0] === '$') {
-					const pos = field.indexOf('.');
-
-					series = field.substr(1, pos - 1);
-					path = field.substr(pos + 1);
-				} else {
-					if (field[0] === '.') {
-						field = field.substr(1);
-					}
-
-					path = field;
-				}
-
-				statement.addFilters(series, [
-					buildParams(path, param, StatementVariable)
-				]);
-			});
+			statement.addFilterExpression(buildExpression(filters));
 		}
 	}
 
@@ -706,12 +682,24 @@ class Structure {
 			]);
 		});
 
-		// parameters we can querying off of, must already be inside the structure
+		// TODO: how do I secure these?  If I prune params, it means you can't
+		// join by fields that aren't queriable.  That's a concern.  Also, how
+		// do I validate the query property here?  Filters don't need validation
+		// but these definitely need to be
+
+		// supports complex query structures
+		const query = settings.query;
+		if (query) {
+			statement.addParamExpression(buildExpression(query));
+		}
+
+		// params are designed for simple joins or references
 		/** structure
 		 * {
 		 * 	[inside series].[inside property]: [inside value]
 		 * }
 		 **/
+		// TODO: since this is no longer exposed externally, I can change the structure
 		const params = settings.params;
 		if (params) {
 			Object.keys(params).map((field) => {
@@ -733,9 +721,7 @@ class Structure {
 					path = field;
 				}
 
-				buildParams(series, path, param, StatementVariable).map((param) =>
-					statement.addParam(param)
-				);
+				statement.addParam(new StatementVariable(series, path, param, '='));
 			});
 		}
 	}
@@ -831,7 +817,6 @@ module.exports = {
 	buildActions,
 	buildInflate,
 	buildDeflate,
-	buildParams,
 	compareChanges,
 	addAccessorsToQuery,
 	Structure

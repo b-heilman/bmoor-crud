@@ -157,7 +157,7 @@ describe('src/controller/synthetic.js', function () {
 				context.query = {
 					param: {
 						id: 123,
-						name: 'req-1'
+						name: '"req-1"'
 					}
 				};
 
@@ -170,10 +170,7 @@ describe('src/controller/synthetic.js', function () {
 				const args = stubs.query.getCall(0).args;
 
 				expect(args[0]).to.deep.equal({
-					params: {
-						id: 123,
-						name: 'req-1'
-					},
+					query: '$test-user.id = 123 & $test-user.name = "req-1"',
 					joins: [],
 					sort: null,
 					position: {

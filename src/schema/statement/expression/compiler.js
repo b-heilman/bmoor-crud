@@ -8,7 +8,8 @@ const {StatementExpression, joiners} = require('../expression.js');
 const {StatementVariable} = require('../variable.js');
 
 const isDigit = /\d/;
-const isSafe = /[A-Za-z_0-9]/;
+const isSafe = /[A-Za-z_0-9\-]/;
+const isVariable = /[A-Za-z_0-9]/;
 const isQuote = /"|'|`/;
 const isOperator = /\+|-|\*|\/|\^|\||&|=|~|<|>|!/;
 
@@ -212,6 +213,40 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('operation', content);
 		}
+	},
+
+	variable: {
+		open: function (master, pos) {
+			if (isVariable.test(master[pos])) {
+				return {
+					pos: pos + 1,
+					begin: pos
+				};
+			}
+		},
+		close: function (master, pos, state) {
+			const ch = master[pos];
+
+			if (isVariable.test(ch)) {
+				return false;
+			}
+
+			return {
+				pos,
+				end: pos - 1
+			};
+		},
+		toToken: function (content, state) {
+			const lowerCase = content.toLowerCase();
+			
+			if (lowerCase === 'true'){
+				return new Token('constant', true, {subtype: 'boolean'});
+			} else if (lowerCase === 'false'){
+				return new Token('constant', false, {subtype: 'boolean'});
+			} else {
+				return new Token('constant', undefined, {subtype: 'undefined'});
+			}
+		}
 	}
 });
 
@@ -254,7 +289,7 @@ function buildExpression(str) {
 	str = str.replace(/[\s]/g, ''); // remove all white space
 
 	const tokens = compiler.tokenize(str)[0].tokens;
-
+	
 	let hasAnd = false;
 	const sets = tokens.reduce(
 		(agg, token) => {

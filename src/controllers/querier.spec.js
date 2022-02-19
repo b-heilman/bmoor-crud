@@ -121,15 +121,8 @@ describe('src/controller/querier.js', function () {
 
 				context.query = {
 					join: ['$test-group > $test-user'],
-					param: {
-						name: {
-							'~': 'something%like'
-						},
-						'.title': {
-							'~': '%oye'
-						},
-						'$test-group.name': 'woot'
-					}
+					query: '$test-user.name ~ "something%like" &' +
+						'$test-user.title ~ "%oye" & $test-group.name= "woot"'
 				};
 
 				context.content = {
@@ -152,7 +145,7 @@ describe('src/controller/querier.js', function () {
 					}
 				];
 
-				const res = await querier.query(context);
+				const res = await querier.search(context);
 
 				const args = stubs.execute.getCall(0).args[0];
 

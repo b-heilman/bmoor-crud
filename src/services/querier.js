@@ -94,6 +94,9 @@ async function processStatements(querier, settings, stmts, datums, ctx) {
 function buildExpressableSwitch(sourceDex, seriesToSource, method) {
 	return function (filter) {
 		// if expression, expression.getSeries() > make sure all same source
+		let name = null;
+		let source = null;
+			
 		if (filter instanceof StatementExpression) {
 			const series = filter.getSeries();
 			const sources = {};
@@ -102,16 +105,28 @@ function buildExpressableSwitch(sourceDex, seriesToSource, method) {
 			}
 
 			const names = Object.keys(sources);
-
 			if (names.length > 1) {
 				throw new Error('Expression with mixed sources');
 			} else {
-				const name = names[0];
-
-				sourceDex[name].queriable[method](filter);
+				name = names[0];
+				source = sourceDex[name];
 			}
 		} else {
-			sourceDex[seriesToSource[filter.series]].queriable[method](filter);
+			name = seriesToSource[filter.series];
+
+			if (!name){
+				const available = Object.keys(seriesToSource).join();
+				throw new Error('Unknown series: '+filter.series+' ('+available+')');
+			}
+
+			source = sourceDex[name];
+		}
+
+		if (source){
+			source.queriable[method](filter);
+		} else {
+			const available = Object.keys(sourceDex).join();
+			throw new Error('Unknown source: '+name+' ('+available+')');
 		}
 	};
 }

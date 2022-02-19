@@ -13,10 +13,10 @@ class Querier extends Controller {
 		this.nexus = nexus;
 	}
 
-	async query(ctx) {
-		const [content, query] = await Promise.all([
+	async search(ctx) {
+		const [content, settings] = await Promise.all([
 			ctx.getContent(),
-			parseQuery(null, ctx)
+			parseQuery(ctx)
 		]);
 
 		const composite = new Composite('comp-' + Date.now(), this.nexus);
@@ -27,7 +27,7 @@ class Querier extends Controller {
 
 		await doc.configure({});
 
-		return doc.query(query, ctx);
+		return doc.query(settings, ctx);
 	}
 
 	_buildRoutes() {
@@ -38,7 +38,7 @@ class Querier extends Controller {
 					path: '',
 					method: 'post'
 				},
-				fn: (ctx) => this.query(ctx),
+				fn: (ctx) => this.search(ctx),
 				hidden: false,
 				structure: {}
 			}

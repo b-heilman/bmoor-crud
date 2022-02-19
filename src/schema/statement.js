@@ -29,6 +29,13 @@ class Statement {
 		return !!this.models[series];
 	}
 
+	getNeededSeries(){
+		return new Set([
+			...this.filters.getSeries(),
+			...this.params.getSeries()
+		]);
+	}
+
 	getSeries(series) {
 		let rtn = this.models[series];
 
