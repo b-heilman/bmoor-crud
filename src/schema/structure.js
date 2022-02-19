@@ -616,10 +616,10 @@ class Structure {
 		}, []);
 	}
 
-	getFieldSeries(){
+	getFieldSeries() {
 		const rtn = new Set();
 
-		this.fields.forEach(field => {
+		this.fields.forEach((field) => {
 			rtn.add(field.series);
 		});
 

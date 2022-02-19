@@ -96,7 +96,7 @@ function buildExpressableSwitch(sourceDex, seriesToSource, method) {
 		// if expression, expression.getSeries() > make sure all same source
 		let name = null;
 		let source = null;
-			
+
 		if (filter instanceof StatementExpression) {
 			const series = filter.getSeries();
 			const sources = {};
@@ -114,19 +114,21 @@ function buildExpressableSwitch(sourceDex, seriesToSource, method) {
 		} else {
 			name = seriesToSource[filter.series];
 
-			if (!name){
+			if (!name) {
 				const available = Object.keys(seriesToSource).join();
-				throw new Error('Unknown series: '+filter.series+' ('+available+')');
+				throw new Error(
+					'Unknown series: ' + filter.series + ' (' + available + ')'
+				);
 			}
 
 			source = sourceDex[name];
 		}
 
-		if (source){
+		if (source) {
 			source.queriable[method](filter);
 		} else {
 			const available = Object.keys(sourceDex).join();
-			throw new Error('Unknown source: '+name+' ('+available+')');
+			throw new Error('Unknown source: ' + name + ' (' + available + ')');
 		}
 	};
 }

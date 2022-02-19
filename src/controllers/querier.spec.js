@@ -121,7 +121,8 @@ describe('src/controller/querier.js', function () {
 
 				context.query = {
 					join: ['$test-group > $test-user'],
-					query: '$test-user.name ~ "something%like" &' +
+					query:
+						'$test-user.name ~ "something%like" &' +
 						'$test-user.title ~ "%oye" & $test-group.name= "woot"'
 				};
 

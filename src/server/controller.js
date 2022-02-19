@@ -3,49 +3,54 @@ const {Router} = require('./router.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
 const opTranslation = new Config({
-	'eq': '=',
-	'gt': '>',
-	'lt': '<',
-	'like': '~'
+	eq: '=',
+	gt: '>',
+	lt: '<',
+	like: '~'
 });
 
-function convertParams(params, view){
-	if (params){
-		return Object.keys(params).map(field => {
-			const value = params[field];
+function convertParams(params, view) {
+	if (params) {
+		return Object.keys(params)
+			.map((field) => {
+				const value = params[field];
 
-			let path = null;
+				let path = null;
 
-			if (field[0] === '$'){
-				path = field;
-			} else {
-				if (view){
-					const structure = view.structure;
-					const name = structure.instructions ? 
-						structure.instructions.model : structure.name;
-
-					path = '$'+name+'.'+field;
+				if (field[0] === '$') {
+					path = field;
 				} else {
-					throw new Error('need to fully define path:'+field);
+					if (view) {
+						const structure = view.structure;
+						const name = structure.instructions
+							? structure.instructions.model
+							: structure.name;
+
+						path = '$' + name + '.' + field;
+					} else {
+						throw new Error('need to fully define path:' + field);
+					}
 				}
-			}
 
-			if (typeof(value) === 'object'){
-				return Object.keys(value).map(op => {
-					const o = opTranslation.get(op) || op;
+				if (typeof value === 'object') {
+					return Object.keys(value)
+						.map((op) => {
+							const o = opTranslation.get(op) || op;
 
-					return `${path} ${op} ${value}`;
-				}).join(' & ');
-			} else {
-				return `${path} = ${value}`;
-			}
-		}, []).join(' & ');
+							return `${path} ${o} ${value}`;
+						})
+						.join(' & ');
+				} else {
+					return `${path} = ${value}`;
+				}
+			}, [])
+			.join(' & ');
 	} else {
 		return null;
 	}
 }
 
-async function parseQuery(ctx, view=null) {
+async function parseQuery(ctx, view = null) {
 	const sort = ctx.getQuery('sort') || null;
 	const joins = ctx.getQuery('join') || [];
 	const limit = ctx.getQuery('limit') || null;

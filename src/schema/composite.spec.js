@@ -274,7 +274,8 @@ describe('src/schema/composite.js', function () {
 								series: 'test-pivot',
 								settings: {},
 								value: true
-							}],
+							}
+						],
 						join: 'and'
 					},
 					params: {
@@ -923,7 +924,8 @@ describe('src/schema/composite.js', function () {
 							operation: '=',
 							value: 'hello-world',
 							settings: {}
-						},{
+						},
+						{
 							series: 'test-1',
 							path: 'name',
 							operation: '=',
@@ -1174,7 +1176,8 @@ describe('src/schema/composite.js', function () {
 							operation: '<',
 							value: 789,
 							settings: {}
-						},{
+						},
+						{
 							series: 'creator',
 							path: 'id',
 							operation: '=',

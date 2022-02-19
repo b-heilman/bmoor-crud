@@ -369,12 +369,12 @@ class Instructions {
 	}
 
 	// this method will take an array of series which are the leafs
-	// and it figures out all series needed 
-	getNeeded(seriesArr){
+	// and it figures out all series needed
+	getNeeded(seriesArr) {
 		const rtn = new Set();
 
 		const addSeries = (series) => {
-			if (!rtn.has(series)){
+			if (!rtn.has(series)) {
 				rtn.add(series);
 
 				this.getSeries(series).incoming.map(addSeries);

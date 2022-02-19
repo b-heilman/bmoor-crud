@@ -21,7 +21,7 @@ class QueryStatement extends Statement {
 		return rtn;
 	}
 
-	addFilterExpression(expression){
+	addFilterExpression(expression) {
 		return this.filters.join(expression);
 	}
 
@@ -31,7 +31,7 @@ class QueryStatement extends Statement {
 		return super.addParam(param);
 	}
 
-	addParamExpression(expression){
+	addParamExpression(expression) {
 		this.hasParams = true;
 
 		return this.params.join(expression);

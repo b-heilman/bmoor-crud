@@ -38,8 +38,8 @@ class StatementExpression {
 
 	// this is joined to join in another expression.  It's so that a caculated expression
 	// that is and based can easily be joined on a lowest level
-	join(expression){
-		if (this.joiner === expression.joiner){
+	join(expression) {
+		if (this.joiner === expression.joiner) {
 			this.expressables.push(...expression.expressables);
 		} else {
 			this.expressables.push(expression);

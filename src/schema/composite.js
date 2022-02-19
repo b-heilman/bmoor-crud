@@ -297,7 +297,7 @@ class Composite extends Structure {
 			// the fields won't be in the actual query, because I use the joins
 			// other places if needed
 			//-----
-			//MARK: 
+			//MARK:
 			await Promise.all(
 				this.instructions.getAllSeries().map(async (series) => {
 					const info = this.instructions.getSeries(series);
@@ -549,20 +549,22 @@ class Composite extends Structure {
 		const query = await super.prepareBaseQuery();
 
 		// WORKING
-		
+
 		// a unique array of used series between fields and filters
-		const names = Array.from(new Set([
-			// we use the model's fields, _subs should have been added, but the 
-			// query hasn't had them added because it require requires a ctx, which
-			// comes at call time
-			...this.getFieldSeries(),
-			// I don't like that I need to do this, but I put the filters
-			// direcly into the query.  I probably need to rethink this in 
-			// the next refactor, but getting this done
-			...query.getNeededSeries()
-		]));
+		const names = Array.from(
+			new Set([
+				// we use the model's fields, _subs should have been added, but the
+				// query hasn't had them added because it require requires a ctx, which
+				// comes at call time
+				...this.getFieldSeries(),
+				// I don't like that I need to do this, but I put the filters
+				// direcly into the query.  I probably need to rethink this in
+				// the next refactor, but getting this done
+				...query.getNeededSeries()
+			])
+		);
 		const needed = this.instructions.getNeeded(names);
-		
+
 		this.instructions.forEach((series, seriesInfo) => {
 			// At this point the params and filters have been added, so I can
 			// assume I need to add only leafs (hasSeries) or models with a join
@@ -642,9 +644,8 @@ class Composite extends Structure {
 
 					query.setModel(compositeName, model);
 
-					query.addParam(new StatementVariable(compositeName,
-						model.getKeyField(),
-						key)
+					query.addParam(
+						new StatementVariable(compositeName, model.getKeyField(), key)
 					);
 				}
 
@@ -691,7 +692,9 @@ class Composite extends Structure {
 				query.setModel(series, model);
 
 				if (byModelName === modelName) {
-					query.addParam(new StatementVariable(series, model.getKeyField(), key));
+					query.addParam(
+						new StatementVariable(series, model.getKeyField(), key)
+					);
 				}
 
 				if (incoming) {
