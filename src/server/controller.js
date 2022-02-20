@@ -71,7 +71,8 @@ async function parseQuery(ctx, view = null) {
 		query: runQuery,
 		joins,
 		sort,
-		position: {limit}
+		position: {limit},
+		validate: true
 	};
 }
 

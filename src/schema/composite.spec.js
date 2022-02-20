@@ -69,7 +69,8 @@ describe('src/schema/composite.js', function () {
 					key: true
 				},
 				name: {
-					read: true
+					read: true,
+					query: true
 				},
 				title: {
 					read: true
@@ -697,9 +698,10 @@ describe('src/schema/composite.js', function () {
 	});
 
 	describe('::getQuery', function () {
+		let lookup = null;
 		// TODO: run this against models that have alias schemas
-		it('should work', async function () {
-			const lookup = new Composite('foo-bar', nexus);
+		beforeEach(async function(){
+			lookup = new Composite('foo-bar', nexus);
 
 			await nexus.configureModel('my-model', {
 				source: 'source-1',
@@ -777,7 +779,9 @@ describe('src/schema/composite.js', function () {
 					tail: '$my-tail.name'
 				}
 			});
+		});
 
+		it('should work', async function () {
 			const query = await lookup.getQuery({
 				params: {
 					'$test-1.name': 'foo-bar'
@@ -935,6 +939,36 @@ describe('src/schema/composite.js', function () {
 					]
 				}
 			});
+		});
+
+		it('should succeed if validating a valid field', async function () {
+			let failed = false;
+			try {
+				await lookup.getQuery({
+					query: '$test-3.name="hello-world"',
+					validate: true
+				});
+			} catch(ex){
+				failed = true;
+			}
+
+			expect(failed).to.equal(false);
+		});
+
+		it('should fail if validating an invalid field', async function () {
+			let failed = false;
+			try {
+				await lookup.getQuery({
+					query: '$test-3.title="hello-world"',
+					validate: true
+				});
+			} catch(ex){
+				expect(ex.message).to.equal('unqueriable field: test-3.title');
+
+				failed = true;
+			}
+
+			expect(failed).to.equal(true);
 		});
 
 		it('should succeed with a basic alignment', async function () {

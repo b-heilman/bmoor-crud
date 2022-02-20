@@ -57,10 +57,12 @@ describe('src/controller/querier.js', function () {
 					key: true
 				},
 				name: {
-					read: true
+					read: true,
+					query: true
 				},
 				title: {
-					read: true
+					read: true,
+					query: true
 				},
 				groupId: {
 					read: true,
@@ -246,6 +248,48 @@ describe('src/controller/querier.js', function () {
 						stats: 'stat-2'
 					}
 				]);
+			});
+
+			it('should fail if an invalid field is queried', async function () {
+				const querier = new sut.Querier(nexus);
+
+				context.query = {
+					join: ['$test-group > $test-user'],
+					query:
+						'$test-user.groupId = 123'
+				};
+
+				context.content = {
+					base: 'test-user',
+					joins: ['> $test-stats'],
+					fields: {
+						user: '.name',
+						stats: '$test-stats.name'
+					}
+				};
+
+				connectorResult = [
+					{
+						user: 'user-1',
+						stats: 'stat-1'
+					},
+					{
+						user: 'user-2',
+						stats: 'stat-2'
+					}
+				];
+
+				let failed = false;
+
+				try {
+					await querier.search(context);
+				} catch(ex){
+					failed = true;
+
+					expect(ex.message).to.equal('unqueriable field: test-user.groupId');
+				}
+
+				expect(failed).to.equal(true);
 			});
 		});
 	});

@@ -14,6 +14,17 @@ function calculateExpressionSet(expression, set) {
 	});
 }
 
+function validateExpression(expression, verify) {
+	expression.expressables.forEach((exp) => {
+		if (exp instanceof StatementExpression) {
+			validateExpression(exp, verify);
+		} else {
+			// this is a variables
+			verify(exp.series, exp.path);
+		}
+	});
+}
+
 class StatementExpression {
 	constructor(expressables = []) {
 		this.joiner = joiners.and;
@@ -34,6 +45,12 @@ class StatementExpression {
 		calculateExpressionSet(this, set);
 
 		return set;
+	}
+
+	validate(verify){
+		validateExpression(this, verify);
+
+		return true;
 	}
 
 	// this is joined to join in another expression.  It's so that a caculated expression

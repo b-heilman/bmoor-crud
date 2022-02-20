@@ -682,15 +682,36 @@ class Structure {
 			]);
 		});
 
-		// TODO: how do I secure these?  If I prune params, it means you can't
-		// join by fields that aren't queriable.  That's a concern.  Also, how
-		// do I validate the query property here?  Filters don't need validation
-		// but these definitely need to be
+		// I'm doing this so people have a way around validation if they deem in neccisary.  I'm sure this
+		// will result in someone getting hacked, but I want to trust the devs using this
 
 		// supports complex query structures
 		const query = settings.query;
-		if (query) {
-			statement.addParamExpression(buildExpression(query));
+		if (query){
+			let isValid = true;
+			const exp = buildExpression(query);
+
+			if (settings.validate) {
+				isValid = exp.validate((series, path) => {
+					if (statement.hasSeries(series)){
+						const model = statement.getSeries(series).model;
+
+						const field = model.getField(path);
+
+						if (!field){
+							throw new Error(`unknown field: ${series}.${path}`);
+						} else if (!field.incomingSettings.query){
+							throw new Error(`unqueriable field: ${series}.${path}`);
+						}
+					} else {
+						throw new Error(`unknown series: ${series}`);
+					}
+				});
+			}
+
+			if (isValid){
+				statement.addParamExpression(exp);
+			}
 		}
 
 		// params are designed for simple joins or references
@@ -699,7 +720,7 @@ class Structure {
 		 * 	[inside series].[inside property]: [inside value]
 		 * }
 		 **/
-		// TODO: since this is no longer exposed externally, I can change the structure
+		//since this is no longer exposed externally, I can change the structure
 		const params = settings.params;
 		if (params) {
 			Object.keys(params).map((field) => {
@@ -728,8 +749,6 @@ class Structure {
 
 	// assigns query specific fields
 	async extendQuery(query, settings, ctx) {
-		await this.extendStatement(query, settings, ctx);
-
 		// this is the query property.  It allows you to 'join in' from the outside
 		/** structure
 		 * {
@@ -765,6 +784,7 @@ class Structure {
 					throw new Error(`unable to mount: ${mountSeries} from ${path}`);
 				}
 
+				// this defined the series' model
 				await addAccessorsToQuery(access, query, this.nexus);
 
 				const rootAccessor = access[0];
@@ -773,6 +793,8 @@ class Structure {
 				query.setModel(rootAccessor.series, model);
 			}, Promise.resolve(true));
 		}
+
+		await this.extendStatement(query, settings, ctx);
 
 		if (settings.sort) {
 			buildSorts(query, settings.sort);

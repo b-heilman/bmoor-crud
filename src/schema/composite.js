@@ -297,7 +297,6 @@ class Composite extends Structure {
 			// the fields won't be in the actual query, because I use the joins
 			// other places if needed
 			//-----
-			//MARK:
 			await Promise.all(
 				this.instructions.getAllSeries().map(async (series) => {
 					const info = this.instructions.getSeries(series);
@@ -606,13 +605,7 @@ class Composite extends Structure {
 
 		return super.extendQuery(
 			query,
-			{
-				joins: settings.joins,
-				params: settings.params, // params only come from joins
-				query: settings.query,
-				sort: settings.sort,
-				position: settings.position
-			},
+			settings,
 			ctx
 		);
 	}

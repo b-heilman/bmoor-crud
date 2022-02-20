@@ -175,7 +175,8 @@ describe('src/controller/synthetic.js', function () {
 					sort: null,
 					position: {
 						limit: null
-					}
+					},
+					validate: true
 				});
 
 				expect(res).to.deep.equal({hello: 'world'});

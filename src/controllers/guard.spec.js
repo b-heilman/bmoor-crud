@@ -105,7 +105,8 @@ describe('src/controller/guard.js', function () {
 						sort: null,
 						position: {
 							limit: null
-						}
+						},
+						validate: true
 					});
 				});
 
@@ -606,7 +607,8 @@ describe('src/controller/guard.js', function () {
 						sort: null,
 						position: {
 							limit: null
-						}
+						},
+						validate: true
 					});
 
 					const args1 = stubs.delete.getCall(0).args;
