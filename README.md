@@ -18,33 +18,33 @@ In this example we are going to define a source (http), a model (a user), a deco
 
 #### Source
 We will be defining the file `src/source/otherServce.js`
-```
+```javascript
 module.exports = {
-  
+  "ok": "yes"
 };
 ```
 
 #### Model
-We will be defining the file `src/models/user.js
-```
+We will be defining the file `src/models/user.js`
+```javascript
 module.exports = {
-  
+  "foo": "bar"
 };
 ```
 
 #### Decorator
-We will be defining the file `src/decorators/user.js
-```
+We will be defining the file `src/decorators/user.js`
+```javascript
 module.exports = {
-  
+  "hello": "world"
 };
 ```
 
 #### Guards
-We will be defining the file `src/guards/user.js
-```
+We will be defining the file `src/guards/user.js`
+```javascript
 module.exports = {
-  
+  "eins": "zwei"
 };
 ```
 
@@ -52,3 +52,10 @@ module.exports = {
 We will be defining the file `index.js`
 ```
 ```
+## TODO
+#### Features
+[ ] - HTTP Connector
+[ ] - Create / Update / Deleta via connectors
+[ ] - Redo configure structures / flow
+[ ] - Set up integration test using http example
+[ ] - Copy integration test to ReadMe Example

@@ -1,30 +1,45 @@
 const error = require('bmoor/src/lib/error.js');
 const {Config} = require('bmoor/src/lib/config.js');
 
-const config = new Config({
-	fetch: null
-});
+// this converts a request into one another bmoor-crud instance can decode
+//-----------
+// sources allow us to solve the multiple upstream problem, so each source instance will reference
+// create a connector with different connectorSettings
 
-const connector = {
-	execute: function (stmt) {
-		const fetch = config.get('fetch');
+/**
+ * connectorSettings {
+ *   base // path to the remove server's querier 
+ * }
+ **/
+function buildConnector(connectorSettings){
+	return {
+		execute: async function (stmt, ctx) {
+			if (!ctx.fetch) {
+				throw error('context has no defined fetch', {
+					code: 'BMOOR_CRUD_CONNECTOR_HTTP'
+				});
+			}
 
-		if (!fetch) {
-			throw error('no knex connector configured', {
-				code: 'BMOOR_CRUD_CONNECTOR_KNEX'
+			//We need to build the content as a post
+			const request = stmt.toRequest();
+
+			const res = await ctx.fetch(connectorSettings.base, {
+				method: 'post',
+				body: JSON.stringify(request),
+				headers: {'Content-Type': 'application/json'} // ctx.fetch should be able to wrap security headers
 			});
-		}
 
-		return stmt;
-	}
-};
+			return res.json();
+		}
+	};
+}
 
 module.exports = {
 	config,
 
 	connector,
 
-	factory() {
-		return connector;
+	factory(settings) {
+		return buildConnector(settings);
 	}
 };
