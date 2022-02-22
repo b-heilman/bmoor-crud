@@ -16,26 +16,16 @@ const scalarMethods = {
 	gte: '>='
 };
 
-function translateWhere(expression, agg) {
+function translateWhere(expression) {
+	const where = [];
+	const params = [];
+
 	expression.expressables.forEach((exp) => {
 		if (exp instanceof StatementExpression) {
-			const myCtx = {
-				where: [],
-				params: {
-					expressables: [],
-					join: 'and'
-				}
-			};
+			const res = translateWhere(exp);
 
-			translateWhere(exp, myCtx);
-
-			const where =
-				'(' +
-				myCtx.where.join(exp.joiner === joiners.and ? ' AND ' : ' OR ') +
-				')';
-
-			agg.where.push(where);
-			agg.params.push(...myCtx.params);
+			where.push('('+res.stmt+')');
+			params.push(...res.params);
 		} else {
 			const path = exp.path;
 			const op = exp.operation;
@@ -44,16 +34,21 @@ function translateWhere(expression, agg) {
 			if (Array.isArray(exp.value)) {
 				const comp = arrayMethods[op];
 
-				agg.where.push(`\`${exp.series}\`.\`${path}\`${comp}(?)`);
-				agg.params.push(exp.value);
+				where.push(`\`${exp.series}\`.\`${path}\`${comp}(?)`);
+				params.push(exp.value);
 			} else {
 				const comp = scalarMethods[op];
 
-				agg.where.push(`\`${exp.series}\`.\`${path}\`${comp}?`);
-				agg.params.push(exp.value);
+				where.push(`\`${exp.series}\`.\`${path}\`${comp}?`);
+				params.push(exp.value);
 			}
 		}
 	});
+
+	return {
+		stmt: where.join(expression.joiner === joiners.and ? ' AND ' : ' OR ')
+		params
+	};
 }
 
 function translateSelect(query) {
@@ -79,6 +74,7 @@ function translateSelect(query) {
 					const type = join.optional ? 'LEFT JOIN' : 'INNER JOIN';
 					const joinPoint = `${type} \`${modelName}\` AS \`${modelRef}\``;
 
+					// I support this, but it never happens in the framework
 					const on = join.mappings.map((on) => {
 						const dis = `\`${modelRef}\`.\`${on.from}\``;
 						const dat = `\`${join.name}\`.\`${on.to}\``;
@@ -102,7 +98,19 @@ function translateSelect(query) {
 		}
 	);
 
-	translateWhere(query.params, settings);
+	const where = translateWhere(query.params);
+
+	if (query.filters.isExpressable()){
+		const t = translateWhere(query.filters);
+
+		if (where.stmt){
+			where.stmt += ' AND '+t.stmt;
+		} else {
+			where.stmt = t.stmt;
+		}
+
+		where.params.push(...t.params);
+	}
 
 	const sorts = query.sorts;
 
@@ -110,8 +118,8 @@ function translateSelect(query) {
 	return {
 		select: `${settings.select.join(',\n\t')}`,
 		from: `${settings.from.join('\n\t')}`,
-		where: settings.where.length ? settings.where.join('\n\tAND ') : null,
-		params: settings.params,
+		where: where.stmt.length ? settings.stmt : null,
+		params: where.params,
 		orderBy: sorts.length
 			? sorts
 					.sort((a, b) => a.pos - b.pos)

@@ -17,20 +17,80 @@ npm install bmoor-crud
 In this example we are going to define a source (http), a model (a user), a decorator (to define a display method), and a guard (to expose the service).  We also will set up a server and add the guard to it. 
 
 #### Source
-We will be defining the file `src/source/otherServce.js`
+We will be defining the file `src/source/otherService.js`
 ```javascript
 module.exports = {
-  "ok": "yes"
+  connector: 'http',
+  connectorSettings: {
+    base: 'https://somewhere.com/v1/querier'
+  }
 };
 ```
 
-#### Model
+#### Models
+We will be defining the file `src/models/organization.js`
+```javascript
+module.exports = {
+  source: 'otherService',
+  isFlat: false, // come models can have `.` in the property, this says ignore that
+  fields: {
+    id: {
+      read: true,
+      delete: true // able to delete based on this value
+    },
+    title: {
+      create: true,
+      update: true,
+      read: true,
+      query: true // able to query this model based on this value
+    }
+  }
+};
+```
+
 We will be defining the file `src/models/user.js`
 ```javascript
 module.exports = {
-  "foo": "bar"
+  source: 'otherService',
+  isFlat: false, // come models can have `.` in the property, this says ignore that
+  fields: {
+    id: {
+      read: true,
+      delete: true // able to delete based on this value
+    },
+    title: {
+      create: true,
+      update: true,
+      read: true,
+      query: true // able to query this model based on this value
+    },
+    organizationId: {
+      read: true,
+      link: {
+        name: 'organization',
+        field: 'id'
+      }
+    }
+  }
 };
 ```
+
+general schema options
+```javascript
+{
+  source,
+  isFlat,
+  fields: {
+    [property] : { // the path of the property, can have '.' in it for heirarchy
+      create // can this field be included in a creation datum?
+      read   // can this field be read from the system?
+      update // can this field be included in a update datum?
+      delete // can we delete based on this field?
+      query  // can we query based on this field?
+    }
+  }
+}
+````
 
 #### Decorator
 We will be defining the file `src/decorators/user.js`
@@ -40,7 +100,7 @@ module.exports = {
 };
 ```
 
-#### Guards
+#### Guard
 We will be defining the file `src/guards/user.js`
 ```javascript
 module.exports = {
@@ -48,14 +108,42 @@ module.exports = {
 };
 ```
 
+#### Documents
+We will be defining the file `src/documents/combined.js`
+```javascript
+module.exports = {
+  base: 'user', // no $ needed
+  joins: ['> $organization'], // if you don't note it, assume base is always the first
+  fields: {
+    title: '.title', // short hand references the base
+    org: {
+      title: '$organization.name'
+  }
+};
+```
+
+General schema options
+```javascript
+{
+  base
+  joins // array of the way to join the models, > is inner join, ?> left join
+  filters // predefined query for the document
+  fields {
+    [structure]: '$field.property' // The structure defined is the structure returned
+                                   // each value is [model].[field]
+  }
+}
+````
+
 #### Server
 We will be defining the file `index.js`
 ```
 ```
+
 ## TODO
 #### Features
-[ ] - HTTP Connector
-[ ] - Create / Update / Deleta via connectors
-[ ] - Redo configure structures / flow
-[ ] - Set up integration test using http example
-[ ] - Copy integration test to ReadMe Example
+- [ ] HTTP Connector
+- [ ] Create / Update / Deleta via connectors
+- [ ] Redo configure structures / flow
+- [ ] Set up integration test using http example
+- [ ] Copy integration test to ReadMe Example

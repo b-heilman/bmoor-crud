@@ -35,6 +35,10 @@ class StatementExpression {
 		this.joiner = joiner;
 	}
 
+	isExpressable(){
+		return this.expressables.length !== 0;
+	}
+
 	addExpressable(expressable) {
 		this.expressables.push(expressable);
 	}

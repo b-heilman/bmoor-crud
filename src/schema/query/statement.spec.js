@@ -132,6 +132,37 @@ describe('src/schema/query.js', function () {
 		});
 	});
 
+	describe('::toRequest', function(){
+		it('should correctly compile all the operations and keep in order', function () {
+			const query = new sut.QueryStatement('a');
+
+			query.setModel('a', {schema: 'schemaA'});
+			query.setModel('c', {schema: 'schemaC'});
+			query.setModel('b', {schema: 'schemaB'});
+
+			query.addJoins('b', [new QueryJoin('a', [{from: 'aId', to: 'id'}])]);
+			query.addJoins('c', [new QueryJoin('b', [{from: 'bId', to: 'id'}])]);
+			query.addJoins('b', [new QueryJoin('a', [{from: '---', to: '----'}])]);
+
+			query.addFields('a', [new StatementField('hello.world')]);
+			query.addFields('b', [new StatementField('foo.bar', 'test')]);
+			query.addFields('c', [new StatementField('eins', 'zwei')]);
+
+			query.addFilter(new StatementVariable('a', 'param1', 123));
+			query.addFilter(new StatementVariable('b', 'param2', '456'));
+			query.addFilter(new StatementVariable('c', 'param3', [1, 2], '='));
+
+			query.addParam(new StatementVariable('a', 'param1', 123));
+			query.addParam(new StatementVariable('b', 'param2', '456'));
+			query.addParam(new StatementVariable('c', 'param3', [1, 2], '='));
+
+			query.addSort(new QuerySort('a', 'unos'));
+			query.addSort(new QuerySort('c', 'dos', true));
+			query.addSort(new QuerySort('b', 'tres', false));
+
+			expect(query.toJSON()).to.deep.equal({});
+	});
+
 	describe('composition', function () {
 		it('should correctly compile all the operations and keep in order', function () {
 			const query = new sut.QueryStatement('a');

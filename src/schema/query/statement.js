@@ -1,4 +1,27 @@
+
+const {set} = require('bmoor/src/core.js');
+
+const {
+	StatementExpression,
+	joiners
+} = require('../statement/expression.js');
 const {Statement, methods, reduceExpression} = require('../statement.js');
+
+function translateParams(expression) {
+	const agg = [];
+
+	// TODO: I don't think I have properly tested ingesting arrays...
+	expression.expressables.forEach((exp) => {
+		if (exp instanceof StatementExpression) {
+			agg.push('(' + translateParams(exp, child) + ')');
+		} else {
+			// has to be a param
+			agg.push(`\`${exp.series}\`.\`${exp.path}\` ${exp.operation} `+JSON.stringify(exp.value));
+		}
+	});
+
+	return agg.join(expression.joiner === joiners.and ? ' & ' : ' | ');
+}
 
 class QueryStatement extends Statement {
 	constructor(baseSeries) {
@@ -167,6 +190,63 @@ class QueryStatement extends Statement {
 		}
 
 		return ordered;
+	}
+
+	toRequest(){
+		const models = this.getInOrder();
+		const base = models[0];
+
+		const queryStmts = [];
+
+		if (this.filters.isExpressable()){
+			queryStmts.push(translateParams(this.filters));
+		}
+
+		if (this.params.isExpressable()){
+			queryStmts.push(translateParams(this.params));
+		}
+
+		const query = queryStmts.length ? (queryStmts.join(' & ')) : undefined;
+
+		const rtn = {
+			base: base.schema,
+			...models.reduce(
+				(agg, model) => {
+					if (model === base){
+						model.fields.forEach(field => {
+							set(agg.fields, field.as, `.${field.path}`);
+						});
+					} else {
+						agg.push(
+							...Object.values(model.joins).map(
+								join => {
+									const on = join.mappings[0];
+
+									const series = (join.name === base.series) ? 
+										base.schema : join.name;
+
+									const target = `.${on.to}$${model.series}:${model.schema}`;
+									
+									return `${series}.${on.from} > ${target}`;
+								}
+							)
+						);
+
+						model.fields.forEach(field => {
+							set(agg.fields, field.as, `$${model.series}.${field.path}`);
+						});
+					}
+
+					return agg;
+				},
+				{
+					joins: [],
+					fields: {}
+				}
+			),
+			query
+			// sorts
+		};
 	}
 
 	toJSON() {
