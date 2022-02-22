@@ -402,6 +402,7 @@ class Composite extends Structure {
 
 		this.instructions = new Instructions(
 			settings.base,
+			settings.alias,
 			settings.joins,
 			settings.fields,
 			settings.params
@@ -541,7 +542,9 @@ class Composite extends Structure {
 	}
 
 	getBaseQuery() {
-		return new QueryStatement(this.instructions.model);
+		return this.instructions.alias ?
+			new QueryStatement(this.instructions.alias, this.instructions.model) :
+			new QueryStatement(this.instructions.model);
 	}
 
 	async prepareBaseQuery() {

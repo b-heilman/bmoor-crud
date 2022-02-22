@@ -61,7 +61,7 @@ const parsings = new Config({
 		close: function (master, pos) {
 			const ch = master[pos];
 
-			if (isCharacter.test(ch) || ch === '-') {
+			if (isCharacter.test(ch) || ch === '-' || ch === '.') {
 				return false;
 			}
 

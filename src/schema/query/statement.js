@@ -13,10 +13,10 @@ function translateParams(expression) {
 	// TODO: I don't think I have properly tested ingesting arrays...
 	expression.expressables.forEach((exp) => {
 		if (exp instanceof StatementExpression) {
-			agg.push('(' + translateParams(exp, child) + ')');
+			agg.push('(' + translateParams(exp) + ')');
 		} else {
 			// has to be a param
-			agg.push(`\`${exp.series}\`.\`${exp.path}\` ${exp.operation} `+JSON.stringify(exp.value));
+			agg.push(`$${exp.series}.${exp.path} ${exp.operation} `+JSON.stringify(exp.value));
 		}
 	});
 
@@ -24,8 +24,8 @@ function translateParams(expression) {
 }
 
 class QueryStatement extends Statement {
-	constructor(baseSeries) {
-		super(baseSeries);
+	constructor(baseSeries, baseSchema=null) {
+		super(baseSeries, baseSchema=null);
 
 		this.position = null;
 		this.sorts = [];
@@ -135,7 +135,6 @@ class QueryStatement extends Statement {
 				if (betterSeries) {
 					this.base = betterSeries;
 				} else {
-					console.log(this.models, paramDex);
 					throw new Error('well, this is bad');
 				}
 			}
@@ -208,34 +207,28 @@ class QueryStatement extends Statement {
 
 		const query = queryStmts.length ? (queryStmts.join(' & ')) : undefined;
 
-		const rtn = {
+		return {
 			base: base.schema,
+			alias: base.series,
 			...models.reduce(
 				(agg, model) => {
-					if (model === base){
-						model.fields.forEach(field => {
-							set(agg.fields, field.as, `.${field.path}`);
-						});
-					} else {
-						agg.push(
+					if (model !== base){
+						agg.joins.push(
 							...Object.values(model.joins).map(
 								join => {
 									const on = join.mappings[0];
 
-									const series = (join.name === base.series) ? 
-										base.schema : join.name;
+									const target = `.${on.from}$${model.series}:${model.schema}`;
 
-									const target = `.${on.to}$${model.series}:${model.schema}`;
-									
-									return `${series}.${on.from} > ${target}`;
+									return `$${join.name}.${on.to} > ${target}`;
 								}
 							)
 						);
-
-						model.fields.forEach(field => {
-							set(agg.fields, field.as, `$${model.series}.${field.path}`);
-						});
 					}
+
+					model.fields.forEach(field => {
+						set(agg.fields, field.as||field.path, `$${model.series}.${field.path}`);
+					});
 
 					return agg;
 				},

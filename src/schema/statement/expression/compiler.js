@@ -188,6 +188,32 @@ const parsings = new Config({
 		}
 	},
 
+	array: {
+		open: function (master, pos, state) {
+			const ch = master[pos];
+
+			if (ch === '[') {
+				return {
+					pos: pos + 1,
+					begin: pos
+				};
+			}
+		},
+		close: function (master, pos, state) {
+			const ch = master[pos];
+
+			if (ch ===']' && master[pos-1] !== '\\') {
+				return {
+					pos: pos + 1,
+					end: pos
+				};
+			}
+		},
+		toToken: function (content) {
+			return new Token('constant', JSON.parse(content), {subtype: 'array'});
+		}
+	},
+
 	operation: {
 		// +
 		open: function (master, pos) {

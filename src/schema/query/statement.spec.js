@@ -152,15 +152,31 @@ describe('src/schema/query.js', function () {
 			query.addFilter(new StatementVariable('b', 'param2', '456'));
 			query.addFilter(new StatementVariable('c', 'param3', [1, 2], '='));
 
-			query.addParam(new StatementVariable('a', 'param1', 123));
-			query.addParam(new StatementVariable('b', 'param2', '456'));
-			query.addParam(new StatementVariable('c', 'param3', [1, 2], '='));
+			query.addParam(new StatementVariable('a', 'param1', 987));
+			query.addParam(new StatementVariable('b', 'param2', '654'));
+			query.addParam(new StatementVariable('c', 'param3', [9,8], '='));
 
 			query.addSort(new QuerySort('a', 'unos'));
 			query.addSort(new QuerySort('c', 'dos', true));
 			query.addSort(new QuerySort('b', 'tres', false));
 
-			expect(query.toJSON()).to.deep.equal({});
+			expect(query.toRequest()).to.deep.equal({
+				base: 'schemaA',
+				alias: 'a',
+				joins: [
+					'$a.id > .aId$b:schemaB',
+					'$b.id > .bId$c:schemaC'
+				],
+				fields: {
+					hello: {
+						world: '$a.hello.world'
+					},
+					test: '$b.foo.bar',
+					zwei: '$c.eins'
+				},
+				query: '$a.param1 = 123 & $b.param2 = "456" & $c.param3 = [1,2] & $a.param1 = 987 & $b.param2 = "654" & $c.param3 = [9,8]'
+			});
+		});
 	});
 
 	describe('composition', function () {

@@ -8,13 +8,18 @@ const methods = {
 };
 
 class Statement {
-	constructor(baseSeries) {
+	constructor(baseSeries, baseSchema=null) {
 		this.base = baseSeries;
+
 		this.models = {};
 		this.filters = new StatementExpression();
 		this.params = new StatementExpression();
 
-		this.getSeries(baseSeries);
+		if (baseSchema){
+			this.setModel(baseSeries, baseSchema);
+		} else {
+			this.getSeries(baseSeries);
+		}
 	}
 
 	setMethod(method) {
@@ -101,7 +106,9 @@ class Statement {
 	}
 
 	clone() {
-		const stmt = new this.constructor(this.base);
+		const stmt = new this.constructor(
+			this.base, this.getSeries(this.base).schema
+		);
 
 		stmt.import(this);
 

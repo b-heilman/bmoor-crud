@@ -99,6 +99,86 @@ describe('src/controller/querier.js', function () {
 			}
 		});
 		await nexus.configureCrud('test-stats', {});
+
+		nexus.configureModel('schemaA', {
+			source: 'test-1',
+			fields: {
+				id: {
+					read: true,
+					key: true
+				},
+				'hello.world': {
+					read: true,
+					write: true,
+					update: true,
+					delete: true,
+					query: true
+				},
+				param1: {
+					read: true,
+					query: true
+				}
+			}
+		});
+		await nexus.configureCrud('schemaA', {});
+
+		nexus.configureModel('schemaB', {
+			source: 'test-1',
+			fields: {
+				id: {
+					read: true,
+					key: true
+				},
+				'foo.bar': {
+					read: true,
+					write: true,
+					update: true,
+					delete: true,
+					query: true
+				},
+				aId: {
+					read: true,
+					link: {
+						name: 'schemaA',
+						field: 'id'
+					}
+				},
+				param2: {
+					read: true, // TODO: do I need to worry about read?
+					query: true
+				}
+			}
+		});
+		await nexus.configureCrud('schemaB', {});
+
+		nexus.configureModel('schemaC', {
+			source: 'test-1',
+			fields: {
+				id: {
+					read: true,
+					key: true
+				},
+				eins: {
+					read: true,
+					write: true,
+					update: true,
+					delete: true,
+					query: true
+				},
+				bId: {
+					read: true,
+					link: {
+						name: 'schemaB',
+						field: 'id'
+					}
+				},
+				param3: {
+					read: true,
+					query: true
+				}
+			}
+		});
+		await nexus.configureCrud('schemaC', {});
 	});
 
 	afterEach(function () {
@@ -246,6 +326,166 @@ describe('src/controller/querier.js', function () {
 					{
 						user: 'user-2',
 						stats: 'stat-2'
+					}
+				]);
+			});
+
+			it('should succeed with aliases', async function(){
+				const querier = new sut.Querier(nexus);
+
+				context.query = {
+					query: '$a.param1 = 123 & $b.param2 = "456" & $c.param3 = [1,2] & $a.param1 = 987 & $b.param2 = "654" & $c.param3 = [9,8]'
+				};
+
+				context.content = {
+					base: 'schemaA',
+					alias: 'a',
+					joins: [
+						'$a.id > .aId$b:schemaB',
+						'$b.id > .bId$c:schemaC'
+					],
+					fields: {
+						hello: {
+							world: '$a.hello.world'
+						},
+						test: '$b.foo.bar',
+						zwei: '$c.eins'
+					}
+				};
+
+				connectorResult = [
+					{
+						hello: {
+							world: 'foo'
+						},
+						test: 'test-1',
+						zwei: 2
+					}
+				];
+
+				const res = await querier.search(context);
+
+				const args = stubs.execute.getCall(0).args[0];
+
+				expect(args.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [
+						{
+							series: 'a',
+							schema: 'schemaA',
+							joins: []
+						},
+						{
+							series: 'b',
+							schema: 'schemaB',
+							joins: [
+								{
+									name: 'a',
+									optional: false,
+									mappings: [
+										{
+											from: 'aId',
+											to: 'id'
+										}
+									]
+								}
+							]
+						},
+						{
+							series: 'c',
+							schema: 'schemaC',
+							joins: [
+								{
+									name: 'b',
+									optional: false,
+									mappings: [
+										{
+											from: 'bId',
+											to: 'id'
+										}
+									]
+								}
+							]
+						}
+					],
+					fields: [
+						{
+							series: 'a',
+							as: 'hello.world',
+							path: 'hello.world'
+						},
+						{
+							series: 'b',
+							as: 'test',
+							path: 'foo.bar'
+						},
+						{
+							series: 'c',
+							as: 'zwei',
+							path: 'eins'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'a',
+								path: 'param1',
+								operation: '=',
+								value: 123,
+								settings: {}
+							},
+							{
+								series: 'b',
+								path: 'param2',
+								operation: '=',
+								value: '456',
+								settings: {}
+							},
+							{
+								series: 'c',
+								path: 'param3',
+								operation: '=',
+								value: [1,2],
+								settings: {}
+							},
+							{
+								series: 'a',
+								path: 'param1',
+								operation: '=',
+								value: 987,
+								settings: {}
+							},
+							{
+								series: 'b',
+								path: 'param2',
+								operation: '=',
+								value: '654',
+								settings: {}
+							},
+							{
+								series: 'c',
+								path: 'param3',
+								operation: '=',
+								value: [9,8],
+								settings: {}
+							}
+						]
+					}
+				});
+
+				expect(res).to.deep.equal([
+					{
+						hello: {
+							world: 'foo'
+						},
+						test: 'test-1',
+						zwei: 2
 					}
 				]);
 			});

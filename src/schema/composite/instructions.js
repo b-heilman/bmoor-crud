@@ -91,9 +91,14 @@ function absorbIndexMerge(target, source, namespace = '') {
 
 // used to parse appart the paths that can be fed into a composite schema
 class Instructions {
-	constructor(baseModel, joinSchema, fieldSchema, params = {}) {
+	constructor(baseModel, alias, joinSchema, fieldSchema, params = {}) {
 		this.model = baseModel;
 
+		if (!alias){
+			alias = baseModel;
+		}
+
+		this.alias = alias;
 		this.index = joinSchema.reduce(
 			(agg, path) => {
 				path = path.replace(/\s/g, '');
@@ -155,8 +160,8 @@ class Instructions {
 				return agg;
 			},
 			{
-				[baseModel]: {
-					series: baseModel,
+				[alias]: {
+					series: alias,
 					model: baseModel,
 					isNeeded: true,
 					optional: false,
@@ -192,7 +197,7 @@ class Instructions {
 		statement = statement.replace(/\s/g, '');
 
 		if (statement[0] === '.') {
-			statement = '$' + this.model + statement;
+			statement = '$' + this.alias + statement;
 		}
 
 		// if it's an = statement, the properties can't be short hand
@@ -279,7 +284,7 @@ class Instructions {
 					join: {}
 				};
 
-				this.index[this.model].join[parent.model] = {
+				this.index[this.alias].join[parent.model] = {
 					from: null,
 					to: null
 				};
@@ -405,8 +410,7 @@ class Instructions {
 	forEach(fn) {
 		const processed = {};
 
-		let toProcess = [this.model];
-
+		let toProcess = [this.alias];
 		while (toProcess.length) {
 			const seriesName = toProcess.shift();
 

@@ -109,7 +109,6 @@ class Document extends View {
 			}
 		};
 
-		console.log('read ->');
 		return (await this.query(query, ctx))[0];
 	}
 

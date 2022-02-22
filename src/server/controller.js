@@ -63,10 +63,8 @@ async function parseQuery(ctx, view = null) {
 	// ? limit=100
 	// TODO: pagination?
 
-	console.log('-> query :', query);
-	console.log('-> params :', params);
 	let runQuery = query || convertParams(params, view);
-	console.log('runQuery', runQuery);
+	
 	return {
 		query: runQuery,
 		joins,

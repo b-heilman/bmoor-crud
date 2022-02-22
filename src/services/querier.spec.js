@@ -1208,8 +1208,6 @@ describe('src/schema/services/querier.js', function () {
 				let failed = false;
 				try {
 					const exe = new sut.Querier('examp-3', query);
-
-					console.log(exe);
 				} catch (ex) {
 					expect(ex.message).to.equal('Expression with mixed sources');
 
@@ -1259,8 +1257,6 @@ describe('src/schema/services/querier.js', function () {
 				let failed = false;
 				try {
 					const exe = new sut.Querier('examp-3', query);
-
-					console.log(exe);
 				} catch (ex) {
 					expect(ex.message).to.equal('Expression with mixed sources');
 

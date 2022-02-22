@@ -1,5 +1,4 @@
 const error = require('bmoor/src/lib/error.js');
-const {Config} = require('bmoor/src/lib/config.js');
 
 // this converts a request into one another bmoor-crud instance can decode
 //-----------
@@ -35,10 +34,6 @@ function buildConnector(connectorSettings){
 }
 
 module.exports = {
-	config,
-
-	connector,
-
 	factory(settings) {
 		return buildConnector(settings);
 	}

@@ -46,7 +46,7 @@ function translateWhere(expression) {
 	});
 
 	return {
-		stmt: where.join(expression.joiner === joiners.and ? ' AND ' : ' OR ')
+		stmt: where.join(expression.joiner === joiners.and ? ' AND ' : ' OR '),
 		params
 	};
 }
@@ -118,7 +118,7 @@ function translateSelect(query) {
 	return {
 		select: `${settings.select.join(',\n\t')}`,
 		from: `${settings.from.join('\n\t')}`,
-		where: where.stmt.length ? settings.stmt : null,
+		where: where.stmt.length ? where.stmt : null,
 		params: where.params,
 		orderBy: sorts.length
 			? sorts

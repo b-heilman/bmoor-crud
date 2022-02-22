@@ -187,4 +187,24 @@ describe('schema/statement/compiler', function () {
 			]
 		});
 	});
+
+	it('should work with an array', function () {
+		//TODO: is someone puts a ] in the search, it goes boom...
+		const exp = sut.buildExpression(
+			'$foo.bar = ["abc", 123 ]' // abc[] goes boom
+		);
+
+		expect(exp.toJSON()).to.deep.equal({
+			join: 'and',
+			expressables: [
+				{
+					series: 'foo',
+					path: 'bar',
+					operation: '=',
+					value: ['abc', 123],
+					settings: {}
+				}
+			]
+		});
+	});
 });

@@ -4,7 +4,7 @@ const {Instructions} = require('./instructions.js');
 
 describe('src/schema/composite/instructions.js', function () {
 	it('should work for a single join', function () {
-		const ci = new Instructions('m-1', ['$m-1 > $m-2 > .myId$m-3'], {
+		const ci = new Instructions('m-1', null, ['$m-1 > $m-2 > .myId$m-3'], {
 			field1: '$m-1.field',
 			field2: '$m-2.field',
 			field3: '$m-3.field'
@@ -98,6 +98,7 @@ describe('src/schema/composite/instructions.js', function () {
 	it('should work with an alias', function () {
 		const ci = new Instructions(
 			'm-1',
+			null,
 			['$m-1 > $alias-2:m-2 > #alias:sub-1', '$alias-2:m-2 > #alias-3:sub-1'],
 			{
 				field1: '$m-1.field',
@@ -220,7 +221,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with optional fields', function () {
-		const ci = new Instructions('m-1', ['$m-1 >? $m-2 > $alias:m-3'], {
+		const ci = new Instructions('m-1', null, ['$m-1 >? $m-2 > $alias:m-3'], {
 			field1: '$m-1.field',
 			field2: '$m-2.field',
 			field3: '$alias.field'
@@ -310,7 +311,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with a sub', function () {
-		const ci = new Instructions('m-1', ['$m-1 > $m-2 > #doc'], {
+		const ci = new Instructions('m-1', null, ['$m-1 > $m-2 > #doc'], {
 			field1: '$m-1.field',
 			field2: '$m-2.field',
 			field3: ['#doc']
@@ -416,6 +417,7 @@ describe('src/schema/composite/instructions.js', function () {
 		// Note white space testing as well
 		const ci = new Instructions(
 			'm-1',
+			null,
 			['$m-1 >? $m-2 > $alias:m-3', ' > $m-4 > $m-5', '> $m-6 > $m-5'],
 			{
 				field1: ' .field',
@@ -508,6 +510,7 @@ describe('src/schema/composite/instructions.js', function () {
 	it('should correctly trace a path', function () {
 		const ci = new Instructions(
 			'm-1',
+			null,
 			['> $m-2 > $m-3', '> $m-20 > $m-21 > $m-3'],
 			{
 				field3: '$m-3.field'
@@ -532,6 +535,7 @@ describe('src/schema/composite/instructions.js', function () {
 	it('should correctly find the mount path', function () {
 		const ci = new Instructions(
 			'm-1',
+			null,
 			['> $m-2 > $m-3', '> $m-20 > $m-21 > $m-3', '> $m-20 > $m-10 > $m-11'],
 			{
 				field2: '$m-2.field',
@@ -559,13 +563,14 @@ describe('src/schema/composite/instructions.js', function () {
 		it('should correctly extend another', function () {
 			const ci1 = new Instructions(
 				'm-1',
+				null,
 				['$m-1 >? $m-2 > $m-3', '> $m-4 > $m-5', '> $m-6 > $m-5'],
 				{
 					field3: '$m-3.field'
 				}
 			);
 
-			const ci2 = new Instructions('m-10', ['$m-10 > $m-6'], {
+			const ci2 = new Instructions('m-10', null, ['$m-10 > $m-6'], {
 				field10: '$m-10.field',
 				field6: '$m-6.field'
 			});
@@ -719,14 +724,14 @@ describe('src/schema/composite/instructions.js', function () {
 		it('should correctly line another', function () {
 			const ci1 = new Instructions(
 				'm-1',
-				['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
+				null, ['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
 				{
 					field3: '$m-3.field',
 					sub1: '#sub-1'
 				}
 			);
 
-			const ci2 = new Instructions('m-10', ['$m-10 > $m-6'], {
+			const ci2 = new Instructions('m-10', null, ['$m-10 > $m-6'], {
 				field10: '$m-10.field',
 				field6: '$m-6.field'
 			});
@@ -844,7 +849,7 @@ describe('src/schema/composite/instructions.js', function () {
 		it('should correctly inline multiple levels', function () {
 			const ci1 = new Instructions(
 				'm-1',
-				['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
+				null, ['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
 				{
 					field3: '$m-3.field',
 					field4: '$m-4.field'
@@ -853,7 +858,7 @@ describe('src/schema/composite/instructions.js', function () {
 
 			const ci2 = new Instructions(
 				'm-10',
-				['$m-10 > $m-16', '$m-10 > #sub-1'],
+				null, ['$m-10 > $m-16', '$m-10 > #sub-1'],
 				{
 					field10: '$m-10.field',
 					field16: '$m-16.field',
@@ -861,7 +866,7 @@ describe('src/schema/composite/instructions.js', function () {
 				}
 			);
 
-			const ci3 = new Instructions('m-20', ['> #sub-2'], {
+			const ci3 = new Instructions('m-20', null, ['> #sub-2'], {
 				field20: '$m-20.field',
 				sub2: '#sub-2'
 			});
