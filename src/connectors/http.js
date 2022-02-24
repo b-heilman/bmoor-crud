@@ -20,9 +20,13 @@ function buildConnector(connectorSettings){
 			}
 
 			//We need to build the content as a post
-			const request = stmt.toRequest();
+			const {query, ...request} = stmt.toRequest();
 
-			const res = await ctx.fetch(connectorSettings.base, {
+			var url = new URL(connectorSettings.base);
+			url.searchParams.append('query', query);
+
+			// queryBase vs crudBase
+			const res = await ctx.fetch(url, {
 				method: 'post',
 				body: JSON.stringify(request),
 				headers: {'Content-Type': 'application/json'} // ctx.fetch should be able to wrap security headers
