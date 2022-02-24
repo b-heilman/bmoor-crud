@@ -724,7 +724,8 @@ describe('src/schema/composite/instructions.js', function () {
 		it('should correctly line another', function () {
 			const ci1 = new Instructions(
 				'm-1',
-				null, ['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
+				null,
+				['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
 				{
 					field3: '$m-3.field',
 					sub1: '#sub-1'
@@ -849,7 +850,8 @@ describe('src/schema/composite/instructions.js', function () {
 		it('should correctly inline multiple levels', function () {
 			const ci1 = new Instructions(
 				'm-1',
-				null, ['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
+				null,
+				['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
 				{
 					field3: '$m-3.field',
 					field4: '$m-4.field'
@@ -858,7 +860,8 @@ describe('src/schema/composite/instructions.js', function () {
 
 			const ci2 = new Instructions(
 				'm-10',
-				null, ['$m-10 > $m-16', '$m-10 > #sub-1'],
+				null,
+				['$m-10 > $m-16', '$m-10 > #sub-1'],
 				{
 					field10: '$m-10.field',
 					field16: '$m-16.field',

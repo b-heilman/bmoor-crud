@@ -24,7 +24,7 @@ function translateWhere(expression) {
 		if (exp instanceof StatementExpression) {
 			const res = translateWhere(exp);
 
-			where.push('('+res.stmt+')');
+			where.push('(' + res.stmt + ')');
 			params.push(...res.params);
 		} else {
 			const path = exp.path;
@@ -100,11 +100,11 @@ function translateSelect(query) {
 
 	const where = translateWhere(query.params);
 
-	if (query.filters.isExpressable()){
+	if (query.filters.isExpressable()) {
 		const t = translateWhere(query.filters);
 
-		if (where.stmt){
-			where.stmt += ' AND '+t.stmt;
+		if (where.stmt) {
+			where.stmt += ' AND ' + t.stmt;
 		} else {
 			where.stmt = t.stmt;
 		}

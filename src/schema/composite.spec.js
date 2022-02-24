@@ -700,7 +700,7 @@ describe('src/schema/composite.js', function () {
 	describe('::getQuery', function () {
 		let lookup = null;
 		// TODO: run this against models that have alias schemas
-		beforeEach(async function(){
+		beforeEach(async function () {
 			lookup = new Composite('foo-bar', nexus);
 
 			await nexus.configureModel('my-model', {
@@ -948,7 +948,7 @@ describe('src/schema/composite.js', function () {
 					query: '$test-3.name="hello-world"',
 					validate: true
 				});
-			} catch(ex){
+			} catch (ex) {
 				failed = true;
 			}
 
@@ -962,7 +962,7 @@ describe('src/schema/composite.js', function () {
 					query: '$test-3.title="hello-world"',
 					validate: true
 				});
-			} catch(ex){
+			} catch (ex) {
 				expect(ex.message).to.equal('unqueriable field: test-3.title');
 
 				failed = true;

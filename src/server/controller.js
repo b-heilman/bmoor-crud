@@ -64,7 +64,7 @@ async function parseQuery(ctx, view = null) {
 	// TODO: pagination?
 
 	let runQuery = query || convertParams(params, view);
-	
+
 	return {
 		query: runQuery,
 		joins,

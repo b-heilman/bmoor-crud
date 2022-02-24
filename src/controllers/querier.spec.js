@@ -330,20 +330,18 @@ describe('src/controller/querier.js', function () {
 				]);
 			});
 
-			it('should succeed with aliases', async function(){
+			it('should succeed with aliases', async function () {
 				const querier = new sut.Querier(nexus);
 
 				context.query = {
-					query: '$a.param1 = 123 & $b.param2 = "456" & $c.param3 = [1,2] & $a.param1 = 987 & $b.param2 = "654" & $c.param3 = [9,8]'
+					query:
+						'$a.param1 = 123 & $b.param2 = "456" & $c.param3 = [1,2] & $a.param1 = 987 & $b.param2 = "654" & $c.param3 = [9,8]'
 				};
 
 				context.content = {
 					base: 'schemaA',
 					alias: 'a',
-					joins: [
-						'$a.id > .aId$b:schemaB',
-						'$b.id > .bId$c:schemaC'
-					],
+					joins: ['$a.id > .aId$b:schemaB', '$b.id > .bId$c:schemaC'],
 					fields: {
 						hello: {
 							world: '$a.hello.world'
@@ -451,7 +449,7 @@ describe('src/controller/querier.js', function () {
 								series: 'c',
 								path: 'param3',
 								operation: '=',
-								value: [1,2],
+								value: [1, 2],
 								settings: {}
 							},
 							{
@@ -472,7 +470,7 @@ describe('src/controller/querier.js', function () {
 								series: 'c',
 								path: 'param3',
 								operation: '=',
-								value: [9,8],
+								value: [9, 8],
 								settings: {}
 							}
 						]
@@ -495,8 +493,7 @@ describe('src/controller/querier.js', function () {
 
 				context.query = {
 					join: ['$test-group > $test-user'],
-					query:
-						'$test-user.groupId = 123'
+					query: '$test-user.groupId = 123'
 				};
 
 				context.content = {
@@ -523,7 +520,7 @@ describe('src/controller/querier.js', function () {
 
 				try {
 					await querier.search(context);
-				} catch(ex){
+				} catch (ex) {
 					failed = true;
 
 					expect(ex.message).to.equal('unqueriable field: test-user.groupId');

@@ -7,10 +7,10 @@ const error = require('bmoor/src/lib/error.js');
 
 /**
  * connectorSettings {
- *   base // path to the remove server's querier 
+ *   base // path to the remove server's querier
  * }
  **/
-function buildConnector(connectorSettings){
+function buildConnector(connectorSettings) {
 	return {
 		execute: async function (stmt, ctx) {
 			if (!ctx.fetch) {
@@ -23,7 +23,10 @@ function buildConnector(connectorSettings){
 			const {query, ...request} = stmt.toRequest();
 
 			var url = new URL(connectorSettings.base);
-			url.searchParams.append('query', query);
+
+			if (query) {
+				url.searchParams.append('query', query);
+			}
 
 			// queryBase vs crudBase
 			const res = await ctx.fetch(url, {

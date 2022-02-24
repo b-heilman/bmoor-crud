@@ -35,7 +35,7 @@ class StatementExpression {
 		this.joiner = joiner;
 	}
 
-	isExpressable(){
+	isExpressable() {
 		return this.expressables.length !== 0;
 	}
 
@@ -51,7 +51,7 @@ class StatementExpression {
 		return set;
 	}
 
-	validate(verify){
+	validate(verify) {
 		validateExpression(this, verify);
 
 		return true;

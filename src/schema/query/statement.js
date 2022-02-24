@@ -1,10 +1,6 @@
-
 const {set} = require('bmoor/src/core.js');
 
-const {
-	StatementExpression,
-	joiners
-} = require('../statement/expression.js');
+const {StatementExpression, joiners} = require('../statement/expression.js');
 const {Statement, methods, reduceExpression} = require('../statement.js');
 
 function translateParams(expression) {
@@ -16,7 +12,10 @@ function translateParams(expression) {
 			agg.push('(' + translateParams(exp) + ')');
 		} else {
 			// has to be a param
-			agg.push(`$${exp.series}.${exp.path} ${exp.operation} `+JSON.stringify(exp.value));
+			agg.push(
+				`$${exp.series}.${exp.path} ${exp.operation} ` +
+					JSON.stringify(exp.value)
+			);
 		}
 	});
 
@@ -24,8 +23,8 @@ function translateParams(expression) {
 }
 
 class QueryStatement extends Statement {
-	constructor(baseSeries, baseSchema=null) {
-		super(baseSeries, baseSchema=null);
+	constructor(baseSeries, baseSchema = null) {
+		super(baseSeries, baseSchema);
 
 		this.position = null;
 		this.sorts = [];
@@ -191,43 +190,45 @@ class QueryStatement extends Statement {
 		return ordered;
 	}
 
-	toRequest(){
+	toRequest() {
 		const models = this.getInOrder();
 		const base = models[0];
 
 		const queryStmts = [];
 
-		if (this.filters.isExpressable()){
+		if (this.filters.isExpressable()) {
 			queryStmts.push(translateParams(this.filters));
 		}
 
-		if (this.params.isExpressable()){
+		if (this.params.isExpressable()) {
 			queryStmts.push(translateParams(this.params));
 		}
 
-		const query = queryStmts.length ? (queryStmts.join(' & ')) : undefined;
+		const query = queryStmts.length ? queryStmts.join(' & ') : undefined;
 
 		return {
 			base: base.schema,
 			alias: base.series,
 			...models.reduce(
 				(agg, model) => {
-					if (model !== base){
+					if (model !== base) {
 						agg.joins.push(
-							...Object.values(model.joins).map(
-								join => {
-									const on = join.mappings[0];
+							...Object.values(model.joins).map((join) => {
+								const on = join.mappings[0];
 
-									const target = `.${on.from}$${model.series}:${model.schema}`;
+								const target = `.${on.from}$${model.series}:${model.schema}`;
 
-									return `$${join.name}.${on.to} > ${target}`;
-								}
-							)
+								return `$${join.name}.${on.to} > ${target}`;
+							})
 						);
 					}
 
-					model.fields.forEach(field => {
-						set(agg.fields, field.as||field.path, `$${model.series}.${field.path}`);
+					model.fields.forEach((field) => {
+						set(
+							agg.fields,
+							field.as || field.path,
+							`$${model.series}.${field.path}`
+						);
 					});
 
 					return agg;

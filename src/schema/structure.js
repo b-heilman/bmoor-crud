@@ -687,20 +687,20 @@ class Structure {
 
 		// supports complex query structures
 		const query = settings.query;
-		if (query){
+		if (query) {
 			let isValid = true;
 			const exp = buildExpression(query);
 
 			if (settings.validate) {
 				isValid = exp.validate((series, path) => {
-					if (statement.hasSeries(series)){
+					if (statement.hasSeries(series)) {
 						const model = statement.getSeries(series).model;
 
 						const field = model.getField(path);
 
-						if (!field){
+						if (!field) {
 							throw new Error(`unknown field: ${series}.${path}`);
-						} else if (!field.incomingSettings.query){
+						} else if (!field.incomingSettings.query) {
 							throw new Error(`unqueriable field: ${series}.${path}`);
 						}
 					} else {
@@ -709,7 +709,7 @@ class Structure {
 				});
 			}
 
-			if (isValid){
+			if (isValid) {
 				statement.addParamExpression(exp);
 			}
 		}

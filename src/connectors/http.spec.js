@@ -13,9 +13,9 @@ describe('src/connectors/http.js', function () {
 		let operator = null;
 		let context = null;
 
-		beforeEach(function(){
+		beforeEach(function () {
 			operator = sut.factory({
-				base: 'foo.bar.com'
+				base: 'http://foo.bar.com/query'
 			});
 
 			context = {
@@ -23,7 +23,7 @@ describe('src/connectors/http.js', function () {
 			};
 		});
 
-		it.only('should translate a basic query', function () {
+		it('should translate a basic query', async function () {
 			const stmt = new QueryStatement('model-1')
 				.addFields('model-1', [
 					new StatementField('id'),
@@ -33,21 +33,37 @@ describe('src/connectors/http.js', function () {
 				])
 				.addParam(new StatementVariable('model-1', 'id', 123));
 
-			context.fetch.resolves([{
-				foo: 'bar'
-			}]);
+			context.fetch.resolves({
+				json: async () => [
+					{
+						foo: 'bar'
+					}
+				]
+			});
 
-			operator.exectute(stmt, context);
+			await operator.execute(stmt, context);
 
 			const req = context.fetch.getCall(0);
 			const url = req.args[0];
 			const content = req.args[1];
 
-			console.log('url', url);
-			console.log('content', JSON.stringify(content, null, 2));
+			expect(url.href).to.equal(
+				'http://foo.bar.com/query?query=%24model-1.id+%3D+123'
+			);
+			expect(JSON.parse(content.body)).to.deep.equal({
+				base: 'model-1',
+				alias: 'model-1',
+				joins: [],
+				fields: {
+					id: '$model-1.id',
+					name: '$model-1.name',
+					title: '$model-1.title',
+					json: '$model-1.json'
+				}
+			});
 		});
 
-		it('should handle a null query', function () {
+		it('should handle a null query', async function () {
 			const stmt = new QueryStatement('model-1').addFields('model-1', [
 				new StatementField('id'),
 				new StatementField('name'),
@@ -55,29 +71,35 @@ describe('src/connectors/http.js', function () {
 				new StatementField('json')
 			]);
 
-			const res = sut.translateSelect(stmt);
+			context.fetch.resolves({
+				json: async () => [
+					{
+						foo: 'bar'
+					}
+				]
+			});
 
-			expect(res.select.replace(/\s+/g, '')).to.equal(
-				`
-				\`model-1\`.\`id\`, 
-				\`model-1\`.\`name\`,
-				\`model-1\`.\`title\`,
-				\`model-1\`.\`json\`
-			`.replace(/\s+/g, '')
-			);
+			await operator.execute(stmt, context);
 
-			expect(res.from.replace(/\s+/g, '')).to.equal(
-				`
-				\`model-1\` AS \`model-1\`
-			`.replace(/\s+/g, '')
-			);
+			const req = context.fetch.getCall(0);
+			const url = req.args[0];
+			const content = req.args[1];
 
-			expect(res.where).to.equal(null);
-
-			expect(res.params).to.deep.equal([]);
+			expect(url.href).to.equal('http://foo.bar.com/query');
+			expect(JSON.parse(content.body)).to.deep.equal({
+				base: 'model-1',
+				alias: 'model-1',
+				joins: [],
+				fields: {
+					id: '$model-1.id',
+					name: '$model-1.name',
+					title: '$model-1.title',
+					json: '$model-1.json'
+				}
+			});
 		});
 
-		it('should handle aliases', function () {
+		it('should handle aliases', async function () {
 			const stmt = new QueryStatement('model-1').addFields('model-1', [
 				new StatementField('id', 'key'),
 				new StatementField('name'),
@@ -85,29 +107,35 @@ describe('src/connectors/http.js', function () {
 				new StatementField('json')
 			]);
 
-			const res = sut.translateSelect(stmt);
+			context.fetch.resolves({
+				json: async () => [
+					{
+						foo: 'bar'
+					}
+				]
+			});
 
-			expect(res.select.replace(/\s+/g, '')).to.equal(
-				`
-				\`model-1\`.\`id\` AS \`key\`, 
-				\`model-1\`.\`name\`,
-				\`model-1\`.\`title\`,
-				\`model-1\`.\`json\`
-			`.replace(/\s+/g, '')
-			);
+			await operator.execute(stmt, context);
 
-			expect(res.from.replace(/\s+/g, '')).to.equal(
-				`
-				\`model-1\` AS \`model-1\`
-			`.replace(/\s+/g, '')
-			);
+			const req = context.fetch.getCall(0);
+			const url = req.args[0];
+			const content = req.args[1];
 
-			expect(res.where).to.equal(null);
-
-			expect(res.params).to.deep.equal([]);
+			expect(url.href).to.equal('http://foo.bar.com/query');
+			expect(JSON.parse(content.body)).to.deep.equal({
+				base: 'model-1',
+				alias: 'model-1',
+				joins: [],
+				fields: {
+					key: '$model-1.id',
+					name: '$model-1.name',
+					title: '$model-1.title',
+					json: '$model-1.json'
+				}
+			});
 		});
 
-		it('should translate a complex query', function () {
+		it('should translate a complex query', async function () {
 			const stmt = new QueryStatement('test-item')
 				.setModel('test-item', {schema: 'foo-bar'})
 				.addJoins('test-person', [
@@ -125,35 +153,37 @@ describe('src/connectors/http.js', function () {
 				.addParam(new StatementVariable('test-item', 'id', 1))
 				.addParam(new StatementVariable('test-person', 'foo', 'bar'));
 
-			const res = sut.translateSelect(stmt);
+			context.fetch.resolves({
+				json: async () => [
+					{
+						foo: 'bar'
+					}
+				]
+			});
 
-			expect(res.select.replace(/\s+/g, '')).to.equal(
-				`
-				\`test-item\`.\`name\` AS \`test-item_0\`, 
-				\`test-person\`.\`name\` AS \`test-person_1\`,
-				\`test-category\`.\`name\`,
-				\`test-category\`.\`fooId\`
-			`.replace(/\s+/g, '')
+			await operator.execute(stmt, context);
+
+			const req = context.fetch.getCall(0);
+			const url = req.args[0];
+			const content = req.args[1];
+
+			expect(url.href).to.equal(
+				'http://foo.bar.com/query?query=%24test-item.id+%3D+1+%26+%24test-person.foo+%3D+%22bar%22'
 			);
-
-			expect(res.from.replace(/\s+/g, '')).to.equal(
-				`
-				\`foo-bar\` AS \`test-item\`
-					INNER JOIN \`test-person\` AS \`test-person\`
-						ON \`test-person\`.\`itemId\` = \`test-item\`.\`id\`
-					LEFT JOIN \`test-category\` AS \`test-category\`
-						ON \`test-category\`.\`itemId\` = \`test-item\`.\`id\`
-			`.replace(/\s+/g, '')
-			);
-
-			expect(res.where.replace(/\s+/g, '')).to.equal(
-				`
-				\`test-item\`.\`id\`=?
-					AND \`test-person\`.\`foo\`=?
-			`.replace(/\s+/g, '')
-			);
-
-			expect(res.params).to.deep.equal([1, 'bar']);
+			expect(JSON.parse(content.body)).to.deep.equal({
+				base: 'foo-bar',
+				alias: 'test-item',
+				joins: [
+					'$test-item.id > .itemId$test-person:test-person',
+					'$test-item.id > .itemId$test-category:test-category'
+				],
+				fields: {
+					'test-item_0': '$test-item.name',
+					'test-person_1': '$test-person.name',
+					name: '$test-category.name',
+					fooId: '$test-category.fooId'
+				}
+			});
 		});
 	});
 });

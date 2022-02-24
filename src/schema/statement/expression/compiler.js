@@ -189,7 +189,7 @@ const parsings = new Config({
 	},
 
 	array: {
-		open: function (master, pos, state) {
+		open: function (master, pos) {
 			const ch = master[pos];
 
 			if (ch === '[') {
@@ -199,10 +199,10 @@ const parsings = new Config({
 				};
 			}
 		},
-		close: function (master, pos, state) {
+		close: function (master, pos) {
 			const ch = master[pos];
 
-			if (ch ===']' && master[pos-1] !== '\\') {
+			if (ch === ']' && master[pos - 1] !== '\\') {
 				return {
 					pos: pos + 1,
 					end: pos

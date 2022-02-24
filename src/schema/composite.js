@@ -542,9 +542,9 @@ class Composite extends Structure {
 	}
 
 	getBaseQuery() {
-		return this.instructions.alias ?
-			new QueryStatement(this.instructions.alias, this.instructions.model) :
-			new QueryStatement(this.instructions.model);
+		return this.instructions.alias
+			? new QueryStatement(this.instructions.alias, this.instructions.model)
+			: new QueryStatement(this.instructions.model);
 	}
 
 	async prepareBaseQuery() {
@@ -606,11 +606,7 @@ class Composite extends Structure {
 	async getQuery(settings = {}, ctx = {}) {
 		const query = this.preparedQuery.clone();
 
-		return super.extendQuery(
-			query,
-			settings,
-			ctx
-		);
+		return super.extendQuery(query, settings, ctx);
 	}
 
 	// this.settings.subs.reference.composite

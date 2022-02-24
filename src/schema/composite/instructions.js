@@ -94,7 +94,7 @@ class Instructions {
 	constructor(baseModel, alias, joinSchema, fieldSchema, params = {}) {
 		this.model = baseModel;
 
-		if (!alias){
+		if (!alias) {
 			alias = baseModel;
 		}
 
