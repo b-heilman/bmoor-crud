@@ -1,5 +1,8 @@
 const error = require('bmoor/src/lib/error.js');
 
+const {QueryStatement} = require('../schema/query/statement.js');
+const {ExecutableStatement, method} = require('../schema/executable/statement.js');
+
 // this converts a request into one another bmoor-crud instance can decode
 //-----------
 // sources allow us to solve the multiple upstream problem, so each source instance will reference
@@ -19,10 +22,26 @@ function buildConnector(connectorSettings) {
 				});
 			}
 
-			//We need to build the content as a post
-			const {query, ...request} = stmt.toRequest();
+			let url = null;
+			let method = null;
+			let query = null;
+			let request = null;
 
-			var url = new URL(connectorSettings.base);
+			if (stmt instanceof QueryStatement){
+				url = new URL(connectorSettings.queryBase);
+				method = 'post';
+
+				({query, ...request} = stmt.toRequest());
+			} else {
+				url = new URL(connectorSettings.crudBase);
+				if (stmt.method === methods.create) {
+					method = 'post';
+				} else if (stmt.method === methods.create){
+					method = 'patch';
+				} else {
+					method = 'delete';
+				}
+			}
 
 			if (query) {
 				url.searchParams.append('query', query);
@@ -30,7 +49,7 @@ function buildConnector(connectorSettings) {
 
 			// queryBase vs crudBase
 			const res = await ctx.fetch(url, {
-				method: 'post',
+				method,
 				body: JSON.stringify(request),
 				headers: {'Content-Type': 'application/json'} // ctx.fetch should be able to wrap security headers
 			});

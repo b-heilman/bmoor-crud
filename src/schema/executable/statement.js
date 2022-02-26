@@ -29,6 +29,10 @@ class ExecutableStatement extends Statement {
 		return incoming;
 	}
 
+	toRequest(){
+		
+	}
+
 	toJSON() {
 		const json = super.toJSON();
 

@@ -15,7 +15,7 @@ describe('src/connectors/http.js', function () {
 
 		beforeEach(function () {
 			operator = sut.factory({
-				base: 'http://foo.bar.com/query'
+				queryBase: 'http://foo.bar.com/query'
 			});
 
 			context = {

@@ -138,47 +138,45 @@ function translateSelect(query) {
 	};
 }
 
-const connector = {
-	prepare: async function (stmt) {
-		const query = translateSelect(stmt);
+function buildConnector(settings){
+	return {
+		prepare: async function (stmt) {
+			const query = translateSelect(stmt);
 
-		let sql = `SELECT ${query.select} \nFROM ${query.from}`;
+			let sql = `SELECT ${query.select} \nFROM ${query.from}`;
 
-		if (query.where) {
-			sql += `\nWHERE ${query.where}`;
+			if (query.where) {
+				sql += `\nWHERE ${query.where}`;
+			}
+
+			if (query.orderBy) {
+				sql += `\nORDER BY ${query.orderBy}`;
+			}
+
+			if (query.limit) {
+				sql += `\nLIMIT ${query.limit}`;
+			}
+
+			return {
+				query,
+				sql
+			};
+		},
+
+		run: async function (sql, params) {
+			return settings.run(sql, params);
+		},
+
+		execute: async function (stmt) {
+			const prepared = await this.prepare(stmt);
+
+			return this.run(prepared.sql, prepared.query.params, stmt);
 		}
-
-		if (query.orderBy) {
-			sql += `\nORDER BY ${query.orderBy}`;
-		}
-
-		if (query.limit) {
-			sql += `\nLIMIT ${query.limit}`;
-		}
-
-		return {
-			query,
-			sql
-		};
-	},
-
-	run: async function (sql, params) {
-		console.log('------\n', sql, '\n===', params, '\n------');
-	},
-
-	execute: async function (stmt) {
-		const prepared = await this.prepare(stmt);
-
-		return this.run(prepared.sql, prepared.query.params, stmt);
-	}
-};
+	};
+}
 
 module.exports = {
-	translateSelect,
-
-	connector,
-
-	factory() {
-		return connector;
+	factory(settings) {
+		return buildConnector(settings);
 	}
 };

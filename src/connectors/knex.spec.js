@@ -14,14 +14,14 @@ describe('src/connectors/knex.js', function () {
 	describe('::connector.execute', function () {
 		let stubs = null;
 
+		let connector = null;
+
 		beforeEach(function () {
 			stubs = {};
 
 			stubs.raw = sinon.stub().resolves('ok');
 
-			sut.config.set('knex', {
-				raw: stubs.raw
-			});
+			connector = sut.factory({knex: stubs});
 		});
 
 		it('should translate with a sort', async function () {
@@ -34,7 +34,7 @@ describe('src/connectors/knex.js', function () {
 				.addSort(new QuerySort('model-1', 'bar', true))
 				.addSort(new QuerySort('model-1', 'world', false));
 
-			await sut.connector.execute(stmt);
+			await connector.execute(stmt);
 
 			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 				`
@@ -57,7 +57,7 @@ describe('src/connectors/knex.js', function () {
 				.addParam(new StatementVariable('model-1', 'id', 123))
 				.setPosition(new QueryPosition(0, 10));
 
-			await sut.connector.execute(stmt);
+			await connector.execute(stmt);
 
 			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 				`
@@ -82,7 +82,7 @@ describe('src/connectors/knex.js', function () {
 				.addSort(new QuerySort('model-2', 'world', false))
 				.setPosition(new QueryPosition(0, 10));
 
-			await sut.connector.execute(stmt);
+			await connector.execute(stmt);
 
 			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 				`
