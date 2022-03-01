@@ -228,7 +228,7 @@ describe('src/server/scafolding.js', function () {
 
 		expect(stubs.routerPost.callCount).to.equal(1);
 
-		expect(stubs.routerPatch.callCount).to.equal(1);
+		expect(stubs.routerPatch.callCount).to.equal(2);
 
 		expect(stubs.routerDelete.callCount).to.equal(2);
 	});

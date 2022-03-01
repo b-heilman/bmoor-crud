@@ -1733,6 +1733,7 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
+				console.log('=>', JSON.stringify(argsB.toJSON(), null, 2));
 				expect(argsB.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',

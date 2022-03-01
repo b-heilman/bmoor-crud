@@ -146,6 +146,7 @@ class Querier {
 			const sourceName = info.model.incomingSettings.source;
 
 			seriesToSource[series] = sourceName;
+			
 			// The thing I know is series always join left here.  So
 			// I am able to figure out of the join is internal or external
 			let order = 0;

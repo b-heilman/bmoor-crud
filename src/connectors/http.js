@@ -1,7 +1,7 @@
 const error = require('bmoor/src/lib/error.js');
 
 const {QueryStatement} = require('../schema/query/statement.js');
-const {ExecutableStatement, method} = require('../schema/executable/statement.js');
+const {ExecutableStatement, methods} = require('../schema/executable/statement.js');
 
 // this converts a request into one another bmoor-crud instance can decode
 //-----------
@@ -33,7 +33,6 @@ function buildConnector(connectorSettings) {
 
 				({query, ...request} = stmt.toRequest());
 			} else {
-				url = new URL(connectorSettings.crudBase);
 				if (stmt.method === methods.create) {
 					method = 'post';
 				} else if (stmt.method === methods.create){
@@ -41,6 +40,11 @@ function buildConnector(connectorSettings) {
 				} else {
 					method = 'delete';
 				}
+
+				let base = null;
+				({query, ...request} = stmt.toRequest());
+
+				url = new URL(connectorSettings.crudBase+'/'+request.base);
 			}
 
 			if (query) {

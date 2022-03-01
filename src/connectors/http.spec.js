@@ -5,11 +5,94 @@ describe('src/connectors/http.js', function () {
 	const sut = require('./http.js');
 
 	const {QueryStatement} = require('../schema/query/statement.js');
+	const {ExecutableStatement, methods} = require('../schema/executable/statement.js');
 	const {StatementVariable} = require('../schema/statement/variable.js');
 	const {StatementField} = require('../schema/statement/field.js');
 	const {QueryJoin} = require('../schema/query/join.js');
 
-	describe('via a factory', function () {
+	describe('as an executable', function(){
+		let operator = null;
+		let context = null;
+
+		beforeEach(function () {
+			operator = sut.factory({
+				crudBase: 'http://foo.bar.com/crud'
+			});
+
+			context = {
+				fetch: sinon.stub()
+			};
+		});
+
+		describe('create', function(){
+			it('should work', async function(){
+				const stmt = new ExecutableStatement('model-1')
+					.setMethod(methods.create)
+					.addFields('model-1', [
+						new StatementField('id'),
+						new StatementField('name'),
+						new StatementField('title'),
+						new StatementField('json')
+					])
+					.setPayload('model-1', {
+						hello: 'world'
+					});
+
+				context.fetch.resolves({
+					json: async () => [
+						{
+							foo: 'bar'
+						}
+					]
+				});
+
+				await operator.execute(stmt, context);
+
+				const req = context.fetch.getCall(0);
+				const url = req.args[0];
+				const content = req.args[1];
+
+				expect(url.href).to.equal(
+					'http://foo.bar.com/crud/model-1'
+				);
+				
+				expect(JSON.parse(content.body)).to.deep.equal({
+					base: 'model-1',
+					alias: 'model-1',
+					fields: {
+						id: '$model-1.id',
+						name: '$model-1.name',
+						title: '$model-1.title',
+						json: '$model-1.json'
+					},
+					payload: {
+						hello: 'world'
+					}
+				});
+			});
+		});
+
+		describe('update', function(){
+			it('should work', async function(){
+				const stmt = new ExecutableStatement('model-1')
+					.setMethod(methods.update)
+					.setPayload('model-1', {
+						
+					})
+					.addParam(new StatementVariable('model-1', 'id', 123));
+			});
+		});
+
+		describe('delete', function(){
+			it('should work', async function(){
+				const stmt = new ExecutableStatement('model-1')
+					.setMethod(methods.delete)
+					.addParam(new StatementVariable('model-1', 'id', 123));
+			});
+		});
+	});
+
+	describe('as a query', function () {
 		let operator = null;
 		let context = null;
 
@@ -50,6 +133,7 @@ describe('src/connectors/http.js', function () {
 			expect(url.href).to.equal(
 				'http://foo.bar.com/query?query=%24model-1.id+%3D+123'
 			);
+
 			expect(JSON.parse(content.body)).to.deep.equal({
 				base: 'model-1',
 				alias: 'model-1',

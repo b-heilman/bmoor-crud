@@ -1,4 +1,6 @@
-const {StatementExpression} = require('./statement/expression.js');
+const {set} = require('bmoor/src/core.js');
+
+const {StatementExpression, joiners} = require('./statement/expression.js');
 
 const methods = {
 	create: Symbol('create'),
@@ -7,18 +9,52 @@ const methods = {
 	delete: Symbol('delete')
 };
 
+function translateParams(expression) {
+	const agg = [];
+
+	// TODO: I don't think I have properly tested ingesting arrays...
+	expression.expressables.forEach((exp) => {
+		if (exp instanceof StatementExpression) {
+			agg.push('(' + translateParams(exp) + ')');
+		} else {
+			// has to be a param
+			agg.push(
+				`$${exp.series}.${exp.path} ${exp.operation} ` +
+					JSON.stringify(exp.value)
+			);
+		}
+	});
+
+	return agg.join(expression.joiner === joiners.and ? ' & ' : ' | ');
+}
+
+function reduceExpression(expression, paramDex = {}) {
+	return expression.expressables.reduce((agg, exp) => {
+		if (exp instanceof StatementExpression) {
+			reduceExpression(exp, agg);
+		} else {
+			if (agg[exp.series]) {
+				agg[exp.series]++;
+			} else {
+				agg[exp.series] = 1;
+			}
+		}
+
+		return agg;
+	}, paramDex);
+}
+
 class Statement {
 	constructor(baseSeries, baseSchema = null) {
-		this.base = baseSeries;
-
 		this.models = {};
+
+		this.baseSeries = this.getSeries(baseSeries);
+		
 		this.filters = new StatementExpression();
 		this.params = new StatementExpression();
 
 		if (baseSchema) {
 			this.setModel(baseSeries, baseSchema);
-		} else {
-			this.getSeries(baseSeries);
 		}
 	}
 
@@ -28,6 +64,8 @@ class Statement {
 		}
 
 		this.method = method;
+
+		return this;
 	}
 
 	hasSeries(series) {
@@ -39,6 +77,10 @@ class Statement {
 	}
 
 	getSeries(series) {
+		if (!series){
+			throw new Error('unusable series: '+series);
+		}
+		
 		let rtn = this.models[series];
 
 		if (!rtn) {
@@ -107,13 +149,47 @@ class Statement {
 
 	clone() {
 		const stmt = new this.constructor(
-			this.base,
-			this.getSeries(this.base).schema
+			this.baseSeries.series,
+			this.baseSeries.schema
 		);
 
 		stmt.import(this);
 
 		return stmt;
+	}
+
+	toRequest(){
+		const queryStmts = [];
+
+		if (this.filters.isExpressable()) {
+			queryStmts.push(translateParams(this.filters));
+		}
+
+		if (this.params.isExpressable()) {
+			queryStmts.push(translateParams(this.params));
+		}
+
+		const query = queryStmts.length ? queryStmts.join(' & ') : undefined;
+
+		return Object.values(this.models).reduce(
+			(agg, model) => {
+				const series = model.series;
+
+				model.fields.forEach((field) => {
+					set(
+						agg.fields,
+						field.as || field.path,
+						`$${model.series}.${field.path}`
+					);
+				});
+
+				return agg;
+			},
+			{
+				fields: {},
+				query
+			}
+		);
 	}
 
 	toJSON() {
@@ -144,22 +220,6 @@ class Statement {
 			}
 		);
 	}
-}
-
-function reduceExpression(expression, paramDex = {}) {
-	return expression.expressables.reduce((agg, exp) => {
-		if (exp instanceof StatementExpression) {
-			reduceExpression(exp, agg);
-		} else {
-			if (agg[exp.series]) {
-				agg[exp.series]++;
-			} else {
-				agg[exp.series] = 1;
-			}
-		}
-
-		return agg;
-	}, paramDex);
 }
 
 module.exports = {

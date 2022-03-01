@@ -10,7 +10,7 @@ class Executor {
 		const executable = this.executable;
 
 		this.source = await nexus.loadSource(
-			executable.models[executable.base].model.incomingSettings.source
+			executable.baseSeries.model.incomingSettings.source
 		);
 
 		return this;
@@ -21,9 +21,10 @@ class Executor {
 	}
 
 	toJSON() {
-		const rtn = this.executable.toJSON();
+		const executable = this.executable;
+		const rtn = executable.toJSON();
 
-		rtn.sourceName = this.models[this.base].model.incomingSettings.source;
+		rtn.sourceName = executable.baseSeries.model.incomingSettings.source;
 
 		return rtn;
 	}

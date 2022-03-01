@@ -1,8 +1,10 @@
 const {QueryStatement} = require('./statement.js');
 const {StatementField} = require('../statement/field.js');
 
-// rename this to shard
+// TODO: rename this to QueryShard
 class Queriable extends QueryStatement {
+	// TODO: I don't like that I did this, it should keep the parent
+	//   constructor pattern
 	constructor(name, baseSeries) {
 		super(baseSeries);
 
@@ -12,7 +14,7 @@ class Queriable extends QueryStatement {
 	}
 
 	clone() {
-		const exe = new Queriable(this.name, this.base);
+		const exe = new Queriable(this.name, this.baseSeries.series);
 
 		exe.import(this);
 

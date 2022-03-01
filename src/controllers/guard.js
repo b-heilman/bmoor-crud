@@ -117,6 +117,7 @@ class Guard extends Controller {
 		}
 	}
 
+	// TODO: handle change structure to {payload: [datum]}
 	async write(ctx) {
 		const datum = await ctx.getContent();
 
@@ -161,8 +162,6 @@ class Guard extends Controller {
 				});
 			}
 		} else if (ctx.getMethod() === 'patch') {
-			const ids = (ctx.getParam('id') || '').trim();
-
 			if (!this.incomingSettings.update) {
 				operationNotAllowed('update');
 			}
@@ -171,14 +170,28 @@ class Guard extends Controller {
 				action: 'update'
 			});
 
-			if (!ids) {
-				throw error.create('called put without id', {
-					code: 'CRUD_CONTROLLER_PATCH_ID',
-					type: 'warn',
-					status: 400
-				});
+			if (ctx.hasQuery()) {
+				if (!this.incomingSettings.query) {
+					operationNotAllowed('query');
+				}
+
+				const queriedIds = (
+					await this.view.query(await parseQuery(ctx, this.view), ctx)
+				).map((datum) => this.view.structure.getKey(datum));
+
+				return runUpdate(queriedIds, this.view, datum, ctx);
 			} else {
-				return runUpdate(ids.split(','), this.view, datum, ctx);
+				const ids = (ctx.getParam('id') || '').trim();
+
+				if (!ids) {
+					throw error.create('called put without id', {
+						code: 'CRUD_CONTROLLER_PATCH_ID',
+						type: 'warn',
+						status: 400
+					});
+				} else {
+					return runUpdate(ids.split(','), this.view, datum, ctx);
+				}
 			}
 		} else {
 			throw error.create('called write with method ' + ctx.method, {
@@ -294,6 +307,16 @@ class Guard extends Controller {
 				// update
 				route: {
 					path: '/:id',
+					method: 'patch'
+				},
+				fn: (ctx) => this.write(ctx),
+				hidden: !this.incomingSettings.update,
+				structure: this.view.structure
+			},
+			{
+				// update
+				route: {
+					path: '',
 					method: 'patch'
 				},
 				fn: (ctx) => this.write(ctx),

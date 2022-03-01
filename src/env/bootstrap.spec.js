@@ -336,6 +336,13 @@ describe('src/env/bootstrap.js', function () {
 							},
 							{
 								route: {
+									path: '',
+									method: 'patch'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
 									path: '/:id',
 									method: 'delete'
 								},
@@ -456,6 +463,11 @@ describe('src/env/bootstrap.js', function () {
 									{
 										$schema: 'bmoor-crud:route',
 										method: 'get',
+										path: ''
+									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'patch',
 										path: ''
 									},
 									{

@@ -325,7 +325,7 @@ function buildSorts(query, sorts) {
 			option = option.substr(1);
 		}
 
-		let base = query.base;
+		let base = query.baseSeries.series;
 		if (option[0] === '$') {
 			const pos = option.indexOf('.');
 
@@ -725,7 +725,7 @@ class Structure {
 		if (params) {
 			Object.keys(params).map((field) => {
 				let path = null;
-				let series = statement.base;
+				let {series} = statement.baseSeries;
 
 				const param = params[field];
 

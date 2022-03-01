@@ -1,26 +1,4 @@
-const {set} = require('bmoor/src/core.js');
-
-const {StatementExpression, joiners} = require('../statement/expression.js');
 const {Statement, methods, reduceExpression} = require('../statement.js');
-
-function translateParams(expression) {
-	const agg = [];
-
-	// TODO: I don't think I have properly tested ingesting arrays...
-	expression.expressables.forEach((exp) => {
-		if (exp instanceof StatementExpression) {
-			agg.push('(' + translateParams(exp) + ')');
-		} else {
-			// has to be a param
-			agg.push(
-				`$${exp.series}.${exp.path} ${exp.operation} ` +
-					JSON.stringify(exp.value)
-			);
-		}
-	});
-
-	return agg.join(expression.joiner === joiners.and ? ' & ' : ' | ');
-}
 
 class QueryStatement extends Statement {
 	constructor(baseSeries, baseSchema = null) {
@@ -60,7 +38,7 @@ class QueryStatement extends Statement {
 	}
 
 	addJoins(series, joins) {
-		if (series === this.base) {
+		if (series === this.baseSeries.series) {
 			joins.map((join) => this.addJoins(join.name, [join.flip(series)]));
 		} else {
 			const seriesInfo = this.getSeries(series);
@@ -114,8 +92,8 @@ class QueryStatement extends Statement {
 		// with parameters to be run first.
 		const paramDex = reduceExpression(this.params);
 
-		if (this.hasParams && !paramDex[this.base]) {
-			const targetSource = this.models[this.base].model.incomingSettings.source;
+		if (this.hasParams && !paramDex[this.baseSeries.series]) {
+			const targetSource = this.baseSeries.model.incomingSettings.source;
 			let sameSource = false;
 			let betterSeries = null;
 
@@ -132,7 +110,7 @@ class QueryStatement extends Statement {
 
 			if (!sameSource) {
 				if (betterSeries) {
-					this.base = betterSeries;
+					this.baseSeries = this.getSeries(betterSeries);
 				} else {
 					throw new Error('well, this is bad');
 				}
@@ -141,7 +119,7 @@ class QueryStatement extends Statement {
 
 		let toProcess = Object.values(this.models);
 		const extraRoots = toProcess.filter(
-			(link) => !Object.values(link.joins).length && link.series !== this.base
+			(link) => !Object.values(link.joins).length && link.series !== this.baseSeries.series
 		);
 
 		if (extraRoots.length) {
@@ -150,7 +128,7 @@ class QueryStatement extends Statement {
 			extraRoots.forEach((extraLink) => {
 				while (
 					!Object.values(extraLink.joins).length &&
-					extraLink.series !== this.base
+					extraLink.series !== this.baseSeries.series
 				) {
 					const join = Object.values(extraLink.links)[0];
 					extraLink.joins[join.name] = join;
@@ -194,53 +172,29 @@ class QueryStatement extends Statement {
 		const models = this.getInOrder();
 		const base = models[0];
 
-		const queryStmts = [];
+		return models.reduce(
+			(agg, model) => {
+				if (model !== base) {
+					agg.joins.push(
+						...Object.values(model.joins).map((join) => {
+							const on = join.mappings[0];
 
-		if (this.filters.isExpressable()) {
-			queryStmts.push(translateParams(this.filters));
-		}
+							const target = `.${on.from}$${model.series}:${model.schema}`;
 
-		if (this.params.isExpressable()) {
-			queryStmts.push(translateParams(this.params));
-		}
-
-		const query = queryStmts.length ? queryStmts.join(' & ') : undefined;
-
-		return {
-			base: base.schema,
-			alias: base.series,
-			...models.reduce(
-				(agg, model) => {
-					if (model !== base) {
-						agg.joins.push(
-							...Object.values(model.joins).map((join) => {
-								const on = join.mappings[0];
-
-								const target = `.${on.from}$${model.series}:${model.schema}`;
-
-								return `$${join.name}.${on.to} > ${target}`;
-							})
-						);
-					}
-
-					model.fields.forEach((field) => {
-						set(
-							agg.fields,
-							field.as || field.path,
-							`$${model.series}.${field.path}`
-						);
-					});
-
-					return agg;
-				},
-				{
-					joins: [],
-					fields: {}
+							return `$${join.name}.${on.to} > ${target}`;
+						})
+					);
 				}
-			),
-			query
-			// sorts
-		};
+
+				return agg;
+			},
+			{
+				base: base.schema,
+				alias: base.series,
+				...super.toRequest(),
+				joins: []
+			}
+		);
 	}
 
 	toJSON() {
