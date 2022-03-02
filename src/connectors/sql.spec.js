@@ -5,11 +5,109 @@ describe('src/connectors/sql.js', function () {
 	const sut = require('./sql.js');
 
 	const {QueryStatement} = require('../schema/query/statement.js');
+	const {
+		ExecutableStatement,
+		methods
+	} = require('../schema/executable/statement.js');
 	const {StatementVariable} = require('../schema/statement/variable.js');
 	const {StatementField} = require('../schema/statement/field.js');
 	const {QueryJoin} = require('../schema/query/join.js');
 
-	describe('::translateSelect', function () {
+	describe('as an executable', function () {
+		let stubs = {};
+		let operator = null;
+		let context = null;
+
+		beforeEach(function () {
+			stubs = {};
+
+			operator = sut.factory(stubs);
+
+			stubs.run = sinon.stub().resolves('ok');
+		});
+
+		describe('create', function () {
+			it('should work', async function () {
+				const stmt = new ExecutableStatement('model-1')
+					.setMethod(methods.create)
+					.addFields('model-1', [
+						new StatementField('id'),
+						new StatementField('name'),
+						new StatementField('title'),
+						new StatementField('json')
+					])
+					.setPayload('model-1', {
+						hello: 'world'
+					});
+
+				await operator.execute(stmt, context);
+
+				expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
+					`
+					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
+					FROM \`model-1\` AS \`model-1\`
+	    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
+				);
+
+				expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
+			});
+		});
+
+		describe('update', function () {
+			it('should work', async function () {
+				const stmt = new ExecutableStatement('model-1')
+					.setMethod(methods.update)
+					.addFields('model-1', [
+						new StatementField('id'),
+						new StatementField('name'),
+						new StatementField('title'),
+						new StatementField('json')
+					])
+					.setPayload('model-1', {
+						hello: 'world'
+					})
+					.addParam(new StatementVariable('model-1', 'id', 123));
+
+				await operator.execute(stmt, context);
+
+				expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
+					`
+					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
+					FROM \`model-1\` AS \`model-1\`
+	    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
+				);
+
+				expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
+			});
+		});
+
+		describe('delete', function () {
+			it('should work', async function () {
+				const stmt = new ExecutableStatement('model-1')
+					.setMethod(methods.delete)
+					.addFields('model-1', [
+						new StatementField('id'),
+						new StatementField('name'),
+						new StatementField('title'),
+						new StatementField('json')
+					])
+					.addParam(new StatementVariable('model-1', 'id', 123));
+
+				await operator.execute(stmt, context);
+
+				expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
+					`
+					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
+					FROM \`model-1\` AS \`model-1\`
+	    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
+				);
+
+				expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
+			});
+		});
+	});
+
+	describe('as a query', function () {
 		let stubs = null;
 
 		let connector = null;
@@ -38,15 +136,10 @@ describe('src/connectors/sql.js', function () {
 				`
 				SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
 				FROM \`model-1\` AS \`model-1\`
-    			WHERE \`model-1\`.\`id\`=?`.replace(
-					/\s+/g,
-					''
-				)
+    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
 			);
 
-			expect(stubs.run.getCall(0).args[1]).to.deep.equal([
-				123
-			]);
+			expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
 		});
 
 		it('should handle a null query', async function () {
@@ -62,10 +155,7 @@ describe('src/connectors/sql.js', function () {
 			expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 				`
 				SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
-				FROM \`model-1\` AS \`model-1\``.replace(
-					/\s+/g,
-					''
-				)
+				FROM \`model-1\` AS \`model-1\``.replace(/\s+/g, '')
 			);
 
 			expect(stubs.run.getCall(0).args[1]).to.deep.equal([]);

@@ -1,6 +1,6 @@
 const {StatementExpression} = require('../schema/statement/expression.js');
 const {StatementVariable} = require('../schema/statement/variable.js');
-const {Queriable} = require('../schema/query/queriable.js');
+const {QueryShard} = require('../schema/query/shard.js');
 
 function canExecute(statement, datum) {
 	let ok = true;
@@ -32,47 +32,43 @@ function combine(arr) {
 	}
 }
 
-async function executeQueriable(querier, queriable, ctx) {
-	const source = querier.sources[queriable.name];
+async function executeShard(querier, shard, ctx) {
+	const source = querier.sources[shard.name];
 
-	return source.execute(queriable, ctx);
+	return source.execute(shard, ctx);
 }
 
-async function runQueriable(querier, settings, queriable, ctx) {
+async function runShard(querier, settings, shard, ctx) {
 	if (settings.cacheable) {
 		const series = 'querier:' + querier.name;
-		const key = queriable.getIdentifier();
+		const key = shard.getIdentifier();
 		const check = ctx.hasCache(series, key);
 
 		if (check) {
 			return ctx.getCache(series, key);
 		} else {
-			return ctx.promiseCache(
-				series,
-				key,
-				executeQueriable(querier, queriable, ctx)
-			);
+			return ctx.promiseCache(series, key, executeShard(querier, shard, ctx));
 		}
 	} else {
-		return executeQueriable(querier, queriable, ctx);
+		return executeShard(querier, shard, ctx);
 	}
 }
 
 async function processDatum(querier, settings, stmts, datum, ctx) {
 	const res = await Promise.all(
 		stmts.map(async (stmt) => {
-			const queriable = stmt.queriable.clone();
+			const shard = stmt.shard.clone();
 
 			// TODO: process the externals
 			stmt.externals.forEach(({name, mappings}) =>
 				mappings.map((mapping) =>
-					queriable.addParam(
+					shard.addParam(
 						new StatementVariable(name, mapping.to, datum[mapping.from], '=')
 					)
 				)
 			);
 
-			return runQueriable(querier, settings, queriable, ctx);
+			return runShard(querier, settings, shard, ctx);
 		})
 	);
 
@@ -125,7 +121,8 @@ function buildExpressableSwitch(sourceDex, seriesToSource, method) {
 		}
 
 		if (source) {
-			source.queriable[method](filter);
+			// this can't be right, right?
+			source.shard[method](filter);
 		} else {
 			const available = Object.keys(sourceDex).join();
 			throw new Error('Unknown source: ' + name + ' (' + available + ')');
@@ -146,7 +143,7 @@ class Querier {
 			const sourceName = info.model.incomingSettings.source;
 
 			seriesToSource[series] = sourceName;
-			
+
 			// The thing I know is series always join left here.  So
 			// I am able to figure out of the join is internal or external
 			let order = 0;
@@ -170,10 +167,10 @@ class Querier {
 							// query.  If not, it has to be added to the other query so we can
 							// reference it here.
 							let temp = false;
-							let fieldAs = other.queriable.getField(join.name, mapping.to);
+							let fieldAs = other.shard.getField(join.name, mapping.to);
 
 							if (!fieldAs) {
-								fieldAs = other.queriable.addTempField(
+								fieldAs = other.shard.addTempField(
 									join.name,
 									'exe_' + tempCount++,
 									mapping.to
@@ -202,35 +199,37 @@ class Querier {
 				}
 			);
 
-			let queriable = null;
+			let shard = null;
 			let statement = agg[sourceName];
 			if (statement) {
-				queriable = statement.queriable;
+				shard = statement.shard;
+
+				// if I link into a pivot into a series, I need to define the model
+				shard.setModel(series, info.model);
 			} else {
 				// these should all be in order, so the first series should be the
 				// base series
-				queriable = new Queriable(
-					'fragment-' + Object.keys(agg).length,
-					series
+				shard = new QueryShard(
+					series,
+					info.model,
+					'fragment-' + Object.keys(agg).length
 				);
 
 				statement = {
-					queriable,
+					shard,
 					externals: [],
 					order
 				};
 				agg[sourceName] = statement;
 			}
 
-			queriable.setModel(series, info.model);
-
 			joins.external.forEach((join) => {
 				statement.externals.push(join);
 			});
 
-			queriable.addJoins(series, joins.internal);
+			shard.addJoins(series, joins.internal);
 
-			queriable.addFields(series, info.fields);
+			shard.addFields(series, info.fields);
 
 			return agg;
 		}, {});
@@ -249,14 +248,14 @@ class Querier {
 		// incoming sorts are in order, so it's expected the order will
 		// be maintained when passed to sub queries this way
 		query.sorts.forEach((sort) => {
-			sourceDex[seriesToSource[sort.series]].queriable.addSort(sort);
+			sourceDex[seriesToSource[sort.series]].shard.addSort(sort);
 		});
 
 		this.statements = Object.values(sourceDex);
 
 		if (this.position) {
 			// first source should always be the root
-			this.statements[0].queriable.setPosition(this.position);
+			this.statements[0].shard.setPosition(this.position);
 		}
 	}
 
@@ -265,8 +264,8 @@ class Querier {
 
 		await Promise.all(
 			this.statements.map(async (stmt) => {
-				sources[stmt.queriable.name] = await nexus.loadSource(
-					stmt.queriable.sourceName
+				sources[stmt.shard.name] = await nexus.loadSource(
+					stmt.shard.sourceName
 				);
 			})
 		);
@@ -298,7 +297,7 @@ class Querier {
 			}
 		} else {
 			// optmized for one source
-			rtn = runQueriable(this, settings, stmts[0].queriable, ctx);
+			rtn = runShard(this, settings, stmts[0].shard, ctx);
 		}
 
 		return rtn;
@@ -306,7 +305,7 @@ class Querier {
 
 	toJSON() {
 		return this.statements.map((stmt) => {
-			const exe = stmt.queriable.toJSON();
+			const exe = stmt.shard.toJSON();
 
 			exe.externals = stmt.externals;
 

@@ -16,7 +16,7 @@ const scalarMethods = {
 	gte: '>='
 };
 
-function translateWhere(expression) {
+function translateExpressable(expression) {
 	const where = [];
 	const params = [];
 
@@ -92,34 +92,17 @@ function translateSelect(query) {
 		},
 		{
 			select: [],
-			from: [],
-			where: [],
-			params: []
+			from: []
 		}
 	);
-
-	const where = translateWhere(query.params);
-
-	if (query.filters.isExpressable()) {
-		const t = translateWhere(query.filters);
-
-		if (where.stmt) {
-			where.stmt += ' AND ' + t.stmt;
-		} else {
-			where.stmt = t.stmt;
-		}
-
-		where.params.push(...t.params);
-	}
 
 	const sorts = query.sorts;
 
 	const position = query.position;
+
 	return {
 		select: `${settings.select.join(',\n\t')}`,
 		from: `${settings.from.join('\n\t')}`,
-		where: where.stmt.length ? where.stmt : null,
-		params: where.params,
 		orderBy: sorts.length
 			? sorts
 					.sort((a, b) => a.pos - b.pos)
@@ -138,27 +121,49 @@ function translateSelect(query) {
 	};
 }
 
-function buildConnector(settings){
+function translateWhere(stmt) {
+	const where = translateExpressable(stmt.params);
+
+	if (stmt.filters.isExpressable()) {
+		const t = translateExpressable(stmt.filters);
+
+		if (where.stmt) {
+			where.stmt += ' AND ' + t.stmt;
+		} else {
+			where.stmt = t.stmt;
+		}
+
+		where.params.push(...t.params);
+	}
+
+	return {
+		where: where.stmt.length ? where.stmt : null,
+		params: where.params
+	};
+}
+
+function buildConnector(settings) {
 	return {
 		prepare: async function (stmt) {
-			const query = translateSelect(stmt);
+			const select = translateSelect(stmt);
+			const where = translateWhere(stmt);
 
-			let sql = `SELECT ${query.select} \nFROM ${query.from}`;
+			let sql = `SELECT ${select.select} \nFROM ${select.from}`;
 
-			if (query.where) {
-				sql += `\nWHERE ${query.where}`;
+			if (where.where) {
+				sql += `\nWHERE ${where.where}`;
 			}
 
-			if (query.orderBy) {
-				sql += `\nORDER BY ${query.orderBy}`;
+			if (select.orderBy) {
+				sql += `\nORDER BY ${select.orderBy}`;
 			}
 
-			if (query.limit) {
-				sql += `\nLIMIT ${query.limit}`;
+			if (select.limit) {
+				sql += `\nLIMIT ${select.limit}`;
 			}
 
 			return {
-				query,
+				params: where.params,
 				sql
 			};
 		},
@@ -170,7 +175,7 @@ function buildConnector(settings){
 		execute: async function (stmt) {
 			const prepared = await this.prepare(stmt);
 
-			return this.run(prepared.sql, prepared.query.params, stmt);
+			return this.run(prepared.sql, prepared.params);
 		}
 	};
 }

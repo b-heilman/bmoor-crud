@@ -45,17 +45,22 @@ function reduceExpression(expression, paramDex = {}) {
 }
 
 class Statement {
-	constructor(baseSeries, baseSchema = null) {
+	constructor(baseSeries, baseModel = null) {
 		this.models = {};
 
 		this.baseSeries = this.getSeries(baseSeries);
-		
+
 		this.filters = new StatementExpression();
 		this.params = new StatementExpression();
 
-		if (baseSchema) {
-			this.setModel(baseSeries, baseSchema);
+		if (baseModel) {
+			this.setModel(baseSeries, baseModel);
 		}
+	}
+
+	getInOrder() {
+		// we assume the models are already in order
+		return Object.values(this.models);
 	}
 
 	setMethod(method) {
@@ -77,10 +82,10 @@ class Statement {
 	}
 
 	getSeries(series) {
-		if (!series){
-			throw new Error('unusable series: '+series);
+		if (!series) {
+			throw new Error('unusable series: ' + series);
 		}
-		
+
 		let rtn = this.models[series];
 
 		if (!rtn) {
@@ -126,6 +131,10 @@ class Statement {
 	importSeries(series, statement) {
 		const incoming = statement.getSeries(series);
 
+		if (!incoming.model) {
+			throw new Error('!!!');
+		}
+
 		this.setModel(series, incoming.model).addFields(series, incoming.fields);
 
 		return incoming;
@@ -158,7 +167,7 @@ class Statement {
 		return stmt;
 	}
 
-	toRequest(){
+	toRequest() {
 		const queryStmts = [];
 
 		if (this.filters.isExpressable()) {
@@ -173,8 +182,6 @@ class Statement {
 
 		return Object.values(this.models).reduce(
 			(agg, model) => {
-				const series = model.series;
-
 				model.fields.forEach((field) => {
 					set(
 						agg.fields,

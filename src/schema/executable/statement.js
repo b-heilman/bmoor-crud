@@ -12,7 +12,7 @@ class ExecutableStatement extends Statement {
 	}
 
 	setPayload(series, payload) {
-		if (this.baseSeries.series !== series){
+		if (this.baseSeries.series !== series) {
 			throw new Error('Must be primary series for payload');
 		}
 
@@ -30,7 +30,7 @@ class ExecutableStatement extends Statement {
 	}
 
 	// TODO: really need a way to validate everything in one place
-	toRequest(){
+	toRequest() {
 		const base = this.baseSeries;
 
 		return {
@@ -45,7 +45,7 @@ class ExecutableStatement extends Statement {
 	toJSON() {
 		const json = super.toJSON();
 
-		if (json.models.length > 1){
+		if (json.models.length > 1) {
 			throw new Error('multiple models not supported');
 		}
 

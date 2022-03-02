@@ -284,13 +284,6 @@ describe('src/schema/services/querier.js', function () {
 					bar: 'hello-world'
 				}
 			]);
-			/**
-			stubs.execute.b.onCall(0)
-			.callsFake(async function(args){
-				console.log('execute =>', JSON.stringify(args, null, '\t'));
-				return null;
-			});
-			**/
 
 			const exe = new sut.Querier('examp-3', query);
 			const ctx = {};
@@ -1733,7 +1726,6 @@ describe('src/schema/services/querier.js', function () {
 				});
 
 				const argsB = stubs.execute.b.getCall(0).args[0];
-				console.log('=>', JSON.stringify(argsB.toJSON(), null, 2));
 				expect(argsB.toJSON()).to.deep.equal({
 					method: 'read',
 					sourceName: 's-2',

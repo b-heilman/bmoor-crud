@@ -2,7 +2,7 @@ const error = require('bmoor/src/lib/error.js');
 
 const {factory: sqlFactory} = require('./sql.js');
 
-function buildConnector(settings){
+function buildConnector(settings) {
 	const connector = sqlFactory();
 
 	connector.run = async function (sql, params) {
@@ -25,8 +25,6 @@ function buildConnector(settings){
 
 	return connector;
 }
-
-
 
 module.exports = {
 	factory(settings) {

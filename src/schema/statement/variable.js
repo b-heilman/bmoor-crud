@@ -7,7 +7,7 @@ class StatementVariable {
 	 * op
 	 ***/
 	constructor(series, path, value, operation = '=', settings = {}) {
-		if (!series){
+		if (!series) {
 			throw new Error('how?');
 		}
 		this.series = series;

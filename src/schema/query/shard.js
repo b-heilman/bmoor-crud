@@ -2,30 +2,28 @@ const {QueryStatement} = require('./statement.js');
 const {StatementField} = require('../statement/field.js');
 
 // TODO: rename this to QueryShard
-class Queriable extends QueryStatement {
+class QueryShard extends QueryStatement {
 	// TODO: I don't like that I did this, it should keep the parent
 	//   constructor pattern
-	constructor(name, baseSeries) {
-		super(baseSeries);
+	constructor(baseSeries, baseModel, name) {
+		super(baseSeries, baseModel);
 
 		this.name = name;
-		this.sourceName = null;
 		this.fieldIndex = {};
 	}
 
 	clone() {
-		const exe = new Queriable(this.name, this.baseSeries.series);
+		const exe = new QueryShard(
+			this.baseSeries.series,
+			this.baseSeries.model,
+			this.name
+		);
 
 		exe.import(this);
 
 		exe.source = this.source;
 
 		return exe;
-	}
-
-	getInOrder() {
-		// we assume the models are already in order
-		return Object.values(this.models);
 	}
 
 	setModel(series, model) {
@@ -91,5 +89,5 @@ class Queriable extends QueryStatement {
 }
 
 module.exports = {
-	Queriable
+	QueryShard
 };

@@ -119,7 +119,9 @@ class QueryStatement extends Statement {
 
 		let toProcess = Object.values(this.models);
 		const extraRoots = toProcess.filter(
-			(link) => !Object.values(link.joins).length && link.series !== this.baseSeries.series
+			(link) =>
+				!Object.values(link.joins).length &&
+				link.series !== this.baseSeries.series
 		);
 
 		if (extraRoots.length) {
