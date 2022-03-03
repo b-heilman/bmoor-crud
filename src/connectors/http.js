@@ -1,7 +1,7 @@
 const error = require('bmoor/src/lib/error.js');
 
 const {QueryStatement} = require('../schema/query/statement.js');
-const {methods} = require('../schema/executable/statement.js');
+const {ExecutableStatement, methods} = require('../schema/executable/statement.js');
 
 // this converts a request into one another bmoor-crud instance can decode
 //-----------
@@ -32,7 +32,7 @@ function buildConnector(connectorSettings) {
 				method = 'post';
 
 				({query, ...request} = stmt.toRequest());
-			} else {
+			} else if (stmt instanceof ExecutableStatement){
 				if (stmt.method === methods.create) {
 					method = 'post';
 				} else if (stmt.method === methods.update) {
@@ -44,6 +44,10 @@ function buildConnector(connectorSettings) {
 				({query, ...request} = stmt.toRequest());
 
 				url = new URL(connectorSettings.crudBase + '/' + request.base);
+			} else {
+				throw error('unknown statement type', {
+					code: 'BMOOR_CRUD_CONNECTOR_HTTP_UNKNOWN'
+				});
 			}
 
 			if (query) {

@@ -23,13 +23,17 @@ describe('src/connectors/sql.js', function () {
 
 			operator = sut.factory(stubs);
 
-			stubs.run = sinon.stub().resolves('ok');
+			stubs.run = sinon.stub().resolves(['eins','zwei']);
 		});
 
 		describe('create', function () {
 			it('should work', async function () {
 				const stmt = new ExecutableStatement('model-1')
 					.setMethod(methods.create)
+					.setModel('model-1', {
+						schema: 'schema-1',
+						getKeyField: () => 'id'
+					})
 					.addFields('model-1', [
 						new StatementField('id'),
 						new StatementField('name'),
@@ -40,16 +44,23 @@ describe('src/connectors/sql.js', function () {
 						hello: 'world'
 					});
 
-				await operator.execute(stmt, context);
+				const res = await operator.execute(stmt, context);
 
 				expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 					`
-					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
-					FROM \`model-1\` AS \`model-1\`
-	    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
+					INSERT INTO schema-1
+					SET ?;
+					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,
+						\`model-1\`.\`json\`
+					FROM \`schema-1\` AS \`model-1\`
+					WHERE id=last_insert_id();`.replace(/\s+/g, '')
 				);
 
-				expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
+				expect(stubs.run.getCall(0).args[1]).to.deep.equal([{
+					hello: 'world'
+				}]);
+
+				expect(res).to.equal('zwei');
 			});
 		});
 
@@ -57,6 +68,10 @@ describe('src/connectors/sql.js', function () {
 			it('should work', async function () {
 				const stmt = new ExecutableStatement('model-1')
 					.setMethod(methods.update)
+					.setModel('model-1', {
+						schema: 'schema-1',
+						getKeyField: () => 'id'
+					})
 					.addFields('model-1', [
 						new StatementField('id'),
 						new StatementField('name'),
@@ -68,16 +83,28 @@ describe('src/connectors/sql.js', function () {
 					})
 					.addParam(new StatementVariable('model-1', 'id', 123));
 
-				await operator.execute(stmt, context);
+				const res = await operator.execute(stmt, context);
 
 				expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 					`
-					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
-					FROM \`model-1\` AS \`model-1\`
-	    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
+					UPDATE schema-1
+					SET ?
+					WHERE \`model-1\`.\`id\`=?;
+
+					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,
+						\`model-1\`.\`json\`
+					FROM \`schema-1\` AS \`model-1\`
+					WHERE \`model-1\`.\`id\`=?;
+					`.replace(/\s+/g, '')
 				);
 
-				expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
+				expect(stubs.run.getCall(0).args[1]).to.deep.equal([
+					{hello: 'world'},
+					123,
+					123
+				]);
+
+				expect(res).to.equal('zwei');
 			});
 		});
 
@@ -85,6 +112,10 @@ describe('src/connectors/sql.js', function () {
 			it('should work', async function () {
 				const stmt = new ExecutableStatement('model-1')
 					.setMethod(methods.delete)
+					.setModel('model-1', {
+						schema: 'schema-1',
+						getKeyField: () => 'id'
+					})
 					.addFields('model-1', [
 						new StatementField('id'),
 						new StatementField('name'),
@@ -93,16 +124,19 @@ describe('src/connectors/sql.js', function () {
 					])
 					.addParam(new StatementVariable('model-1', 'id', 123));
 
-				await operator.execute(stmt, context);
+				const res = await operator.execute(stmt, context);
 
 				expect(stubs.run.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
 					`
-					SELECT \`model-1\`.\`id\`,\`model-1\`.\`name\`,\`model-1\`.\`title\`,\`model-1\`.\`json\`
-					FROM \`model-1\` AS \`model-1\`
-	    			WHERE \`model-1\`.\`id\`=?`.replace(/\s+/g, '')
+					DELETE schema-1
+					FROM \`schema-1\`AS \`model-1\`
+					WHERE \`model-1\`.\`id\` = ?;
+					`.replace(/\s+/g, '')
 				);
 
 				expect(stubs.run.getCall(0).args[1]).to.deep.equal([123]);
+
+				expect(res).to.deep.equal(['eins', 'zwei']);
 			});
 		});
 	});
