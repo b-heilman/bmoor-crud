@@ -5,7 +5,10 @@ const {
 	joiners
 } = require('../schema/statement/expression.js');
 const {QueryStatement} = require('../schema/query/statement.js');
-const {ExecutableStatement, methods} = require('../schema/executable/statement.js');
+const {
+	ExecutableStatement,
+	methods
+} = require('../schema/executable/statement.js');
 
 const arrayMethods = {
 	'=': 'IN'
@@ -72,7 +75,7 @@ function translateSelect(query) {
 				}
 			});
 
-			if (model.joins){
+			if (model.joins) {
 				const joins = Object.values(model.joins);
 				if (joins.length) {
 					joins.forEach((join) => {
@@ -112,16 +115,17 @@ function translateSelect(query) {
 	return {
 		select: `${settings.select.join(',\n\t')}`,
 		from: `${settings.from.join('\n\t')}`,
-		orderBy:  sorts && sorts.length
-			? sorts
-					.sort((a, b) => a.pos - b.pos)
-					.map(
-						(order) =>
-							`\`${order.series}\`.\`${order.path}\` ` +
-							(order.ascending ? 'ASC' : 'DESC')
-					)
-					.join(',')
-			: null,
+		orderBy:
+			sorts && sorts.length
+				? sorts
+						.sort((a, b) => a.pos - b.pos)
+						.map(
+							(order) =>
+								`\`${order.series}\`.\`${order.path}\` ` +
+								(order.ascending ? 'ASC' : 'DESC')
+						)
+						.join(',')
+				: null,
 		limit: position
 			? position.start
 				? position.start + ',' + position.limit
@@ -177,7 +181,7 @@ function buildConnector(settings) {
 					sql,
 					resultIndex: 0
 				};
-			} else if (stmt instanceof ExecutableStatement){
+			} else if (stmt instanceof ExecutableStatement) {
 				const params = [];
 
 				let sql = '';
@@ -218,7 +222,7 @@ function buildConnector(settings) {
 					const select = translateSelect(stmt);
 					const where = translateWhere(stmt);
 
-					// I can't figure out how to unwind this from the 
+					// I can't figure out how to unwind this from the
 					// models, so only the primary can be updated
 					sql = `
 					UPDATE ${stmt.baseSeries.schema} SET ?
@@ -237,7 +241,7 @@ function buildConnector(settings) {
 					const select = translateSelect(stmt);
 					const where = translateWhere(stmt);
 
-					// I can't figure out how to unwind this from the 
+					// I can't figure out how to unwind this from the
 					// models, so only the primary can be deleted
 					sql = `
 					DELETE ${stmt.baseSeries.schema} 
@@ -269,10 +273,9 @@ function buildConnector(settings) {
 
 			const res = await this.run(sql, params);
 
-			if (resultIndex === null){
+			if (resultIndex === null) {
 				return res;
 			} else {
-
 				return res[resultIndex];
 			}
 		}

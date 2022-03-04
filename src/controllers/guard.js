@@ -119,7 +119,7 @@ class Guard extends Controller {
 
 	// TODO: handle change structure to {payload: [datum]}
 	async write(ctx) {
-		const datum = await ctx.getContent();
+		const {payload} = await ctx.getContent();
 
 		ctx.setInfo({
 			model: this.view.structure.name
@@ -134,7 +134,7 @@ class Guard extends Controller {
 				action: 'create'
 			});
 
-			return this.view.create(datum, ctx);
+			return this.view.create(payload, ctx);
 		} else if (ctx.getMethod() === 'put') {
 			const ids = (ctx.getParam('id') || '').trim();
 
@@ -153,7 +153,7 @@ class Guard extends Controller {
 					status: 400
 				});
 			} else if (config.get('putIsPatch')) {
-				return runUpdate(ids.split(','), this.view, datum, ctx);
+				return runUpdate(ids.split(','), this.view, payload, ctx);
 			} else {
 				throw error.create('called write and tried to put, not ready', {
 					code: 'CRUD_CONTROLLER_WRITE_NOTREADY',
@@ -179,7 +179,7 @@ class Guard extends Controller {
 					await this.view.query(await parseQuery(ctx, this.view), ctx)
 				).map((datum) => this.view.structure.getKey(datum));
 
-				return runUpdate(queriedIds, this.view, datum, ctx);
+				return runUpdate(queriedIds, this.view, payload, ctx);
 			} else {
 				const ids = (ctx.getParam('id') || '').trim();
 
@@ -190,7 +190,7 @@ class Guard extends Controller {
 						status: 400
 					});
 				} else {
-					return runUpdate(ids.split(','), this.view, datum, ctx);
+					return runUpdate(ids.split(','), this.view, payload, ctx);
 				}
 			}
 		} else {

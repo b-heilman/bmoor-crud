@@ -23,7 +23,7 @@ describe('src/connectors/sql.js', function () {
 
 			operator = sut.factory(stubs);
 
-			stubs.run = sinon.stub().resolves(['eins','zwei']);
+			stubs.run = sinon.stub().resolves(['eins', 'zwei']);
 		});
 
 		describe('create', function () {
@@ -56,9 +56,11 @@ describe('src/connectors/sql.js', function () {
 					WHERE id=last_insert_id();`.replace(/\s+/g, '')
 				);
 
-				expect(stubs.run.getCall(0).args[1]).to.deep.equal([{
-					hello: 'world'
-				}]);
+				expect(stubs.run.getCall(0).args[1]).to.deep.equal([
+					{
+						hello: 'world'
+					}
+				]);
 
 				expect(res).to.equal('zwei');
 			});

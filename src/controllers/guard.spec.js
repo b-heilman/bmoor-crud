@@ -361,7 +361,9 @@ describe('src/controller/guard.js', function () {
 							{
 								method: 'post',
 								content: {
-									weAre: 'Penn State'
+									payload: {
+										weAre: 'Penn State'
+									}
 								}
 							},
 							{content: 'content'}
@@ -385,7 +387,9 @@ describe('src/controller/guard.js', function () {
 							{
 								method: 'put',
 								body: {
-									weAre: 'Penn State'
+									payload: {
+										weAre: 'Penn State'
+									}
 								},
 								params: {
 									id: '1'
@@ -411,7 +415,9 @@ describe('src/controller/guard.js', function () {
 						new Context({
 							method: 'put',
 							body: {
-								weAre: 'Penn State'
+								payload: {
+										weAre: 'Penn State'
+									}
 							},
 							params: {
 								id: '1,2'
@@ -438,7 +444,9 @@ describe('src/controller/guard.js', function () {
 							new Context({
 								method: 'put',
 								body: {
-									weAre: 'Penn State'
+									payload: {
+										weAre: 'Penn State'
+									}
 								},
 								params: {}
 							})
@@ -462,7 +470,9 @@ describe('src/controller/guard.js', function () {
 							new Context({
 								method: 'put',
 								body: {
-									weAre: 'Penn State'
+									payload: {
+										weAre: 'Penn State'
+									}
 								},
 								params: {
 									id: '1'
@@ -490,7 +500,9 @@ describe('src/controller/guard.js', function () {
 						new Context({
 							method: 'patch',
 							body: {
-								weAre: 'Penn State'
+								payload: {
+										weAre: 'Penn State'
+									}
 							},
 							params: {
 								id: '1'
@@ -514,7 +526,9 @@ describe('src/controller/guard.js', function () {
 						new Context({
 							method: 'patch',
 							body: {
-								weAre: 'Penn State'
+								payload: {
+										weAre: 'Penn State'
+									}
 							},
 							params: {
 								id: '1,2'
@@ -541,7 +555,9 @@ describe('src/controller/guard.js', function () {
 							new Context({
 								method: 'patch',
 								body: {
-									weAre: 'Penn State'
+									payload: {
+										weAre: 'Penn State'
+									}
 								},
 								params: {}
 							})
@@ -562,7 +578,8 @@ describe('src/controller/guard.js', function () {
 					try {
 						await controller.write(
 							new Context({
-								method: 'not-get'
+								method: 'not-get',
+								body: {}
 							})
 						);
 					} catch (ex) {
