@@ -673,14 +673,17 @@ class Structure {
 	// Add content to a statement based on the given context.  This will be run
 	// each invocation, unlike the prepare which is univeral across all contexts
 	async extendStatement(statement, settings, ctx) {
-		// this is in extended because some fields are based on permission.
-		// I could preload some and do the rest, but for now this is how
-		// it will work
-		(await this.testFields('read', ctx)).forEach((field) => {
-			statement.addFields(field.series, [
-				new StatementField(field.storagePath, field.reference || null)
-			]);
-		});
+		if (settings.fields){
+		} else {
+			// this is in extended because some fields are based on permission.
+			// I could preload some and do the rest, but for now this is how
+			// it will work
+			(await this.testFields('read', ctx)).forEach((field) => {
+				statement.addFields(field.series, [
+					new StatementField(field.storagePath, field.reference || null)
+				]);
+			});
+		}
 
 		// I'm doing this so people have a way around validation if they deem in neccisary.  I'm sure this
 		// will result in someone getting hacked, but I want to trust the devs using this
