@@ -124,6 +124,8 @@ class Composite extends Structure {
 	}
 
 	async linkFields() {
+		// this defines the defaults for the composite, but not the run time fields.  That is
+		// still handled in the structure::extendStatement
 		return Promise.all(
 			this.instructions.fields.map(async (property) => {
 				const accessor = property.action;

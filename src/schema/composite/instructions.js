@@ -1,6 +1,7 @@
 const {create} = require('bmoor/src/lib/error.js');
 const {implode} = require('bmoor/src/object.js');
 
+const {translateField} = require('../translator/field.js');
 const {pathToAccessors} = require('../../graph/path.js');
 
 function instructionIndexMerge(target, source) {
@@ -200,26 +201,13 @@ class Instructions {
 			statement = '$' + this.alias + statement;
 		}
 
-		// if it's an = statement, the properties can't be short hand
-		const action = pathToAccessors(statement)[0]; // this is an array of action tokens
-		if (!action) {
-			throw create(`unable to parse ${statement}`, {
-				code: 'BMOOR_CRUD_COMPOSITE_PARSE_STATEMENT',
-				context: {
-					statement
-				}
-			});
-		}
+		const info = translateField(mount, statement);
 
-		const isArray = mount.indexOf('[0]') !== -1;
-
-		const path = mount.substring(0, isArray ? mount.length - 3 : mount.length);
-
-		const join = this.index[namespace + action.series];
+		const join = this.index[namespace + info.action.series];
 		if (!join) {
 			throw create(
 				`requesting field not joined ${namespace ? namespace + ':' : ''}${
-					action.series
+					info.action.series
 				}`,
 				{
 					code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
@@ -230,15 +218,7 @@ class Instructions {
 			);
 		}
 
-		action.model = join.model;
-
-		const info = {
-			type: action.loader,
-			action,
-			statement,
-			path,
-			isArray
-		};
+		info.action.model = join.model;
 
 		if (info.type === 'access') {
 			let toProcess = [namespace + info.action.series];

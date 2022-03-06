@@ -8,12 +8,13 @@ class Field {
 		// path should always be considered an unique identifier
 		this.path = path;
 		this.series = settings.series || structure.name;
-		this.storagePath = settings.storagePath || path;
+		this.storagePath = settings.storagePath || path; // this is how it's stored
 		// using storage path can cause collisions on composites, path should
 		// still be unique.  By writing back to the path I can later optimize
 		// by just inflating the returned response or something else
-		this.reference = settings.reference || path;
-
+		this.reference = settings.reference || path; // this is how it's referenced ('as' in sql),
+		                                             // can differ from storage e.g. 'foo' as 'bar'
+		// NOTE: I really need to rethink storagePath not overriding  if reference is not defined
 		this.structure = structure;
 
 		/***

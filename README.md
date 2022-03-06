@@ -165,8 +165,12 @@ We will be defining the file `index.js`
 
 #### Features
 
-- [ ] HTTP Connector
-- [ ] Create / Update / Deleta via connectors
+- Checklist for next feature branch
+- [x] HTTP Connector
+- [x] Create / Update / Deleta via connectors
+- [ ] Update crud routes to allow custom field responses
 - [ ] Redo configure structures / flow
 - [ ] Set up integration test using http example
 - [ ] Copy integration test to ReadMe Example
+- Other features I'm kicking around
+- [ ] hmmm...

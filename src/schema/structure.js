@@ -1,5 +1,6 @@
 const {Config} = require('bmoor/src/lib/config.js');
 const {makeGetter} = require('bmoor/src/core.js');
+const {implode} = require('bmoor/src/object.js');
 const {apply, create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
@@ -584,32 +585,43 @@ class Structure {
 		return found;
 	}
 
+	async testField(field, type, ctx){
+		// if I need to in the future, I can load the permission here then run the test
+		const op = field.incomingSettings[type];
+
+		if (op) {
+			if (typeof op === 'string') {
+				try {
+					return ctx.hasPermission(op);
+				} catch (ex) {
+					apply(ex, {
+						code: 'BMOOR_CRUD_SCHEMA_TEST_FIELD',
+						context: {
+							type,
+							external: field.path,
+							structure: field.structure.name
+						}
+					});
+
+					throw ex;
+				}
+			} else {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	async testFields(type, ctx) {
 		return this.fields.reduce(async (prom, field) => {
-			const agg = await prom;
-			const op = field.incomingSettings[type];
+			const [test, agg] = await Promise.all([
+				this.testField(field, type, ctx),
+				prom
+			]);
 
-			if (op) {
-				if (typeof op === 'string') {
-					try {
-						if (ctx.hasPermission(op)) {
-							agg.push(field);
-						}
-					} catch (ex) {
-						apply(ex, {
-							code: 'BMOOR_CRUD_SCHEMA_TEST_FIELD',
-							context: {
-								type,
-								external: field.path,
-								structure: field.structure.name
-							}
-						});
-
-						throw ex;
-					}
-				} else {
-					agg.push(field);
-				}
+			if (test) {
+				agg.push(field);
 			}
 
 			return agg;
@@ -674,6 +686,35 @@ class Structure {
 	// each invocation, unlike the prepare which is univeral across all contexts
 	async extendStatement(statement, settings, ctx) {
 		if (settings.fields){
+			// this will allow you to select a subset of the structure's fields and remap them
+			const imploded = implode(settings.fields);
+			await Object.keys(imploded).reduce(
+				async (agg, mount) =>{
+					const info = translateField(mount, imploded[mount]);
+
+					const field = this.getField(info.action.field);
+
+					if (field.series !== accessor.series) {
+						throw create(
+							`series mismatch: ${field.series} vs ${accessor.series}`,
+							{
+								code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID',
+								context: {
+									accessor
+								}
+							}
+						);
+					}
+
+					if (this.testField(field, 'read', ctx)){
+						statement.addFields(field.series, [
+							new StatementField(field.storagePath, mount)
+						]);
+					}
+
+					return agg;
+				}, []
+			);
 		} else {
 			// this is in extended because some fields are based on permission.
 			// I could preload some and do the rest, but for now this is how
@@ -681,9 +722,10 @@ class Structure {
 			(await this.testFields('read', ctx)).forEach((field) => {
 				statement.addFields(field.series, [
 					new StatementField(field.storagePath, field.reference || null)
-				]);
+				])
 			});
 		}
+		
 
 		// I'm doing this so people have a way around validation if they deem in neccisary.  I'm sure this
 		// will result in someone getting hacked, but I want to trust the devs using this
