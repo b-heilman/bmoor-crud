@@ -4,16 +4,16 @@ const {Querier} = require('./querier.js');
 const {Executor} = require('./executor.js');
 
 async function runMap(arr, view, ctx) {
-	const mapFn = view.buildMap(ctx);
-	const inflateFn = view.structure.actions.inflate;
+	const cleanFn = view.actions.cleanForInflate;
+	const inflateFn = view.actions.inflate;
 
 	let rtn = null;
 
 	if (mapFn) {
 		if (inflateFn) {
-			rtn = await Promise.all(arr.map((datum) => mapFn(inflateFn(datum, ctx))));
+			rtn = await Promise.all(arr.map((datum) => inflateFn(cleanFn(datum, ctx), ctx)));
 		} else {
-			rtn = await Promise.all(arr.map(mapFn));
+			rtn = await Promise.all(arr.map((datum) => cleanFn(datum, ctx)));
 		}
 	} else if (inflateFn) {
 		rtn = arr.map((datum) => {
@@ -40,24 +40,141 @@ async function runFilter(arr, view, ctx) {
 	}
 }
 
-function buildCleaner(type, fields) {
-	const cleaner = fields.reduce((old, field) => {
+function buildInflate(baseInflate, fields) {
+	const mutator = fields.reduce((old, field) => {
+		const structureSettings = (
+			field.original ? field.original.structure : field.structure
+		).incomingSettings;
+
+		if (field.incomingSettings.onInflate) {
+			// this means the mapping is handled by the function and is already
+			// being passed in
+			return old;
+		} else {
+			// TODO: isFlat needs to come from the adapter? but how...
+			// TODO: should the below be internalGetter and the field always
+			//   knows its context based on reference?
+			const getter = structureSettings.isFlat
+				? (datum) => datum[field.reference]
+				: field.internalGetter;
+			const setter = field.externalSetter;
+
+			if (old) {
+				return function (src) {
+					const tgt = old(src);
+
+					const val = getter(src);
+					if (val !== undefined) {
+						setter(tgt, val);
+					}
+
+					return tgt;
+				};
+			} else {
+				return function (src) {
+					const tgt = {};
+
+					const val = getter(src);
+					if (val !== undefined) {
+						setter(tgt, val);
+					}
+
+					return tgt;
+				};
+			}
+		}
+	}, null);
+
+	if (baseInflate && mutator) {
+		return function mutateInflaterFn(datum, ctx) {
+			return baseInflate(mutator(datum), datum, ctx);
+		};
+	} else if (baseInflate) {
+		return function inflaterFn(datum, ctx) {
+			return baseInflate({}, datum, ctx);
+		};
+	} else if (mutator) {
+		return function mutatorFn(datum /*, ctx*/) {
+			return mutator(datum);
+		};
+	} else {
+		return (datum) => datum;
+	}
+}
+
+function buildDeflate(baseDeflate, fields) {
+	const mutator = fields.reduce((old, field) => {
+		const structureSettings = (
+			field.original ? field.original.structure : field.structure
+		).incomingSettings;
+
+		if (field.incomingSettings.onDeflate) {
+			return old;
+		} else {
+			const getter = field.externalGetter;
+			const setter = !structureSettings.isFlat
+				? field.internalSetter
+				: function (datum, value) {
+						datum[field.storagePath] = value;
+				  };
+
+			if (old) {
+				return function (src) {
+					const tgt = old(src);
+
+					const val = getter(src);
+					if (val !== undefined) {
+						setter(tgt, val);
+					}
+
+					return tgt;
+				};
+			} else {
+				return function (src) {
+					const tgt = {};
+
+					const val = getter(src);
+					if (val !== undefined) {
+						setter(tgt, val);
+					}
+
+					return tgt;
+				};
+			}
+		}
+	}, null);
+
+	if (baseDeflate && mutator) {
+		return function mutateDeflaterFn(datum, ctx) {
+			return baseDeflate(mutator(datum), datum, ctx);
+		};
+	} else if (baseDeflate) {
+		return function deflaterFn(datum, ctx) {
+			return baseDeflate({}, datum, ctx);
+		};
+	} else if (mutator) {
+		return function mutatorFn(datum /*, ctx*/) {
+			return mutator(datum);
+		};
+	} else {
+		return (datum) => datum;
+	}
+}
+
+function buildFieldOperator(type, fields, fn){
+	const method = fields.reduce((old, field) => {
 		const op = field.incomingSettings[type];
 
-		if (typeof op === 'string') {
+		if (op){
 			if (old) {
 				return async function (datum, ctx) {
 					await old(datum, ctx);
 
-					if (!ctx.hasPermission(op)) {
-						del(datum, field.path);
-					}
+					return fn(datum, field, op, ctx);
 				};
 			} else {
 				return async function (datum, ctx) {
-					if (!ctx.hasPermission(op)) {
-						del(datum, field.path);
-					}
+					return fn(datum, field, op, ctx);
 				};
 			}
 		}
@@ -65,14 +182,28 @@ function buildCleaner(type, fields) {
 		return old;
 	}, null);
 
-	if (cleaner) {
+	if (method) {
 		return async function (datum, ctx) {
-			await cleaner(datum, ctx);
+			await method(datum, ctx);
 
 			return datum;
 		};
 	} else {
-		return null;
+		return async function(datum){
+			return datum;
+		};
+	}
+}
+
+function cleanResponse(datum, field, op, ctx){
+	if (typeof op === 'string' && !ctx.hasPermission(op)) {
+		del(datum, field.reference);
+	}
+}
+
+function cleanIncominge(datum, field, op, ctx){
+	if (typeof op === 'string' && !ctx.hasPermission(op)) {
+		del(datum, field.path);
 	}
 }
 
@@ -82,53 +213,58 @@ class View {
 		this.cleaners = {};
 		this.hooks = {};
 		this.security = {};
+
 	}
 
 	async configure(settings = {}) {
 		this.incomingSettings = settings;
 	}
 
-	// returns a function to clean multiple datums from this instance
-	/*
-	 * I am defaulting preclean to false, as this view will already be
-	 * defining what fields are requested, so the clean will be double duty
-	 * leaving it here though incase anyone wants to be over zealous with
-	 * security.
-	 */
-	buildCleaner(type) {
-		let cleaner = this.cleaners[type];
+	async build(){
+		await this.structure.build();
 
-		if (!(type in this.cleaners)) {
-			cleaner = buildCleaner(type, this.structure.getFields());
-
-			this.cleaners[type] = cleaner;
-		}
-
-		return cleaner;
-	}
-
-	async clean(type, datum, ctx) {
-		const cleaner = this.buildCleaner(type);
-
-		datum = this.structure.clean(type, datum);
-
-		if (cleaner) {
-			await cleaner(datum, ctx);
-		}
-
-		return datum;
-	}
-
-	buildMap(ctx) {
-		const readCleaner = this.buildCleaner('read');
-
-		if (readCleaner) {
-			return async function (datum) {
-				return readCleaner(datum, ctx);
-			};
-		}
-
-		return null;
+		// TODO: now that I have things separated, do I really want this 
+		//   logic here?
+		/***
+		 * Here's how permissions / security will work.  I am going to treat
+		 * the framework like a red/green network topography.  Everything
+		 * services and schemas will be assumed sanitized, and controllers
+		 * will sanitize any incoming things.  This reduces the number of 
+		 * unneccisary copies made of data. So cleanFor are used to apply permissions
+		 * to a known data shape and copyFor is to sanitize data from the outside.
+		 * 
+		 * Deflate will act as a copyFor, so I don't need one for create or update
+		 ***/
+		this.actions = {
+			// source read => cleanForInflate => inflate
+			inflate: buildInflate(
+				this.structure.actions.inflate,
+				this.structure.getFields(),
+				this.structure.incomingSettings
+			),
+			cleanForInflate: buildFieldOperator(
+				'read', 
+				this.structure.getFields(),
+				cleanResponse
+			),
+			// update => cleanForUpdate => deflate
+			// create => cleanForCreate => deflate
+			deflate: buildDeflate(
+				this.structure.actions.deflate,
+				this.structure.getFields(),
+				this.structure.incomingSettings
+			),
+			cleanForUpdate: buildFieldOperator(
+				'update', 
+				this.structure.getFields(),
+				cleanIncominge
+			),
+			cleanForCreate = buildFieldOperator(
+				'create', 
+				this.structure.getFields(),
+				cleanIncominge
+			)
+		};
 	}
 
 	async buildFilter(ctx) {

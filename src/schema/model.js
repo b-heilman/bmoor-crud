@@ -114,6 +114,7 @@ class Model extends Structure {
 	}
 
 	clean(type, datum) {
+		// TODO: I should be able to assume build has already been run
 		if (!this.settings) {
 			this.build();
 		}
@@ -128,6 +129,7 @@ class Model extends Structure {
 	}
 
 	cleanDelta(delta, type = 'update') {
+		// TODO: remove
 		return this.clean(type, delta);
 	}
 
@@ -169,6 +171,7 @@ class Model extends Structure {
 		await this.extendStatement(
 			exe,
 			{
+				fields: settings.fields,
 				params: settings.params
 			},
 			ctx
@@ -197,6 +200,7 @@ class Model extends Structure {
 		return this.extendQuery(
 			query,
 			{
+				fields: settings.fields,
 				joins: settings.joins,
 				query: settings.query,
 				params: settings.params,

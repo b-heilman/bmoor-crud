@@ -1,8 +1,47 @@
+const {makeGetter, makeSetter} = require('bmoor/src/core.js');
+
 const {create} = require('bmoor/src/lib/error.js');
 
 const {View} = require('./view.js');
 const {config: structureConfig} = require('../schema/structure.js');
 const {methods} = require('../schema/executable/statement.js');
+
+function buildFieldCopier(type, fields){
+	const method = fields.reduce((old, field) => {
+		const op = field.incomingSettings[type];
+
+		if (op){
+			const get = makeGetter(field.path);
+			const set = makeGetter(field.path);
+
+			if (old) {
+				return function (datum, to) {
+					set(old(datum, to), get(datum));
+
+					return to;
+				};
+			} else {
+				return function (datum, to) {
+					set(to, get(datum));
+
+					return to;
+				};
+			}
+		}
+
+		return old;
+	}, null);
+
+	if (method) {
+		return function (from) {
+			return method(from, {});
+		};
+	} else {
+		return function(){
+			return {};
+		};
+	}
+}
 
 class Crud extends View {
 	async configure(settings = {}) {
@@ -13,12 +52,27 @@ class Crud extends View {
 		);
 	}
 
+	async build(){
+		await super.build():
+
+		this.actions.cleanForIndex = buildFieldCopier(
+			'index', 
+			this.structure.getFields()
+		);
+
+		this.actions.cleanForQuery = buildFieldCopier(
+			'query', 
+			this.structure.getFields()
+		);
+	}
+
 	decorate(decoration) {
 		Object.assign(this, decoration);
 	}
 
 	async _create(datum, ctx) {
-		const cleaned = await this.clean('create', datum, ctx);
+		const cleaned = this.actions.cleanForCreate(datum, ctx);
+
 		let payload = this.structure.actions.create
 			? this.structure.actions.create(cleaned, cleaned, ctx)
 			: cleaned;
@@ -39,12 +93,12 @@ class Crud extends View {
 			});
 		}
 
-		if (this.structure.actions.deflate) {
-			payload = this.structure.actions.deflate(payload, ctx);
-		}
-
 		if (this.incomingSettings.deflate) {
 			payload = this.incomingSettings.deflate(payload, ctx);
+		}
+
+		if (this.actions.deflate) {
+			payload = this.actions.deflate(payload, ctx);
 		}
 
 		return this.execute(
@@ -112,8 +166,6 @@ class Crud extends View {
 
 		const hooks = this.hooks;
 
-		await this.structure.build();
-
 		if (hooks.beforeRead) {
 			await hooks.beforeRead(null, ctx, this);
 		}
@@ -170,8 +222,6 @@ class Crud extends View {
 			return ctx.sessionCache.get('crud:' + name, id);
 		}
 
-		await this.structure.build();
-
 		if (hooks.beforeRead) {
 			await hooks.beforeRead(null, ctx, this);
 		}
@@ -204,8 +254,6 @@ class Crud extends View {
 	async readAll(ctx, settings = {}) {
 		const hooks = this.hooks;
 
-		await this.structure.build();
-
 		if (hooks.beforeRead) {
 			await hooks.beforeRead(null, ctx, this);
 		}
@@ -215,8 +263,6 @@ class Crud extends View {
 
 	async readMany(ids, ctx, settings = {}) {
 		const hooks = this.hooks;
-
-		await this.structure.build();
 
 		if (hooks.beforeRead) {
 			await hooks.beforeRead(null, ctx, this);
@@ -234,7 +280,7 @@ class Crud extends View {
 	}
 
 	async _update(delta, tgt, params, ctx) {
-		const cleaned = await this.clean('update', delta, ctx);
+		const cleaned = this.actions.cleanForUpdate(datum, ctx);
 
 		let payload = this.structure.actions.update
 			? this.structure.actions.update(cleaned, tgt, ctx)
@@ -256,8 +302,12 @@ class Crud extends View {
 			});
 		}
 
-		if (this.structure.actions.deflate) {
-			payload = this.structure.actions.deflate(payload, ctx);
+		if (this.incomingSettings.deflate) {
+			payload = this.incomingSettings.deflate(payload, ctx);
+		}
+
+		if (this.actions.deflate) {
+			payload = this.actions.deflate(payload, ctx);
 		}
 
 		return this.execute(
@@ -277,8 +327,6 @@ class Crud extends View {
 		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
-
-		await this.structure.build();
 
 		const tgt = await this.read(id, ctx, settings);
 
@@ -343,8 +391,6 @@ class Crud extends View {
 		const hooks = this.hooks;
 		const security = this.security;
 
-		await this.structure.build();
-
 		const datum = await this.read(id, ctx, settings);
 
 		if (security.canDelete) {
@@ -381,6 +427,7 @@ class Crud extends View {
 		return datum; // datum will have had onRead run against it
 	}
 
+	// TODO: I can't use a clean here, I need to write a copy only
 	async discoverDatum(query, ctx) {
 		let key = this.structure.getKey(query);
 
@@ -389,7 +436,7 @@ class Crud extends View {
 			return await this.read(key, ctx);
 		} else {
 			if (this.structure.hasIndex()) {
-				const res = await this.query(this.structure.clean('index', query), ctx);
+				const res = await this.query(this.actions.cleanForIndex(query), ctx);
 
 				return res[0];
 			} else {

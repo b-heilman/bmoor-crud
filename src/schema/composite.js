@@ -357,8 +357,10 @@ class Composite extends Structure {
 				await this.flatten();
 			}
 
+			// fields are defined in here
 			await this.link();
 
+			// defaults are defined here since we have all our fields
 			await super.build();
 		} catch (ex) {
 			addTrace(ex, {

@@ -191,127 +191,6 @@ function buildActions(actions, field) {
 	return actions;
 }
 
-function buildInflate(baseInflate, fields) {
-	const mutator = fields.reduce((old, field) => {
-		const structureSettings = (
-			field.original ? field.original.structure : field.structure
-		).incomingSettings;
-
-		if (field.incomingSettings.onInflate) {
-			// this means the mapping is handled by the function and is already
-			// being passed in
-			return old;
-		} else {
-			// TODO: isFlat needs to come from the adapter? but how...
-			// TODO: should the below be internalGetter and the field always
-			//   knows its context based on reference?
-			const getter = structureSettings.isFlat
-				? (datum) => datum[field.reference]
-				: field.internalGetter;
-			const setter = field.externalSetter;
-
-			if (old) {
-				return function (src) {
-					const tgt = old(src);
-
-					const val = getter(src);
-					if (val !== undefined) {
-						setter(tgt, val);
-					}
-
-					return tgt;
-				};
-			} else {
-				return function (src) {
-					const tgt = {};
-
-					const val = getter(src);
-					if (val !== undefined) {
-						setter(tgt, val);
-					}
-
-					return tgt;
-				};
-			}
-		}
-	}, null);
-
-	if (baseInflate && mutator) {
-		return function mutateInflaterFn(datum, ctx) {
-			return baseInflate(mutator(datum), datum, ctx);
-		};
-	} else if (baseInflate) {
-		return function inflaterFn(datum, ctx) {
-			return baseInflate({}, datum, ctx);
-		};
-	} else if (mutator) {
-		return function mutatorFn(datum /*, ctx*/) {
-			return mutator(datum);
-		};
-	} else {
-		return (datum) => datum;
-	}
-}
-
-function buildDeflate(baseDeflate, fields) {
-	const mutator = fields.reduce((old, field) => {
-		const structureSettings = (
-			field.original ? field.original.structure : field.structure
-		).incomingSettings;
-
-		if (field.incomingSettings.onDeflate) {
-			return old;
-		} else {
-			const getter = field.externalGetter;
-			const setter = !structureSettings.isFlat
-				? field.internalSetter
-				: function (datum, value) {
-						datum[field.storagePath] = value;
-				  };
-
-			if (old) {
-				return function (src) {
-					const tgt = old(src);
-
-					const val = getter(src);
-					if (val !== undefined) {
-						setter(tgt, val);
-					}
-
-					return tgt;
-				};
-			} else {
-				return function (src) {
-					const tgt = {};
-
-					const val = getter(src);
-					if (val !== undefined) {
-						setter(tgt, val);
-					}
-
-					return tgt;
-				};
-			}
-		}
-	}, null);
-
-	if (baseDeflate && mutator) {
-		return function mutateDeflaterFn(datum, ctx) {
-			return baseDeflate(mutator(datum), datum, ctx);
-		};
-	} else if (baseDeflate) {
-		return function deflaterFn(datum, ctx) {
-			return baseDeflate({}, datum, ctx);
-		};
-	} else if (mutator) {
-		return function mutatorFn(datum /*, ctx*/) {
-			return mutator(datum);
-		};
-	} else {
-		return (datum) => datum;
-	}
-}
-
 function buildSorts(query, sorts) {
 	sorts.split(',').map((option) => {
 		option = option.trimStart();
@@ -503,29 +382,20 @@ class Structure {
 	}
 
 	async build() {
+		this.actions = this.fields.reduce(buildActions, {
+			mutates: false
+		});
+
+		this.settings = this.fields.reduce(buildSettings, {
+			validation: null,
+			calculateChangeType: null
+		});
+
+		// TODO: I hope I fixed it so this is only over called once
 		if (!this.actions) {
-			this.actions = this.fields.reduce(buildActions, {
-				mutates: false
-			});
+			
 
-			this.actions.inflate = buildInflate(
-				this.actions.inflate,
-				this.fields,
-				this.incomingSettings
-			);
-
-			this.actions.deflate = buildDeflate(
-				this.actions.deflate,
-				this.fields,
-				this.incomingSettings
-			);
-		}
-
-		if (!this.settings) {
-			this.settings = this.fields.reduce(buildSettings, {
-				validation: null,
-				calculateChangeType: null
-			});
+			
 		}
 	}
 
@@ -685,7 +555,8 @@ class Structure {
 	// Add content to a statement based on the given context.  This will be run
 	// each invocation, unlike the prepare which is univeral across all contexts
 	async extendStatement(statement, settings, ctx) {
-		if (settings.fields){
+		// TODO: the level above should translate the fields
+		if (){
 			// this will allow you to select a subset of the structure's fields and remap them
 			const imploded = implode(settings.fields);
 			await Object.keys(imploded).reduce(
@@ -719,7 +590,7 @@ class Structure {
 			// this is in extended because some fields are based on permission.
 			// I could preload some and do the rest, but for now this is how
 			// it will work
-			(await this.testFields('read', ctx)).forEach((field) => {
+			(settings.fields || await this.testFields('read', ctx)).forEach((field) => {
 				statement.addFields(field.series, [
 					new StatementField(field.storagePath, field.reference || null)
 				])
