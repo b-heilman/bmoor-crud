@@ -50,7 +50,10 @@ describe('src/service/normalization', function () {
 						key: true
 					},
 					info: {
-						index: true
+						index: true,
+						read: true,
+						create: true,
+						update: true
 					}
 				}
 			});

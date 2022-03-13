@@ -1,10 +1,9 @@
 const {Config} = require('bmoor/src/lib/config.js');
-const {makeGetter} = require('bmoor/src/core.js');
-const {implode} = require('bmoor/src/object.js');
 const {apply, create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
+const {StructureActions} = require('./structure/actions.js');
 const {StatementField} = require('./statement/field.js');
 const {StatementVariable} = require('./statement/variable.js');
 const {buildExpression} = require('./statement/expression/compiler.js');
@@ -38,34 +37,34 @@ const config = new Config({
 
 const usages = new Config({
 	json: {
-		onInflate: function (tgt, src, setter, getter) {
-			const value = getter(src);
+		onInflate: function (datum, setter, getter) {
+			const value = getter(datum);
 
 			if (value) {
-				setter(tgt, JSON.parse(value));
+				setter(datum, JSON.parse(value));
 			}
 		},
-		onDeflate: function (tgt, src, setter, getter) {
-			const value = getter(src);
+		onDeflate: function (datum, setter, getter) {
+			const value = getter(datum);
 
 			if (value) {
-				setter(tgt, JSON.stringify(value));
+				setter(datum, JSON.stringify(value));
 			}
 		}
 	},
 	monitor: {
-		onCreate: function (tgt, src, setter, getter, cfg) {
-			const target = cfg.getTarget(src);
+		onCreate: function (datum, setter, getter, cfg) {
+			const target = cfg.getTarget(datum);
 
 			if (target !== undefined) {
-				setter(tgt, Date.now());
+				setter(datum, Date.now());
 			}
 		},
-		onUpdate: function (tgt, src, setter, getter, cfg) {
-			const target = cfg.getTarget(src);
+		onUpdate: function (datum, setter, getter, cfg) {
+			const target = cfg.getTarget(datum);
 
 			if (target !== undefined) {
-				setter(tgt, Date.now());
+				setter(datum, Date.now());
 			}
 		}
 	}
@@ -102,94 +101,6 @@ structure: {
 	fields: <fields>
 }
 **/
-
-function actionExtend(op, getter, setter, old, cfg) {
-	if (old) {
-		return function (tgt, src, ctx) {
-			op(old(tgt, src, ctx), src, setter, getter, cfg, ctx);
-
-			return tgt;
-		};
-	} else {
-		return function (tgt, src, ctx) {
-			op(tgt, src, setter, getter, cfg, ctx);
-
-			return tgt;
-		};
-	}
-}
-
-function buildActions(actions, field) {
-	const path = field.path;
-	const reference = field.reference;
-	const storagePath = field.storagePath;
-
-	const settings = field.incomingSettings;
-
-	let cfg = {};
-
-	if (settings.cfg) {
-		cfg = settings.cfg;
-		// this is to allow one field type to watch another field type
-		if (cfg.target) {
-			cfg.getTarget = makeGetter(cfg.target);
-		}
-	}
-
-	if (settings.onCreate) {
-		actions.create = actionExtend(
-			settings.onCreate,
-			field.externalGetter,
-			field.externalSetter,
-			actions.create,
-			cfg
-		);
-	}
-
-	if (settings.onUpdate) {
-		actions.update = actionExtend(
-			settings.onUpdate,
-			field.externalGetter,
-			field.externalSetter,
-			actions.update,
-			cfg
-		);
-	}
-
-	// inflate are changes out of the database
-	if (settings.onInflate) {
-		actions.inflate = actionExtend(
-			settings.onInflate,
-			field.internalGetter,
-			field.externalSetter,
-			actions.inflate,
-			cfg
-		);
-	}
-
-	// deflate are changes into the database
-	if (settings.onDeflate) {
-		actions.deflate = actionExtend(
-			settings.onDeflate,
-			field.externalGetter,
-			field.internalSetter,
-			actions.deflate,
-			cfg
-		);
-	}
-
-	if (path !== reference) {
-		// data changes from internal to external
-		actions.mutatesInflate = true;
-	}
-
-	if (path !== storagePath) {
-		// data changes from external to internal
-		actions.mutatesDeflate = true;
-	}
-
-	return actions;
-}
 
 function buildSorts(query, sorts) {
 	sorts.split(',').map((option) => {
@@ -381,22 +292,15 @@ class Structure {
 		this.index = {};
 	}
 
+	// optimization phase
 	async build() {
-		this.actions = this.fields.reduce(buildActions, {
-			mutates: false
-		});
+		this.actions = new StructureActions(this.fields);
 
+		// TODO: StructureSettings
 		this.settings = this.fields.reduce(buildSettings, {
 			validation: null,
 			calculateChangeType: null
 		});
-
-		// TODO: I hope I fixed it so this is only over called once
-		if (!this.actions) {
-			
-
-			
-		}
 	}
 
 	assignField(field) {
@@ -556,7 +460,7 @@ class Structure {
 	// each invocation, unlike the prepare which is univeral across all contexts
 	async extendStatement(statement, settings, ctx) {
 		// TODO: the level above should translate the fields
-		if (){
+		/**if (){
 			// this will allow you to select a subset of the structure's fields and remap them
 			const imploded = implode(settings.fields);
 			await Object.keys(imploded).reduce(
@@ -587,16 +491,15 @@ class Structure {
 				}, []
 			);
 		} else {
-			// this is in extended because some fields are based on permission.
-			// I could preload some and do the rest, but for now this is how
-			// it will work
-			(settings.fields || await this.testFields('read', ctx)).forEach((field) => {
-				statement.addFields(field.series, [
-					new StatementField(field.storagePath, field.reference || null)
-				])
-			});
-		}
-		
+		**/
+		// this is in extended because some fields are based on permission.
+		// I could preload some and do the rest, but for now this is how
+		// it will work
+		(settings.fields || await this.testFields('read', ctx)).forEach((field) => {
+			statement.addFields(field.series, [
+				new StatementField(field.storagePath, field.reference || null)
+			])
+		});
 
 		// I'm doing this so people have a way around validation if they deem in neccisary.  I'm sure this
 		// will result in someone getting hacked, but I want to trust the devs using this
@@ -751,10 +654,6 @@ class Structure {
 module.exports = {
 	usages,
 	config,
-	actionExtend,
-	buildActions,
-	buildInflate,
-	buildDeflate,
 	compareChanges,
 	addAccessorsToQuery,
 	Structure

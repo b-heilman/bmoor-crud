@@ -248,6 +248,7 @@ describe('src/services/secure.js', function () {
 			service = new Crud(model);
 
 			await service.configure();
+			await service.build();
 		});
 
 		describe('::canCreate', function () {

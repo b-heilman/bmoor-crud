@@ -44,207 +44,6 @@ describe('src/services/crud.js', function () {
 		});
 	});
 
-	describe('::clean', function () {
-		// right now this is covered by forge's old code
-	});
-
-	describe('::buildCleaner', function () {
-		let model = null;
-		let service = null;
-
-		beforeEach(async function () {
-			model = new Model('model-1', nexus);
-
-			await model.configure({
-				source: 'test-1',
-				fields: {
-					id: {
-						key: true,
-						read: true
-					},
-					name: {
-						create: true,
-						read: 'regular',
-						update: 'regular',
-						delete: 'admin',
-						index: 'regular'
-					},
-					title: {
-						create: 'admin',
-						read: 'admin',
-						update: 'admin'
-					},
-					hello: {
-						create: 'regular',
-						read: 'regular',
-						query: 'regular'
-					}
-				}
-			});
-
-			service = new Crud(model);
-		});
-		// right now this is covered by forge's old code
-		describe('for create', function () {
-			let cleaner = null;
-
-			beforeEach(async function () {
-				cleaner = service.buildCleaner('create');
-			});
-
-			it('should clean anything that needs permissions', async function () {
-				permissions = {};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1,
-					name: 'name-1'
-				});
-			});
-
-			it('should work with regular permissions', async function () {
-				permissions = {
-					regular: true
-				};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1,
-					name: 'name-1',
-					hello: 'world'
-				});
-			});
-
-			it('should work with admin permissions', async function () {
-				permissions = {
-					regular: true,
-					admin: true
-				};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				});
-			});
-		});
-
-		describe('for read', function () {
-			let cleaner = null;
-
-			beforeEach(async function () {
-				cleaner = await service.buildCleaner('read');
-			});
-
-			it('should clean anything that needs permissions', async function () {
-				permissions = {};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1
-				});
-			});
-
-			it('should clean with regular permissions', async function () {
-				permissions = {
-					regular: true
-				};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1,
-					name: 'name-1',
-					hello: 'world'
-				});
-			});
-
-			it('should clean with just admin permissions', async function () {
-				permissions = {
-					admin: true
-				};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1,
-					title: 'title-1'
-				});
-			});
-
-			it('should clean with full admin permissions', async function () {
-				permissions = {
-					regular: true,
-					admin: true
-				};
-
-				const datum = {
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				};
-
-				const res = await cleaner(datum, context);
-
-				expect(res).to.deep.equal({
-					id: 1,
-					name: 'name-1',
-					title: 'title-1',
-					hello: 'world'
-				});
-			});
-		});
-	});
-
 	describe('::create', function () {
 		it('should basically work', async function () {
 			connector.execute = async function (request, myCtx) {
@@ -337,6 +136,8 @@ describe('src/services/crud.js', function () {
 			const service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 
 			return service
 				.create(
@@ -451,6 +252,8 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			return service
 				.create(
 					{
@@ -564,7 +367,9 @@ describe('src/services/crud.js', function () {
 
 			const service = new Crud(model);
 
-			service.configure();
+			await service.configure();
+
+			await service.build();
 
 			return service.read(123, context).then((res) => {
 				expect(res).to.deep.equal({
@@ -607,6 +412,8 @@ describe('src/services/crud.js', function () {
 			const service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 
 			//----------------
 			response = {
@@ -753,13 +560,12 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			return service.readAll(context).then((res) => {
-				// this illustrates a good point, I am not doing a clean on the
-				// data returned from the execution
 				expect(res).to.deep.equal([
 					{
 						id: 'something-1',
-						name: 'v-1',
 						title: 't-1'
 					}
 				]);
@@ -844,6 +650,8 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			service.readAll(context).then((res) => {
 				// this illustrates a good point, I am not doing a clean on the
 				// data returned from the execution, but am an inflate
@@ -895,13 +703,13 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			permissions = {
 				user: true
 			};
 
 			return service.readAll(context).then((res) => {
-				// this illustrates a good point, I am not doing a clean on the
-				// data returned from the execution
 				expect(res).to.deep.equal([
 					{
 						id: 'something-1',
@@ -999,6 +807,8 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			return service.readMany([1, 2, 3], context).then((res) => {
 				expect(res).to.deep.equal([
 					{
@@ -1044,6 +854,8 @@ describe('src/services/crud.js', function () {
 			const service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 
 			permissions = {
 				user: true
@@ -1148,6 +960,8 @@ describe('src/services/crud.js', function () {
 			const service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 
 			return service
 				.query(
@@ -1276,6 +1090,8 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			return service
 				.query(
 					{
@@ -1333,6 +1149,8 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			permissions = {
 				user: true
 			};
@@ -1343,7 +1161,9 @@ describe('src/services/crud.js', function () {
 				expect(res).to.deep.equal([
 					{
 						id: 'something-1',
-						name: 'v-1'
+						// title: removed because of access
+						name: 'v-1',
+						// foo: not copied because 
 					}
 				]);
 			});
@@ -1442,6 +1262,8 @@ describe('src/services/crud.js', function () {
 			const service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 
 			stubs.read = sinon.stub(service, 'read').resolves({id: 123});
 
@@ -1558,7 +1380,8 @@ describe('src/services/crud.js', function () {
 
 			const service = new Crud(model);
 
-			service.configure();
+			await service.configure();
+			await service.build();
 
 			stubs.read = sinon.stub(service, 'read').resolves({id: 123});
 
@@ -1579,10 +1402,7 @@ describe('src/services/crud.js', function () {
 					expect(res).to.deep.equal({
 						id: 'something-1',
 						name: 'v-1',
-						title: 't-1',
-						json: {
-							foo: 'bar'
-						}
+						title: 't-1'
 					});
 
 					expect(stubs.read.getCall(0).args[0]).to.equal('1');
@@ -1674,6 +1494,8 @@ describe('src/services/crud.js', function () {
 			const service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 
 			stubs.read = sinon.stub(service, 'read').resolves({id: 123});
 
@@ -1772,6 +1594,8 @@ describe('src/services/crud.js', function () {
 
 			await service.configure();
 
+			await service.build();
+
 			service.decorate({
 				superDelete: async function (id, context) {
 					expect(id).to.equal('1');
@@ -1824,6 +1648,8 @@ describe('src/services/crud.js', function () {
 			});
 
 			const service = new Crud(model);
+
+			await service.build();
 
 			let res = await service.getChangeType({junk: true});
 
@@ -1880,6 +1706,8 @@ describe('src/services/crud.js', function () {
 			});
 
 			const service = new Crud(model);
+
+			await service.build();
 
 			stubs.read = sinon.stub(service, 'read');
 
@@ -2038,6 +1866,8 @@ describe('src/services/crud.js', function () {
 			service = new Crud(model);
 
 			await service.configure();
+
+			await service.build();
 		});
 
 		it('should properly pass when called directly', async function () {
@@ -2136,6 +1966,7 @@ describe('src/services/crud.js', function () {
 			service = new Crud(model);
 
 			await service.configure();
+			await service.build();
 		});
 
 		describe('::create', function () {
@@ -2332,6 +2163,131 @@ describe('src/services/crud.js', function () {
 				expect(res).to.deep.equal({
 					id: 345,
 					name: 'foo-3'
+				});
+			});
+		});
+	});
+
+	describe('::actions', function(){
+		let context = null;
+		let service = null;
+		let permissions = null;
+
+		beforeEach(async function () {
+			permissions = {};
+
+			context = new Context();
+			context.hasPermission = (perm) => !!permissions[perm];
+
+			stubs.execute = sinon.stub();
+
+			connector.execute = async () => {
+				return stubs.execute();
+			};
+
+			const model = new Model('model-1', nexus);
+
+			await model.configure({
+				source: 'test-1',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						read: true,
+						create: true,
+						update: true,
+						storagePath: 'storage-1',
+						reference: 'ref-1'
+					},
+					index: {
+						index: true,
+						storagePath: 'storage-2',
+						reference: 'ref-2'
+					},
+					query: {
+						query: true,
+						storagePath: 'storage-3',
+						reference: 'ref-3'
+					},
+					other: {
+						index: 'can-dex',
+						query: 'can-dex',
+						storagePath: 'storage-4',
+						reference: 'ref-4'
+					}
+				}
+			});
+
+			service = new Crud(model);
+
+			await service.configure();
+			await service.build();
+		});
+
+		describe('::cleanForIndex', function(){
+			it('it should work', function(){
+				expect(
+					service.actions.cleanForIndex({
+						foo: 'bar',
+						name: 'val-0',
+						index: 'val-1',
+						query: 'val-2',
+						other: 'val-3'
+					}, context)
+				).to.deep.equal({
+					index: 'val-1'
+				});
+			});
+
+			it('it should work with permissions', function(){
+				permissions['can-dex'] = true;
+
+				expect(
+					service.actions.cleanForIndex({
+						foo: 'bar',
+						name: 'val-0',
+						index: 'val-1',
+						query: 'val-2',
+						other: 'val-3'
+					}, context)
+				).to.deep.equal({
+					index: 'val-1',
+					other: 'val-3'
+				});
+			});
+		});
+
+		describe('::cleanForQuery', function(){
+			it('it should work', function(){
+				expect(
+					service.actions.cleanForQuery({
+						foo: 'bar',
+						name: 'val-0',
+						index: 'val-1',
+						query: 'val-2',
+						other: 'val-3'
+					}, context)
+				).to.deep.equal({
+					query: 'val-2'
+				});
+			});
+
+			it('it should work with permissions', function(){
+				permissions['can-dex'] = true;
+				
+				expect(
+					service.actions.cleanForQuery({
+						foo: 'bar',
+						name: 'val-0',
+						index: 'val-1',
+						query: 'val-2',
+						other: 'val-3'
+					}, context)
+				).to.deep.equal({
+					query: 'val-2',
+					other: 'val-3'
 				});
 			});
 		});

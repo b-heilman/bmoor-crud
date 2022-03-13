@@ -46,8 +46,8 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onCreate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onCreate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {}
@@ -56,13 +56,14 @@ describe('src/schema/model.js', function () {
 
 				expect(
 					model.actions.create(
-						{},
 						{
 							bar: 'eins',
 							world: 'zwei'
 						}
 					)
 				).to.deep.equal({
+					bar: 'eins',
+					world: 'zwei',
 					foo: 'eins'
 				});
 			});
@@ -73,13 +74,13 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onCreate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onCreate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
-							onCreate: function (tgt, src) {
-								tgt.hello = src.world;
+							onCreate: function (datum) {
+								datum.hello = datum.world;
 							}
 						}
 					}
@@ -87,7 +88,6 @@ describe('src/schema/model.js', function () {
 
 				expect(
 					model.actions.create(
-						{},
 						{
 							bar: 'eins',
 							world: 'zwei'
@@ -95,7 +95,9 @@ describe('src/schema/model.js', function () {
 					)
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 		});
@@ -107,8 +109,8 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onUpdate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onUpdate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {}
@@ -117,14 +119,15 @@ describe('src/schema/model.js', function () {
 
 				expect(
 					model.actions.update(
-						{},
 						{
 							bar: 'eins',
 							world: 'zwei'
 						}
 					)
 				).to.deep.equal({
-					foo: 'eins'
+					foo: 'eins',
+					bar: 'eins',
+							world: 'zwei'
 				});
 			});
 
@@ -134,13 +137,13 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onUpdate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onUpdate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
-							onUpdate: function (tgt, src) {
-								tgt.hello = src.world;
+							onUpdate: function (datum) {
+								datum.hello = datum.world;
 							}
 						}
 					}
@@ -148,7 +151,6 @@ describe('src/schema/model.js', function () {
 
 				expect(
 					model.actions.update(
-						{},
 						{
 							bar: 'eins',
 							world: 'zwei'
@@ -156,7 +158,9 @@ describe('src/schema/model.js', function () {
 					)
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					hello: 'zwei',
+					bar: 'eins',
+							world: 'zwei'
 				});
 			});
 		});
@@ -168,8 +172,8 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onInflate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onInflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {}
@@ -182,7 +186,9 @@ describe('src/schema/model.js', function () {
 						world: 'zwei'
 					})
 				).to.deep.equal({
-					foo: 'eins'
+					foo: 'eins',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
@@ -192,13 +198,13 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onInflate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onInflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
-							onInflate: function (tgt, src) {
-								tgt.hello = src.world;
+							onInflate: function (datum) {
+								datum.hello = datum.world;
 							}
 						}
 					}
@@ -211,7 +217,9 @@ describe('src/schema/model.js', function () {
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
@@ -222,12 +230,12 @@ describe('src/schema/model.js', function () {
 					fields: {
 						eins: {
 							reference: 'one',
-							onInflate: function (tgt, src, setter, getter) {
-								let value = getter(src);
+							onInflate: function (datum, setter, getter) {
+								let value = getter(datum);
 
 								value += '-- 1';
 
-								setter(tgt, value);
+								setter(datum, value);
 							}
 						},
 						zwei: {},
@@ -238,10 +246,9 @@ describe('src/schema/model.js', function () {
 				});
 
 				const res = model.actions.inflate({
-					one: 'eins',
-					world: 'foo',
+					eins: 'eins',
 					zwei: 'bar',
-					woot: 'woot'
+					drei: 'woot'
 				});
 
 				expect(res).to.deep.equal({
@@ -259,8 +266,8 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onDeflate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onDeflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {}
@@ -273,7 +280,9 @@ describe('src/schema/model.js', function () {
 						world: 'zwei'
 					})
 				).to.deep.equal({
-					foo: 'eins'
+					foo: 'eins',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
@@ -283,13 +292,13 @@ describe('src/schema/model.js', function () {
 				await model.configure({
 					fields: {
 						eins: {
-							onDeflate: function (tgt, src) {
-								tgt.foo = src.bar;
+							onDeflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
-							onDeflate: function (tgt, src) {
-								tgt.hello = src.world;
+							onDeflate: function (datum) {
+								datum.hello = datum.world;
 							}
 						}
 					}
@@ -302,7 +311,9 @@ describe('src/schema/model.js', function () {
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
@@ -313,12 +324,12 @@ describe('src/schema/model.js', function () {
 					fields: {
 						eins: {
 							storagePath: 'one',
-							onDeflate: function (tgt, src, setter, getter) {
-								let value = getter(src);
+							onDeflate: function (datum, setter, getter) {
+								let value = getter(datum);
 
 								value += '-- 1';
 
-								setter(tgt, value);
+								setter(datum, value);
 							}
 						},
 						zwei: {},
@@ -336,9 +347,10 @@ describe('src/schema/model.js', function () {
 						drei: 'woot'
 					})
 				).to.deep.equal({
-					one: 'eins-- 1',
+					eins: 'eins-- 1',
+					world: 'foo',
 					zwei: 'bar',
-					woot: 'woot'
+					drei: 'woot'
 				});
 			});
 		});
@@ -355,6 +367,8 @@ describe('src/schema/model.js', function () {
 							}
 						}
 					});
+
+					await model.build();
 
 					expect(
 						model.actions.inflate({
@@ -377,6 +391,8 @@ describe('src/schema/model.js', function () {
 							}
 						}
 					});
+
+					await model.build();
 
 					expect(
 						model.actions.deflate({
@@ -410,13 +426,11 @@ describe('src/schema/model.js', function () {
 
 					expect(
 						model.actions.create(
-							{junk: 'ok'},
-							{
-								eins: 1
-							}
+							{junk: 'ok', eins: 1}
 						)
 					).to.deep.equal({
 						junk: 'ok',
+						eins: 1,
 						zwei: now
 					});
 				});
@@ -440,13 +454,11 @@ describe('src/schema/model.js', function () {
 
 					expect(
 						model.actions.update(
-							{junk: 'ok'},
-							{
-								eins: 1
-							}
+							{junk: 'ok', eins: 1}
 						)
 					).to.deep.equal({
 						junk: 'ok',
+						eins: 1,
 						zwei: now
 					});
 				});
@@ -470,13 +482,11 @@ describe('src/schema/model.js', function () {
 
 					expect(
 						model.actions.update(
-							{junk: 'ok'},
-							{
-								eins: 0
-							}
+							{junk: 'ok', eins: 0}
 						)
 					).to.deep.equal({
 						junk: 'ok',
+						eins: 0,
 						zwei: now
 					});
 				});
@@ -500,13 +510,11 @@ describe('src/schema/model.js', function () {
 
 					expect(
 						model.actions.update(
-							{junk: 'ok'},
-							{
-								eins: null
-							}
+							{junk: 'ok', eins: null},
 						)
 					).to.deep.equal({
 						junk: 'ok',
+						eins: null,
 						zwei: now
 					});
 				});
@@ -530,13 +538,11 @@ describe('src/schema/model.js', function () {
 
 					expect(
 						model.actions.update(
-							{junk: 'ok'},
-							{
-								eins: undefined
-							}
+							{junk: 'ok', eins: undefined}
 						)
 					).to.deep.equal({
-						junk: 'ok'
+						junk: 'ok',
+						eins: undefined
 					});
 				});
 			});

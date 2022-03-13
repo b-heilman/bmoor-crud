@@ -212,6 +212,7 @@ class Nexus {
 		const crud = this.getCrud(ref);
 
 		await crud.configure(settings);
+		await crud.build();
 
 		await this.setConfigured('crud', ref, crud);
 
@@ -280,6 +281,7 @@ class Nexus {
 		const doc = this.getDocument(ref);
 
 		await doc.configure(settings);
+		await doc.build();
 
 		await this.setConfigured('document', ref, doc);
 

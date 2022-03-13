@@ -719,26 +719,6 @@ class Composite extends Structure {
 
 		return query;
 	}
-
-	async getInflater(ctx) {
-		await this.link();
-
-		const inflater = this.actions.inflate;
-
-		return function complexInflate(datum) {
-			return inflater(datum, ctx);
-		};
-	}
-
-	async getDeflater(ctx) {
-		await this.link();
-
-		const deflater = this.actions.deflate;
-
-		return function complexDeflate(datum) {
-			return deflater(datum, ctx);
-		};
-	}
 }
 
 module.exports = {

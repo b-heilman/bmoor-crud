@@ -618,8 +618,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.read(1, context);
 
@@ -742,8 +741,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.read(1, context);
 
@@ -834,7 +832,7 @@ describe('src/services/document.js', function () {
 				{
 					item: 'item-1',
 					personInfo: '{"foo":"bar"}',
-					category: '{"hello":"world"}'
+					categoryInfo: '{"hello":"world"}'
 				}
 			];
 
@@ -853,7 +851,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure({});
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.read(1, context);
 
@@ -965,7 +963,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.read(1, context);
 
@@ -1089,7 +1087,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.read(1, context);
 
@@ -1227,8 +1225,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.readAll(context);
 
@@ -1338,8 +1335,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.readMany([1, 2, 3], context);
 
@@ -1434,15 +1430,16 @@ describe('src/services/document.js', function () {
 
 	describe('::query', function () {
 		it('should handle a sub', async function () {
-			connectorResult = [
-				{
-					item: 'item-1',
-					categoryName: 'category-1',
-					tag: 'tag-1',
-					mask: 'mask-1',
-					sub_0: 123
-				}
-			];
+			stubs.execute.onCall(0).resolves([{
+				item: 'item-1',
+				sub_0: 123,
+				categoryName: 'category-1',
+			}]);
+
+			stubs.execute.onCall(1).resolves([{
+				tag: 'tag-1',
+				mask: 'mask-1'
+			}]);
 
 			nexus.configureComposite('test-tags', {
 				base: 'test-item-material',
@@ -1475,6 +1472,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.query({}, context);
 
@@ -1597,15 +1595,20 @@ describe('src/services/document.js', function () {
 		});
 
 		it('should handle a sub with a pivot', async function () {
-			connectorResult = [
-				{
+			stubs.execute.onCall(0).resolves([{
 					item: 'item-1',
 					categoryName: 'category-1',
-					name: 'name-1',
 					sub_0: 123,
 					sub_1: 456
-				}
-			];
+				}]);
+
+			stubs.execute.onCall(1).resolves([{
+				name: 'name-1',
+			}]);
+
+			stubs.execute.onCall(2).resolves([{
+				name: 'name-1.1',
+			}]);
 
 			nexus.configureComposite('test-stuff', {
 				base: 'test-material',
@@ -1637,6 +1640,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.query({}, context);
 
@@ -1817,7 +1821,7 @@ describe('src/services/document.js', function () {
 					],
 					moreStuff: [
 						{
-							name: 'name-1'
+							name: 'name-1.1'
 						}
 					]
 				}
@@ -1848,6 +1852,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.query(
 				{
@@ -2071,7 +2076,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure({});
-			await doc.link();
+			await doc.build();
 
 			expect(doc.structure.subs.length).to.equal(1);
 
@@ -2108,7 +2113,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure({});
-			await doc.link();
+			await doc.build();
 
 			const {info, mounts, document} = doc.structure.subs[0];
 
@@ -2149,7 +2154,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure({});
-			await doc.link();
+			await doc.build();
 
 			const {info, mounts, document} = doc.structure.subs[0];
 
@@ -2199,7 +2204,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.query(
 				{
@@ -2318,7 +2323,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.query(
 				{
@@ -2420,7 +2425,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const instructions = doc.buildNormalizedSchema();
 			await doc.normalize(
@@ -2468,7 +2473,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const instructions = doc.buildNormalizedSchema();
 			await doc.normalize(
@@ -2532,6 +2537,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -2602,7 +2608,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -2678,7 +2684,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			let failed = false;
 			try {
@@ -2716,7 +2722,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
-			await doc.link();
+			await doc.build();
 
 			let failed = false;
 			try {
@@ -2803,6 +2809,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -2970,6 +2977,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -3114,6 +3122,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -3258,6 +3267,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			let failed = false;
 
@@ -3368,6 +3378,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -3505,6 +3516,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			const res = await doc.push(
 				{
@@ -4198,6 +4210,8 @@ describe('src/services/document.js', function () {
 		it('should complete parallel processing', async function () {
 			doc = await nexus.configureDocument('test-god');
 
+			await doc.build();
+
 			const users = await nexus.loadCrud('test-user');
 			const items = await nexus.loadCrud('test-item');
 			const itemMaterials = await nexus.loadCrud('test-item-material');
@@ -4483,6 +4497,7 @@ describe('src/services/document.js', function () {
 			const doc = new sut.Document(comp);
 
 			await doc.configure();
+			await doc.build();
 
 			stubs.execute = sinon.stub();
 			stubs.execute.onCall(0).resolves([
@@ -4510,14 +4525,12 @@ describe('src/services/document.js', function () {
 
 			stubs.execute.onCall(3).resolves([
 				{
-					id: 'u-1',
 					name: 'C3PO'
 				}
 			]);
 
 			stubs.execute.onCall(4).resolves([
 				{
-					id: 'u-2',
 					name: 'R2D2'
 				}
 			]);

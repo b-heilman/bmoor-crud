@@ -20,8 +20,8 @@ const normalization = require('./normalization.js');
  * encoding: <function> transforms a query result to a new format
  ***/
 class Document extends View {
-	async link() {
-		await this.structure.link();
+	async build() {
+		await super.build();
 
 		await Promise.all(
 			this.structure.subs.map(async (sub) => {
@@ -36,8 +36,6 @@ class Document extends View {
 	 *
 	 **/
 	async query(settings, ctx) {
-		await this.link();
-
 		// prepare the query
 		if (this._beforeQuery) {
 			await this._beforeQuery(settings.params, ctx);
@@ -99,8 +97,6 @@ class Document extends View {
 	}
 
 	async read(id, ctx) {
-		await this.link();
-
 		// so anything pass as param should always be passed as against the base
 		// otherwise it should be a join...
 		const query = {
@@ -113,14 +109,10 @@ class Document extends View {
 	}
 
 	async readAll(ctx) {
-		await this.link();
-
 		return this.query({}, ctx);
 	}
 
 	async readMany(ids, ctx) {
-		await this.link();
-
 		// so anything pass as param should always be passed as against the base
 		// otherwise it should be a join...
 		const query = {
@@ -136,8 +128,6 @@ class Document extends View {
 		if (!ctx) {
 			throw new Error('no ctx');
 		}
-
-		await this.link();
 
 		const seriesSession = parentSession.getChildSession();
 		const transitions = this.structure.fields.reduce((agg, field) => {

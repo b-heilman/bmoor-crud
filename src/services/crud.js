@@ -1,4 +1,4 @@
-const {makeGetter, makeSetter} = require('bmoor/src/core.js');
+const {makeGetter} = require('bmoor/src/core.js');
 
 const {create} = require('bmoor/src/lib/error.js');
 
@@ -52,33 +52,15 @@ class Crud extends View {
 		);
 	}
 
-	async build(){
-		await super.build():
-
-		this.actions.cleanForIndex = buildFieldCopier(
-			'index', 
-			this.structure.getFields()
-		);
-
-		this.actions.cleanForQuery = buildFieldCopier(
-			'query', 
-			this.structure.getFields()
-		);
-	}
-
 	decorate(decoration) {
 		Object.assign(this, decoration);
 	}
 
 	async _create(datum, ctx) {
-		const cleaned = this.actions.cleanForCreate(datum, ctx);
-
-		let payload = this.structure.actions.create
-			? this.structure.actions.create(cleaned, cleaned, ctx)
-			: cleaned;
+		const payload = this.actions.deflateCreate(datum, ctx);
 
 		const errors = await this.validate(
-			payload,
+			payload, // this will be in storage structure
 			structureConfig.get('writeModes.create'),
 			ctx
 		);
@@ -91,14 +73,6 @@ class Crud extends View {
 					errors
 				}
 			});
-		}
-
-		if (this.incomingSettings.deflate) {
-			payload = this.incomingSettings.deflate(payload, ctx);
-		}
-
-		if (this.actions.deflate) {
-			payload = this.actions.deflate(payload, ctx);
 		}
 
 		return this.execute(
@@ -280,14 +254,10 @@ class Crud extends View {
 	}
 
 	async _update(delta, tgt, params, ctx) {
-		const cleaned = this.actions.cleanForUpdate(datum, ctx);
-
-		let payload = this.structure.actions.update
-			? this.structure.actions.update(cleaned, tgt, ctx)
-			: cleaned;
-
+		const payload = this.actions.deflateUpdate(delta, ctx);
+		
 		const errors = await this.validate(
-			payload,
+			payload, // this will be in storage structure
 			structureConfig.get('writeModes.update'),
 			ctx
 		);
@@ -300,14 +270,6 @@ class Crud extends View {
 					errors
 				}
 			});
-		}
-
-		if (this.incomingSettings.deflate) {
-			payload = this.incomingSettings.deflate(payload, ctx);
-		}
-
-		if (this.actions.deflate) {
-			payload = this.actions.deflate(payload, ctx);
 		}
 
 		return this.execute(

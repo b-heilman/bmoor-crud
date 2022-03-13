@@ -1,13 +1,15 @@
+const sinon = require('sinon');
 const {expect} = require('chai');
 
 const {Statement} = require('./statement.js');
-const {StatementField} = require('./statement/field.js');
 
 describe('src/schema/structure.js', function(){
 	const sut = require('./structure.js');
+	const now = Date.now();
 
 	let base = null;
 	let ctx = null;
+	let clock = null;
 	let permissions = null;
 
 	beforeEach(function(){
@@ -15,10 +17,16 @@ describe('src/schema/structure.js', function(){
 		permissions = {};
 
 		base = new Statement('base-series', 'base-model');
+
+		clock = sinon.useFakeTimers(now);
 	
 		ctx.hasPermission = function(permission){
 			return !!permissions[permission];
 		};
+	});
+
+	afterEach(function () {
+		clock.restore();
 	});
 
 	describe('::extendStatement', function(){
@@ -95,6 +103,179 @@ describe('src/schema/structure.js', function(){
 			        join: 'and',
 			        expressables: []
 			    }
+			});
+		});
+	});
+
+	describe('::actions', function(){
+		let structure = null;
+
+		beforeEach(async function(){
+			structure = new sut.Structure('base-struct');
+
+			structure.configure({});
+
+			await Promise.all([
+				structure.addField('eins', {
+					storagePath: 'path1',
+					reference: 'ref1',
+					usage: 'json',
+					read: true,
+					create: true
+				}),
+				structure.addField('zwei', {
+					storagePath: 'path2',
+					reference: 'ref2',
+					usage: 'monitor',
+ 					cfg: {
+						target: 'eins'
+					},
+					read: true,
+					update: true
+				}),
+				structure.addField('foo.bar', {
+					storagePath: 'attr.path3',
+					reference: 'attr.ref3'
+				}),
+				structure.addField('hello.world', {
+					storagePath: 'attr.path4',
+					reference: 'attr.ref4',
+					read: true,
+					create: true,
+					update: true
+				})
+			]);
+
+			structure.build();
+		});
+
+		describe('::inflate', function(){
+			it('should properly inflate', async function () {
+				expect(
+					structure.actions.inflate({
+						eins: '{"foo":"bar"}'
+					})
+				).to.deep.equal({
+					eins: {
+						foo: 'bar'
+					}
+				});
+			});
+		});
+
+		describe('::deflate', function(){
+			it('should properly deflate', async function () {
+				expect(
+					structure.actions.deflate({
+						eins: {
+							foo: 'bar'
+						}
+					})
+				).to.deep.equal({
+					eins: '{"foo":"bar"}'
+				});
+			});
+		});
+
+		describe('::onCreate', function(){
+			it('should properly deflate', async function () {
+				expect(
+					structure.actions.create({
+						eins: {
+							foo: 'bar'
+						}
+					})
+				).to.deep.equal({
+					eins: {
+						foo: 'bar'
+					},
+					zwei: now
+				});
+			});
+		});
+
+		describe('::onUpdate', function(){
+			it('should properly deflate', async function () {
+				expect(
+					structure.actions.update({
+						eins: {
+							foo: 'bar'
+						}
+					})
+				).to.deep.equal({
+					eins: {
+						foo: 'bar'
+					},
+					zwei: now
+				});
+			});
+		});
+
+		describe('::convertFromStorage', function(){
+			it('should work', async function () {
+				expect(
+					structure.actions.convertFromStorage({
+						junk: true,
+						ref1: 'eins',
+						ref2: 2,
+						attr: {
+							ref3: undefined,
+							ref4: null
+						}
+					})
+				).to.deep.equal({
+					eins: 'eins',
+					zwei: 2,
+					hello: {
+						world: null
+					}
+				});
+			});
+		});
+
+		describe('::convertFromCreate', function(){
+			it('should work', async function () {
+				expect(
+					structure.actions.convertFromCreate({
+						junk: true,
+						eins: 'eins',
+						zwei: 2,
+						foo: {
+							bar: undefined
+						},
+						hello: {
+							world: null
+						}
+					})
+				).to.deep.equal({
+					path1: 'eins',
+					attr: {
+						path4: null
+					}
+				});
+			});
+		});
+
+		describe('::convertFromUpdate', function(){
+			it('should work', async function () {
+				expect(
+					structure.actions.convertFromUpdate({
+						junk: true,
+						eins: 'eins',
+						zwei: 2,
+						foo: {
+							bar: undefined
+						},
+						hello: {
+							world: null
+						}
+					})
+				).to.deep.equal({
+					path2: 2,
+					attr: {
+						path4: null
+					}
+				});
 			});
 		});
 	});

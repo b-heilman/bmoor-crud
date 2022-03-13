@@ -10,6 +10,7 @@ class QueryShard extends QueryStatement {
 
 		this.name = name;
 		this.fieldIndex = {};
+		this.temps = [];
 	}
 
 	clone() {
@@ -52,6 +53,8 @@ class QueryShard extends QueryStatement {
 	}
 
 	addTempField(series, name, internal) {
+		this.temps.push(name);
+		
 		this.addFields(series, [new StatementField(internal, name)]);
 
 		return name;

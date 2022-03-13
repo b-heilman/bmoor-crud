@@ -30,11 +30,13 @@ class Field {
 
 		this.externalGetter = makeGetter(this.path);
 		this.externalSetter = makeSetter(this.path);
-		this.internalGetter = makeGetter(this.reference);
-		this.internalSetter = makeSetter(this.storagePath);
+		this.internalGetter = settings.isFlat ?
+			function(datum){ return datum[this.reference]; } : makeGetter(this.reference);
+		this.internalSetter = settings.isFlat ?
+			function(datum, value ){ datum[this.storagePath] = value; } : makeSetter(this.storagePath);
 	}
 
-	extend(path, settings) {
+	extend(path, settings = {}) {
 		const ops = Object.assign({}, this.incomingSettings, settings);
 		ops.storagePath = this.storagePath;
 

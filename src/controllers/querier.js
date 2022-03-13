@@ -26,6 +26,7 @@ class Querier extends Controller {
 		const doc = new Document(composite);
 
 		await doc.configure({});
+		await doc.build();
 
 		return doc.query(settings, ctx);
 	}
