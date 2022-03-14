@@ -8,6 +8,7 @@ describe('src/schema/model.js', function () {
 	const {Model} = require('./model.js');
 
 	let now = Date.now();
+	let stubs = null;
 	let nexus = null;
 	let clock = null;
 	let connector = null;
@@ -19,6 +20,8 @@ describe('src/schema/model.js', function () {
 
 		nexus = new Nexus();
 
+		
+
 		connector = {
 			// this doesn't matter here, right?
 		};
@@ -28,6 +31,12 @@ describe('src/schema/model.js', function () {
 		await nexus.configureSource('test-1', {
 			connector: 'test'
 		});
+
+		stubs = {
+			loadSource: sinon.stub(nexus, 'loadSource')
+		};
+
+		stubs.loadSource.resolves({isFlat: false});
 	});
 
 	afterEach(function () {
@@ -69,7 +78,7 @@ describe('src/schema/model.js', function () {
 			});
 
 			it('should work with multiple fields', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -104,7 +113,7 @@ describe('src/schema/model.js', function () {
 
 		describe('::update', function () {
 			it('should work with a single field', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -132,7 +141,7 @@ describe('src/schema/model.js', function () {
 			});
 
 			it('should work with multiple fields', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -167,7 +176,7 @@ describe('src/schema/model.js', function () {
 
 		describe('::inflate', function () {
 			it('should work with a single field', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -193,7 +202,7 @@ describe('src/schema/model.js', function () {
 			});
 
 			it('should work with multiple fields', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -224,7 +233,7 @@ describe('src/schema/model.js', function () {
 			});
 
 			it('should work with a mutation', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -261,7 +270,7 @@ describe('src/schema/model.js', function () {
 
 		describe('::deflate', function () {
 			it('should work with a single field', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -287,7 +296,7 @@ describe('src/schema/model.js', function () {
 			});
 
 			it('should work with multiple fields', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -318,7 +327,7 @@ describe('src/schema/model.js', function () {
 			});
 
 			it('should work with a mutation', async function () {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -358,7 +367,7 @@ describe('src/schema/model.js', function () {
 		describe('via type', function () {
 			describe('json', function () {
 				it('should properly inflate', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -382,7 +391,7 @@ describe('src/schema/model.js', function () {
 				});
 
 				it('should properly deflate', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -408,7 +417,7 @@ describe('src/schema/model.js', function () {
 
 			describe('monitor', function () {
 				it('should properly on create', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -436,7 +445,7 @@ describe('src/schema/model.js', function () {
 				});
 
 				it('should properly on update', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -464,7 +473,7 @@ describe('src/schema/model.js', function () {
 				});
 
 				it('should properly on update with 0', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -492,7 +501,7 @@ describe('src/schema/model.js', function () {
 				});
 
 				it('should properly on update with null', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -520,7 +529,7 @@ describe('src/schema/model.js', function () {
 				});
 
 				it('should properly on update with undefined', async function () {
-					const model = new Model('test-1');
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -551,7 +560,7 @@ describe('src/schema/model.js', function () {
 
 	describe('.settings', function () {
 		it('should expand default settings correctly', async function () {
-			const model = new Model('test-1');
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -597,7 +606,7 @@ describe('src/schema/model.js', function () {
 
 	describe('::getKey', function () {
 		it('pull in a singular value', async function () {
-			const model = new Model('test-1');
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -624,7 +633,7 @@ describe('src/schema/model.js', function () {
 			let failure = false;
 
 			try {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -647,7 +656,7 @@ describe('src/schema/model.js', function () {
 
 	describe('::getIndex', function () {
 		it('pull in a singlar value', async function () {
-			const model = new Model('test-1');
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -672,7 +681,7 @@ describe('src/schema/model.js', function () {
 		});
 
 		it('pull in a multiple values', async function () {
-			const model = new Model('test-1');
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -702,7 +711,7 @@ describe('src/schema/model.js', function () {
 
 	describe('::getChanges', function () {
 		it('pull in a singlar value', async function () {
-			const model = new Model('test-1');
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -739,7 +748,7 @@ describe('src/schema/model.js', function () {
 
 	describe('::getChangeType', function () {
 		it('pull in a singlar value', async function () {
-			const model = new Model('test-1');
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -802,7 +811,7 @@ describe('src/schema/model.js', function () {
 		const updateMode = config.get('writeModes.update');
 
 		beforeEach(async function () {
-			model = new Model('test-1');
+			model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {

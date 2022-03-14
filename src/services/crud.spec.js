@@ -481,6 +481,130 @@ describe('src/services/crud.js', function () {
 				title: 't-4'
 			});
 		});
+
+		it('should work with remapping', async function(){
+			const model = new Model('model-1', nexus);
+
+			connector.execute = async function (request, myCtx) {
+				expect(myCtx).to.equal(context);
+
+				expect(request.toJSON()).to.deep.equal({
+					method: 'read',
+					sourceName: 'test-1',
+					models: [
+						{
+							series: 'model-1',
+							schema: 'model-1',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'model-1',
+							as: 'info.id',
+							path: 'id'
+						},
+						{
+							series: 'model-1',
+							as: 'info.name',
+							path: 'name'
+						},
+						{
+							series: 'model-1',
+							as: 'info.title',
+							path: 'title'
+						},
+						{
+							series: 'model-1',
+							as: 'content',
+							path: 'json'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: 123,
+								settings: {}
+							}
+						]
+					}
+				});
+
+				return Promise.resolve([
+					{
+						'info.id': 'something-1',
+						'info.name': 'v-1',
+						'info.title': 't-1',
+						content: '{"foo":"bar"}'
+					}
+				]);
+			};
+
+			await model.configure({
+				source: 'test-1',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						delete: true,
+						index: true
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true
+					},
+					json: {
+						read: true,
+						usage: 'json'
+					}
+				}
+			});
+
+			// I can get away with this here, but it's bad practice
+			model.setSource({isFlat: true});
+
+			const service = new Crud(model);
+
+			await service.configure();
+
+			await service.build();
+
+			return service.read(123, context, {
+				actions: service.actions.remap({
+					info: {
+						id: 'id',
+						name: 'name',
+						title: 'title'
+					},
+					content: 'json'
+				})
+			}).then((res) => {
+				expect(res).to.deep.equal({
+					info: {
+						id: 'something-1',
+						name: 'v-1',
+						title: 't-1'
+					},
+					content: {
+						foo: 'bar'
+					}
+				});
+			});
+		});
 	});
 
 	describe('::readAll', function () {

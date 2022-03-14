@@ -1,7 +1,4 @@
-const {del} = require('bmoor/src/core.js');
-
 const {buildTransformer} = require('../../schema/structure/actions.js');
-
 
 function stackMethods(...ops){
 	return ops.reduce(
@@ -23,7 +20,8 @@ function stackMethods(...ops){
 }
 
 class ViewActions {
-	constructor(fields, structureActions) {
+	constructor(structureActions) {
+		this.structure = structureActions;
 		// TODO: now that I have things separated, do I really want this 
 		//   logic here?
 		/***
@@ -56,19 +54,25 @@ class ViewActions {
 			structureActions.convertFromUpdate
 		);
 
-		this.cleanForIndex = fields.reduce(
+		this.cleanForIndex = structureActions.fields.reduce(
 			buildTransformer('index', 'externalGetter', 'externalSetter'),
 			function(){
 				return {};
 			}
 		);
 
-		this.cleanForQuery = fields.reduce(
+		this.cleanForQuery = structureActions.fields.reduce(
 			buildTransformer('query', 'externalGetter', 'externalSetter'),
 			function(){
 				return {};
 			}
 		);
+	}
+
+	remap(schema){
+		const structure = this.structure.remap(schema);
+
+		return new ViewActions(structure);
 	}
 }
 

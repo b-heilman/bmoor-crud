@@ -188,15 +188,21 @@ describe('src/mapper.js', function () {
 
 	describe('::getRelationships', function () {
 		let mapper = null;
+		let fakeNexus = null;
 
 		beforeEach(function () {
 			mapper = new Mapper();
+
+			fakeNexus = {
+				loadSource: async () => ({isFlat: false})
+			};
 		});
 
 		it('pull in a singlar value', async function () {
-			const model1 = new Model('test-1');
+			const model1 = new Model('test-1', fakeNexus);
 
 			await model1.configure({
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -211,7 +217,7 @@ describe('src/mapper.js', function () {
 				}
 			});
 
-			const model2 = new Model('test-2');
+			const model2 = new Model('test-2', fakeNexus);
 
 			await model2.configure({
 				fields: {
@@ -221,7 +227,7 @@ describe('src/mapper.js', function () {
 				}
 			});
 
-			const model3 = new Model('test-3');
+			const model3 = new Model('test-3', fakeNexus);
 
 			await model3.configure({
 				fields: {
@@ -280,12 +286,18 @@ describe('src/mapper.js', function () {
 	describe('::getRelationship', function () {
 		let mapper = null;
 
+		let fakeNexus = null;
+
 		beforeEach(function () {
 			mapper = new Mapper();
+
+			fakeNexus = {
+				loadSource: async () => ({isFlat: false})
+			};
 		});
 
 		it('pull in a singlar value', async function () {
-			const model1 = new Model('test-1');
+			const model1 = new Model('test-1', fakeNexus);
 
 			await model1.configure({
 				fields: {
@@ -323,7 +335,7 @@ describe('src/mapper.js', function () {
 				}
 			});
 
-			const model2 = new Model('test-2');
+			const model2 = new Model('test-2', fakeNexus);
 			await model2.configure({
 				fields: {
 					id: {
@@ -332,7 +344,7 @@ describe('src/mapper.js', function () {
 				}
 			});
 
-			const model3 = new Model('test-3');
+			const model3 = new Model('test-3', fakeNexus);
 			model3.configure({
 				fields: {
 					id: {

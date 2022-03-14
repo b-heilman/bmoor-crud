@@ -175,6 +175,140 @@ describe('src/controller/guard.js', function () {
 					});
 				});
 
+
+				it('should allow remap with query', async function () {
+					const content = [
+						{
+							hello: 'world',
+							eins: 1
+						}
+					];
+
+					stubs.execute.resolves(content);
+
+					const res = await controller.read(
+						new Context({
+							method: 'get',
+							query: {
+								param: {
+									foo: '"bar"'
+								}
+							}
+						})
+					);
+
+					expect(res).to.deep.equal([
+						{
+							eins: 1
+						}
+					]);
+
+					const args = stubs.execute.getCall(0).args[0];
+
+					expect(args.toJSON()).to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
+						models: [
+							{
+								series: 'service-1',
+								schema: 'service-1',
+								joins: []
+							}
+						],
+						fields: [
+							{
+								as: 'eins',
+								path: 'eins',
+								series: 'service-1'
+							}
+						],
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'foo',
+									operation: '=',
+									value: 'bar',
+									settings: {}
+								}
+							]
+						}
+					});
+				});
+
+				it.only('should allow field override via query', async function () {
+					const content = [
+						{
+							hello: 'world',
+							other: 1
+						}
+					];
+
+					stubs.execute.resolves(content);
+
+					const res = await controller.read(
+						new Context({
+							method: 'get',
+							query: {
+								fields: {
+									other: 'eins'
+								},
+								param: {
+									foo: '"bar"'
+								}
+							}
+						})
+					);
+
+					expect(res).to.deep.equal([
+						{
+							other: 1
+						}
+					]);
+
+					const args = stubs.execute.getCall(0).args[0];
+
+					expect(args.toJSON()).to.deep.equal({
+						method: 'read',
+						sourceName: 'test-1',
+						models: [
+							{
+								series: 'service-1',
+								schema: 'service-1',
+								joins: []
+							}
+						],
+						fields: [
+							{
+								as: 'other',
+								path: 'eins',
+								series: 'service-1'
+							}
+						],
+						filters: {
+							expressables: [],
+							join: 'and'
+						},
+						params: {
+							join: 'and',
+							expressables: [
+								{
+									series: 'service-1',
+									path: 'foo',
+									operation: '=',
+									value: 'bar',
+									settings: {}
+								}
+							]
+						}
+					});
+				});
+
 				it('should call query with a query', async function () {
 					const content = [
 						{

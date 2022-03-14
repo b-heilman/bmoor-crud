@@ -1,4 +1,5 @@
-
+const {apply, create} = require('bmoor/src/lib/error.js');
+const {implode} = require('bmoor/src/object.js');
 const {makeGetter} = require('bmoor/src/core.js');
 
 function actionExtend(op, getter, setter, old, cfg) {
@@ -18,10 +19,6 @@ function actionExtend(op, getter, setter, old, cfg) {
 }
 
 function buildActions(actions, field) {
-	const path = field.path;
-	const reference = field.reference;
-	const storagePath = field.storagePath;
-
 	const settings = field.incomingSettings;
 
 	let cfg = {};
@@ -76,16 +73,6 @@ function buildActions(actions, field) {
 		);
 	}
 
-	if (path !== reference) {
-		// data changes from internal to external
-		actions.mutatesInflate = true;
-	}
-
-	if (path !== storagePath) {
-		// data changes from external to internal
-		actions.mutatesDeflate = true;
-	}
-
 	return actions;
 }
 
@@ -112,7 +99,15 @@ function buildTransformer(opProperty, getter, setter){
 
 class StructureActions {
 	constructor(fields){
-		this.mutates = false;
+		this.fields = fields;
+		this.index = fields.reduce(
+			(agg, field) => {
+				agg[field.path] = field;
+
+				return agg;
+			},
+			{}
+		);
 
 		fields.reduce(buildActions, this);
 
@@ -137,6 +132,72 @@ class StructureActions {
 			function(){
 				return {};
 			}
+		);
+	}
+
+	testField(field, type, ctx){
+		// if I need to in the future, I can load the permission here then run the test
+		const op = field.incomingSettings[type];
+
+		if (op) {
+			if (typeof op === 'string') {
+				try {
+					return ctx.hasPermission(op);
+				} catch (ex) {
+					apply(ex, {
+						code: 'BMOOR_CRUD_SCHEMA_TEST_FIELD',
+						context: {
+							type,
+							external: field.path,
+							structure: field.structure.name
+						}
+					});
+
+					throw ex;
+				}
+			} else {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	testFields(type, ctx) {
+		return this.fields.reduce((agg, field) => {
+			const test = this.testField(field, type, ctx);
+
+			if (test) {
+				agg.push(field);
+			}
+
+			return agg;
+		}, []);
+	}
+
+	remap(schema){
+		const imploded = implode(schema);
+
+		return new StructureActions(
+			Object.keys(imploded).map(
+				(path) => {
+					const field = this.index[imploded[path]];
+
+					if (!field){
+						throw create(
+							`unknown field: ${imploded[path]}`,
+							{
+								code: 'BMOOR_CRUD_STRUCTURE_ACTION_FIELD',
+								context: {
+									available: Object.keys(this.index)
+								}
+							}
+						);
+					}
+
+					return field.extend(path);
+				}
+			)
 		);
 	}
 }

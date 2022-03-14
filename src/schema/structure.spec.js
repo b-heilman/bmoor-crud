@@ -33,7 +33,8 @@ describe('src/schema/structure.js', function(){
 		it('should work with base settings', async function(){
 			const structure = new sut.Structure('base-struct');
 
-			structure.configure({});
+			structure.setSource({isFlat: false});
+			await structure.configure({});
 
 			await Promise.all([
 				structure.addField('eins', {
@@ -60,6 +61,8 @@ describe('src/schema/structure.js', function(){
 					read: true
 				})
 			]);
+
+			await structure.build();
 
 			await structure.extendStatement(base, {}, ctx);
 
@@ -114,6 +117,7 @@ describe('src/schema/structure.js', function(){
 			structure = new sut.Structure('base-struct');
 
 			structure.configure({});
+			structure.setSource({isFlat: false});
 
 			await Promise.all([
 				structure.addField('eins', {
@@ -158,6 +162,27 @@ describe('src/schema/structure.js', function(){
 				).to.deep.equal({
 					eins: {
 						foo: 'bar'
+					}
+				});
+			});
+
+			it('should worked when remapped', async function(){
+				expect(
+					structure.actions.remap({
+						hello: {
+							world: 'eins'
+						}
+					})
+					.inflate({
+						hello: {
+							world: '{"foo":"bar"}'
+						}
+					})
+				).to.deep.equal({
+					hello: {
+						world: {
+							foo: 'bar'
+						}
 					}
 				});
 			});
@@ -228,6 +253,31 @@ describe('src/schema/structure.js', function(){
 					zwei: 2,
 					hello: {
 						world: null
+					}
+				});
+			});
+
+			it('should worked when remapped', async function(){
+				expect(
+					structure.actions.remap({
+						prop: {
+							remapped: 'eins',
+							other: 'hello.world'
+						}
+					})
+					.convertFromStorage({
+						junk: true,
+						ref1: 'eins',
+						ref2: 2,
+						attr: {
+							ref3: undefined,
+							ref4: null
+						}
+					})
+				).to.deep.equal({
+					prop: {
+						remapped: 'eins',
+						other: null
 					}
 				});
 			});

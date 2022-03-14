@@ -67,6 +67,7 @@ class Model extends Structure {
 		await super.configure(settings);
 
 		this.schema = settings.schema || this.name;
+		this.setSource(await this.nexus.loadSource(settings.source));
 		this.settings = null;
 
 		const fields = settings.fields;
@@ -194,17 +195,17 @@ class Model extends Structure {
 
 	// produces representation for interface layer
 	// similar to lookup, which is a combination of models
-	async getQuery(settings, ctx) {
+	async getQuery(request, ctx, settings = {}) {
 		const query = this.preparedQuery.clone();
 
 		return this.extendQuery(
 			query,
 			{
-				fields: settings.fields,
-				joins: settings.joins,
-				query: settings.query,
-				params: settings.params,
-				sort: settings.sort
+				actions: settings.actions,
+				joins: request.joins,
+				query: request.query,
+				params: request.params,
+				sort: request.sort
 			},
 			ctx
 		);

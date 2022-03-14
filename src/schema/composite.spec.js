@@ -13,6 +13,15 @@ describe('src/schema/composite.js', function () {
 
 		nexus = new Nexus();
 
+		await nexus.setConnector('connect-1', function(){
+			return {};
+		});
+
+		await nexus.configureSource('source-1', {
+			connector: 'connect-1',
+			isFlat: false
+		});
+
 		await nexus.configureModel('test-1', {
 			source: 'source-1',
 			fields: {
@@ -180,6 +189,7 @@ describe('src/schema/composite.js', function () {
 		});
 
 		await nexus.configureModel('test-6', {
+			source: 'source-1',
 			fields: {
 				table5Id: {
 					read: true,
@@ -439,6 +449,7 @@ describe('src/schema/composite.js', function () {
 
 		beforeEach(async function () {
 			await nexus.configureModel('test-10', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -459,6 +470,7 @@ describe('src/schema/composite.js', function () {
 			});
 
 			await nexus.configureModel('test-11', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -567,6 +579,7 @@ describe('src/schema/composite.js', function () {
 
 		beforeEach(async function () {
 			await nexus.configureModel('test-10', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -581,6 +594,7 @@ describe('src/schema/composite.js', function () {
 			});
 
 			await nexus.configureModel('test-11', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false

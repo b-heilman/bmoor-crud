@@ -28,8 +28,6 @@ class View {
 	async build(){
 		await this.structure.build();
 
-		// TODO: now that I have things separated, do I really want this 
-		//   logic here?
 		/***
 		 * Here's how permissions / security will work.  I am going to treat
 		 * the framework like a red/green network topography.  Everything
@@ -41,7 +39,6 @@ class View {
 		 * Deflate will act as a copyFor, so I don't need one for create or update
 		 ***/
 		this.actions = new ViewActions(
-			this.structure.getFields(),
 			this.structure.actions,
 			this.incomingSettings
 		);
@@ -62,12 +59,14 @@ class View {
 		return stmt.run(ctx, settings);
 	}
 
-	async process(stmt, ctx, inflate, settings) {
+	async process(stmt, ctx, settings={}) {
+		const actions = settings.actions || this.actions;
+
 		return runFilter(
 			await Promise.all(
 				// converts from internal => external
 				(await this.run(stmt, ctx, settings)).map(
-					async (datum) => inflate(datum, ctx)
+					async (datum) => actions.inflate(datum, ctx)
 				)
 			),
 			this,
@@ -79,7 +78,6 @@ class View {
 		return this.process(
 			new Querier('view:' + this.structure.name, query),
 			ctx,
-			this.actions.inflate,
 			settings
 		);
 	}
@@ -88,7 +86,6 @@ class View {
 		return this.process(
 			new Executor('view:' + this.structure.name, exe),
 			ctx,
-			this.actions.inflate,
 			settings
 		);
 	}

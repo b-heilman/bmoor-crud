@@ -1,5 +1,5 @@
 const {Config} = require('bmoor/src/lib/config.js');
-const {apply, create} = require('bmoor/src/lib/error.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
@@ -303,6 +303,10 @@ class Structure {
 		});
 	}
 
+	setSource(source){
+		this.source = source;
+	}
+
 	assignField(field) {
 		const found = this.index[field.path];
 		if (found) {
@@ -357,49 +361,6 @@ class Structure {
 		}
 
 		return found;
-	}
-
-	async testField(field, type, ctx){
-		// if I need to in the future, I can load the permission here then run the test
-		const op = field.incomingSettings[type];
-
-		if (op) {
-			if (typeof op === 'string') {
-				try {
-					return ctx.hasPermission(op);
-				} catch (ex) {
-					apply(ex, {
-						code: 'BMOOR_CRUD_SCHEMA_TEST_FIELD',
-						context: {
-							type,
-							external: field.path,
-							structure: field.structure.name
-						}
-					});
-
-					throw ex;
-				}
-			} else {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	async testFields(type, ctx) {
-		return this.fields.reduce(async (prom, field) => {
-			const [test, agg] = await Promise.all([
-				this.testField(field, type, ctx),
-				prom
-			]);
-
-			if (test) {
-				agg.push(field);
-			}
-
-			return agg;
-		}, []);
 	}
 
 	getFieldSeries() {
@@ -459,43 +420,10 @@ class Structure {
 	// Add content to a statement based on the given context.  This will be run
 	// each invocation, unlike the prepare which is univeral across all contexts
 	async extendStatement(statement, settings, ctx) {
-		// TODO: the level above should translate the fields
-		/**if (){
-			// this will allow you to select a subset of the structure's fields and remap them
-			const imploded = implode(settings.fields);
-			await Object.keys(imploded).reduce(
-				async (agg, mount) =>{
-					const info = translateField(mount, imploded[mount]);
-
-					const field = this.getField(info.action.field);
-
-					if (field.series !== accessor.series) {
-						throw create(
-							`series mismatch: ${field.series} vs ${accessor.series}`,
-							{
-								code: 'BMOOR_CRUD_COMPOSITE_PROPERTY_INVALID',
-								context: {
-									accessor
-								}
-							}
-						);
-					}
-
-					if (this.testField(field, 'read', ctx)){
-						statement.addFields(field.series, [
-							new StatementField(field.storagePath, mount)
-						]);
-					}
-
-					return agg;
-				}, []
-			);
-		} else {
-		**/
 		// this is in extended because some fields are based on permission.
 		// I could preload some and do the rest, but for now this is how
 		// it will work
-		(settings.fields || await this.testFields('read', ctx)).forEach((field) => {
+		((settings.actions && settings.actions.structure) || this.actions).testFields('read', ctx).forEach((field) => {
 			statement.addFields(field.series, [
 				new StatementField(field.storagePath, field.reference || null)
 			])

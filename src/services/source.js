@@ -5,6 +5,8 @@ class Source {
 	}
 
 	async configure(settings) {
+		this.isFlat = settings.isFlat || false;
+		
 		this.incomingSettings = settings;
 
 		const factory = await this.nexus.loadConnector(settings.connector);

@@ -1,47 +1,8 @@
-const {makeGetter} = require('bmoor/src/core.js');
-
 const {create} = require('bmoor/src/lib/error.js');
 
 const {View} = require('./view.js');
 const {config: structureConfig} = require('../schema/structure.js');
 const {methods} = require('../schema/executable/statement.js');
-
-function buildFieldCopier(type, fields){
-	const method = fields.reduce((old, field) => {
-		const op = field.incomingSettings[type];
-
-		if (op){
-			const get = makeGetter(field.path);
-			const set = makeGetter(field.path);
-
-			if (old) {
-				return function (datum, to) {
-					set(old(datum, to), get(datum));
-
-					return to;
-				};
-			} else {
-				return function (datum, to) {
-					set(to, get(datum));
-
-					return to;
-				};
-			}
-		}
-
-		return old;
-	}, null);
-
-	if (method) {
-		return function (from) {
-			return method(from, {});
-		};
-	} else {
-		return function(){
-			return {};
-		};
-	}
-}
 
 class Crud extends View {
 	async configure(settings = {}) {
@@ -144,8 +105,9 @@ class Crud extends View {
 			await hooks.beforeRead(null, ctx, this);
 		}
 
+		console.log('settings', settings);
 		const res = await super.query(
-			await this.structure.getQuery(schema, ctx),
+			await this.structure.getQuery(schema, ctx, settings),
 			ctx,
 			settings
 		);
