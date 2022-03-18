@@ -13,7 +13,7 @@ describe('src/schema/composite.js', function () {
 
 		nexus = new Nexus();
 
-		await nexus.setConnector('connect-1', function(){
+		await nexus.setConnector('connect-1', function () {
 			return {};
 		});
 

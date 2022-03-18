@@ -303,7 +303,7 @@ class Structure {
 		});
 	}
 
-	setSource(source){
+	setSource(source) {
 		this.source = source;
 	}
 
@@ -423,11 +423,13 @@ class Structure {
 		// this is in extended because some fields are based on permission.
 		// I could preload some and do the rest, but for now this is how
 		// it will work
-		((settings.actions && settings.actions.structure) || this.actions).testFields('read', ctx).forEach((field) => {
-			statement.addFields(field.series, [
-				new StatementField(field.storagePath, field.reference || null)
-			])
-		});
+		((settings.actions && settings.actions.structure) || this.actions)
+			.testFields('read', ctx)
+			.forEach((field) => {
+				statement.addFields(field.series, [
+					new StatementField(field.storagePath, field.reference || null)
+				]);
+			});
 
 		// I'm doing this so people have a way around validation if they deem in neccisary.  I'm sure this
 		// will result in someone getting hacked, but I want to trust the devs using this

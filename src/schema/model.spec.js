@@ -20,8 +20,6 @@ describe('src/schema/model.js', function () {
 
 		nexus = new Nexus();
 
-		
-
 		connector = {
 			// this doesn't matter here, right?
 		};
@@ -64,12 +62,10 @@ describe('src/schema/model.js', function () {
 				});
 
 				expect(
-					model.actions.create(
-						{
-							bar: 'eins',
-							world: 'zwei'
-						}
-					)
+					model.actions.create({
+						bar: 'eins',
+						world: 'zwei'
+					})
 				).to.deep.equal({
 					bar: 'eins',
 					world: 'zwei',
@@ -96,12 +92,10 @@ describe('src/schema/model.js', function () {
 				});
 
 				expect(
-					model.actions.create(
-						{
-							bar: 'eins',
-							world: 'zwei'
-						}
-					)
+					model.actions.create({
+						bar: 'eins',
+						world: 'zwei'
+					})
 				).to.deep.equal({
 					foo: 'eins',
 					hello: 'zwei',
@@ -127,16 +121,14 @@ describe('src/schema/model.js', function () {
 				});
 
 				expect(
-					model.actions.update(
-						{
-							bar: 'eins',
-							world: 'zwei'
-						}
-					)
+					model.actions.update({
+						bar: 'eins',
+						world: 'zwei'
+					})
 				).to.deep.equal({
 					foo: 'eins',
 					bar: 'eins',
-							world: 'zwei'
+					world: 'zwei'
 				});
 			});
 
@@ -159,17 +151,15 @@ describe('src/schema/model.js', function () {
 				});
 
 				expect(
-					model.actions.update(
-						{
-							bar: 'eins',
-							world: 'zwei'
-						}
-					)
+					model.actions.update({
+						bar: 'eins',
+						world: 'zwei'
+					})
 				).to.deep.equal({
 					foo: 'eins',
 					hello: 'zwei',
 					bar: 'eins',
-							world: 'zwei'
+					world: 'zwei'
 				});
 			});
 		});
@@ -433,11 +423,7 @@ describe('src/schema/model.js', function () {
 						}
 					});
 
-					expect(
-						model.actions.create(
-							{junk: 'ok', eins: 1}
-						)
-					).to.deep.equal({
+					expect(model.actions.create({junk: 'ok', eins: 1})).to.deep.equal({
 						junk: 'ok',
 						eins: 1,
 						zwei: now
@@ -461,11 +447,7 @@ describe('src/schema/model.js', function () {
 						}
 					});
 
-					expect(
-						model.actions.update(
-							{junk: 'ok', eins: 1}
-						)
-					).to.deep.equal({
+					expect(model.actions.update({junk: 'ok', eins: 1})).to.deep.equal({
 						junk: 'ok',
 						eins: 1,
 						zwei: now
@@ -489,11 +471,7 @@ describe('src/schema/model.js', function () {
 						}
 					});
 
-					expect(
-						model.actions.update(
-							{junk: 'ok', eins: 0}
-						)
-					).to.deep.equal({
+					expect(model.actions.update({junk: 'ok', eins: 0})).to.deep.equal({
 						junk: 'ok',
 						eins: 0,
 						zwei: now
@@ -517,11 +495,7 @@ describe('src/schema/model.js', function () {
 						}
 					});
 
-					expect(
-						model.actions.update(
-							{junk: 'ok', eins: null},
-						)
-					).to.deep.equal({
+					expect(model.actions.update({junk: 'ok', eins: null})).to.deep.equal({
 						junk: 'ok',
 						eins: null,
 						zwei: now
@@ -546,9 +520,7 @@ describe('src/schema/model.js', function () {
 					});
 
 					expect(
-						model.actions.update(
-							{junk: 'ok', eins: undefined}
-						)
+						model.actions.update({junk: 'ok', eins: undefined})
 					).to.deep.equal({
 						junk: 'ok',
 						eins: undefined

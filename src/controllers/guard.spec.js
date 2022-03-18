@@ -175,7 +175,6 @@ describe('src/controller/guard.js', function () {
 					});
 				});
 
-
 				it('should allow remap with query', async function () {
 					const content = [
 						{
@@ -241,7 +240,7 @@ describe('src/controller/guard.js', function () {
 					});
 				});
 
-				it.only('should allow field override via query', async function () {
+				it('should allow field override via query', async function () {
 					const content = [
 						{
 							hello: 'world',
@@ -550,8 +549,8 @@ describe('src/controller/guard.js', function () {
 							method: 'put',
 							body: {
 								payload: {
-										weAre: 'Penn State'
-									}
+									weAre: 'Penn State'
+								}
 							},
 							params: {
 								id: '1,2'
@@ -635,8 +634,8 @@ describe('src/controller/guard.js', function () {
 							method: 'patch',
 							body: {
 								payload: {
-										weAre: 'Penn State'
-									}
+									weAre: 'Penn State'
+								}
 							},
 							params: {
 								id: '1'
@@ -661,8 +660,8 @@ describe('src/controller/guard.js', function () {
 							method: 'patch',
 							body: {
 								payload: {
-										weAre: 'Penn State'
-									}
+									weAre: 'Penn State'
+								}
 							},
 							params: {
 								id: '1,2'

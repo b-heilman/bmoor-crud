@@ -105,7 +105,6 @@ class Crud extends View {
 			await hooks.beforeRead(null, ctx, this);
 		}
 
-		console.log('settings', settings);
 		const res = await super.query(
 			await this.structure.getQuery(schema, ctx, settings),
 			ctx,
@@ -217,7 +216,7 @@ class Crud extends View {
 
 	async _update(delta, tgt, params, ctx) {
 		const payload = this.actions.deflateUpdate(delta, ctx);
-		
+
 		const errors = await this.validate(
 			payload, // this will be in storage structure
 			structureConfig.get('writeModes.update'),

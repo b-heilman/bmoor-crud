@@ -3,7 +3,7 @@ const {create} = require('bmoor/src/lib/error.js');
 const {pathToAccessors} = require('../../graph/path.js');
 
 module.exports = {
-	translateField: function(toStatement, fromStatement){
+	translateField: function (toStatement, fromStatement) {
 		// if it's an = fromStatement, the properties can't be short hand
 		const action = pathToAccessors(fromStatement)[0]; // this is an array of action tokens
 		if (!action) {
@@ -17,7 +17,10 @@ module.exports = {
 
 		const isArray = toStatement.indexOf('[0]') !== -1;
 
-		const path = toStatement.substring(0, isArray ? toStatement.length - 3 : toStatement.length);
+		const path = toStatement.substring(
+			0,
+			isArray ? toStatement.length - 3 : toStatement.length
+		);
 
 		return {
 			type: action.loader,

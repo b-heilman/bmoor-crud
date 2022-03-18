@@ -3,7 +3,7 @@ const {expect} = require('chai');
 
 const {Statement} = require('./statement.js');
 
-describe('src/schema/structure.js', function(){
+describe('src/schema/structure.js', function () {
 	const sut = require('./structure.js');
 	const now = Date.now();
 
@@ -12,15 +12,15 @@ describe('src/schema/structure.js', function(){
 	let clock = null;
 	let permissions = null;
 
-	beforeEach(function(){
+	beforeEach(function () {
 		ctx = {};
 		permissions = {};
 
 		base = new Statement('base-series', 'base-model');
 
 		clock = sinon.useFakeTimers(now);
-	
-		ctx.hasPermission = function(permission){
+
+		ctx.hasPermission = function (permission) {
 			return !!permissions[permission];
 		};
 	});
@@ -29,8 +29,8 @@ describe('src/schema/structure.js', function(){
 		clock.restore();
 	});
 
-	describe('::extendStatement', function(){
-		it('should work with base settings', async function(){
+	describe('::extendStatement', function () {
+		it('should work with base settings', async function () {
 			const structure = new sut.Structure('base-struct');
 
 			structure.setSource({isFlat: false});
@@ -67,53 +67,53 @@ describe('src/schema/structure.js', function(){
 			await structure.extendStatement(base, {}, ctx);
 
 			expect(base.toJSON()).to.deep.equal({
-			    models: [
-			        {
-			            series: 'base-series',
-			            schema: undefined
-			        },
-			        {
-			            series: 'series-2',
-			            schema: 'series-2'
-			        },
-			        {
-			            series: 'series-1',
-			            schema: 'series-1'
-			        }
-			    ],
-			    fields: [
-			        {
-			            series: 'series-2',
-			            path: 'path2',
-			            as: 'path2'
-			        },
-			        {
-			            series: 'series-2',
-			            path: 'path4',
-			            as: 'path4'
-			        },
-			        {
-			            series: 'series-1',
-			            path: 'path3',
-			            as: 'path3'
-			        }
-			    ],
-			    filters: {
-			        join: 'and',
-			        expressables: []
-			    },
-			    params: {
-			        join: 'and',
-			        expressables: []
-			    }
+				models: [
+					{
+						series: 'base-series',
+						schema: undefined
+					},
+					{
+						series: 'series-2',
+						schema: 'series-2'
+					},
+					{
+						series: 'series-1',
+						schema: 'series-1'
+					}
+				],
+				fields: [
+					{
+						series: 'series-2',
+						path: 'path2',
+						as: 'path2'
+					},
+					{
+						series: 'series-2',
+						path: 'path4',
+						as: 'path4'
+					},
+					{
+						series: 'series-1',
+						path: 'path3',
+						as: 'path3'
+					}
+				],
+				filters: {
+					join: 'and',
+					expressables: []
+				},
+				params: {
+					join: 'and',
+					expressables: []
+				}
 			});
 		});
 	});
 
-	describe('::actions', function(){
+	describe('::actions', function () {
 		let structure = null;
 
-		beforeEach(async function(){
+		beforeEach(async function () {
 			structure = new sut.Structure('base-struct');
 
 			structure.configure({});
@@ -131,7 +131,7 @@ describe('src/schema/structure.js', function(){
 					storagePath: 'path2',
 					reference: 'ref2',
 					usage: 'monitor',
- 					cfg: {
+					cfg: {
 						target: 'eins'
 					},
 					read: true,
@@ -153,7 +153,7 @@ describe('src/schema/structure.js', function(){
 			structure.build();
 		});
 
-		describe('::inflate', function(){
+		describe('::inflate', function () {
 			it('should properly inflate', async function () {
 				expect(
 					structure.actions.inflate({
@@ -166,18 +166,19 @@ describe('src/schema/structure.js', function(){
 				});
 			});
 
-			it('should worked when remapped', async function(){
+			it('should worked when remapped', async function () {
 				expect(
-					structure.actions.remap({
-						hello: {
-							world: 'eins'
-						}
-					})
-					.inflate({
-						hello: {
-							world: '{"foo":"bar"}'
-						}
-					})
+					structure.actions
+						.remap({
+							hello: {
+								world: 'eins'
+							}
+						})
+						.inflate({
+							hello: {
+								world: '{"foo":"bar"}'
+							}
+						})
 				).to.deep.equal({
 					hello: {
 						world: {
@@ -188,7 +189,7 @@ describe('src/schema/structure.js', function(){
 			});
 		});
 
-		describe('::deflate', function(){
+		describe('::deflate', function () {
 			it('should properly deflate', async function () {
 				expect(
 					structure.actions.deflate({
@@ -202,7 +203,7 @@ describe('src/schema/structure.js', function(){
 			});
 		});
 
-		describe('::onCreate', function(){
+		describe('::onCreate', function () {
 			it('should properly deflate', async function () {
 				expect(
 					structure.actions.create({
@@ -219,7 +220,7 @@ describe('src/schema/structure.js', function(){
 			});
 		});
 
-		describe('::onUpdate', function(){
+		describe('::onUpdate', function () {
 			it('should properly deflate', async function () {
 				expect(
 					structure.actions.update({
@@ -236,7 +237,7 @@ describe('src/schema/structure.js', function(){
 			});
 		});
 
-		describe('::convertFromStorage', function(){
+		describe('::convertFromStorage', function () {
 			it('should work', async function () {
 				expect(
 					structure.actions.convertFromStorage({
@@ -257,23 +258,24 @@ describe('src/schema/structure.js', function(){
 				});
 			});
 
-			it('should worked when remapped', async function(){
+			it('should worked when remapped', async function () {
 				expect(
-					structure.actions.remap({
-						prop: {
-							remapped: 'eins',
-							other: 'hello.world'
-						}
-					})
-					.convertFromStorage({
-						junk: true,
-						ref1: 'eins',
-						ref2: 2,
-						attr: {
-							ref3: undefined,
-							ref4: null
-						}
-					})
+					structure.actions
+						.remap({
+							prop: {
+								remapped: 'eins',
+								other: 'hello.world'
+							}
+						})
+						.convertFromStorage({
+							junk: true,
+							ref1: 'eins',
+							ref2: 2,
+							attr: {
+								ref3: undefined,
+								ref4: null
+							}
+						})
 				).to.deep.equal({
 					prop: {
 						remapped: 'eins',
@@ -283,7 +285,7 @@ describe('src/schema/structure.js', function(){
 			});
 		});
 
-		describe('::convertFromCreate', function(){
+		describe('::convertFromCreate', function () {
 			it('should work', async function () {
 				expect(
 					structure.actions.convertFromCreate({
@@ -306,7 +308,7 @@ describe('src/schema/structure.js', function(){
 			});
 		});
 
-		describe('::convertFromUpdate', function(){
+		describe('::convertFromUpdate', function () {
 			it('should work', async function () {
 				expect(
 					structure.actions.convertFromUpdate({

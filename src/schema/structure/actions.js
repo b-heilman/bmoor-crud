@@ -76,19 +76,19 @@ function buildActions(actions, field) {
 	return actions;
 }
 
-function buildTransformer(opProperty, getter, setter){
-	return function(baseFn, field) {
+function buildTransformer(opProperty, getter, setter) {
+	return function (baseFn, field) {
 		const op = field.incomingSettings[opProperty];
 
-		return function(datum, ctx){
+		return function (datum, ctx) {
 			const rtn = baseFn(datum, ctx);
 
 			const value = field[getter](datum);
-			
-			if (value !== undefined && (op === true ||
-					(typeof op === 'string' && ctx.hasPermission(op)))
-			){
 
+			if (
+				value !== undefined &&
+				(op === true || (typeof op === 'string' && ctx.hasPermission(op)))
+			) {
 				field[setter](rtn, value);
 			}
 
@@ -98,16 +98,13 @@ function buildTransformer(opProperty, getter, setter){
 }
 
 class StructureActions {
-	constructor(fields){
+	constructor(fields) {
 		this.fields = fields;
-		this.index = fields.reduce(
-			(agg, field) => {
-				agg[field.path] = field;
+		this.index = fields.reduce((agg, field) => {
+			agg[field.path] = field;
 
-				return agg;
-			},
-			{}
-		);
+			return agg;
+		}, {});
 
 		fields.reduce(buildActions, this);
 
@@ -115,27 +112,27 @@ class StructureActions {
 		//   but I'm going to be lazy and do so.  I'm getting into premature optimization
 		this.convertFromStorage = fields.reduce(
 			buildTransformer('read', 'internalGetter', 'externalSetter'),
-			function(){
+			function () {
 				return {};
 			}
 		);
 
 		this.convertFromCreate = fields.reduce(
 			buildTransformer('create', 'externalGetter', 'internalSetter'),
-			function(){
+			function () {
 				return {};
 			}
 		);
 
 		this.convertFromUpdate = fields.reduce(
 			buildTransformer('update', 'externalGetter', 'internalSetter'),
-			function(){
+			function () {
 				return {};
 			}
 		);
 	}
 
-	testField(field, type, ctx){
+	testField(field, type, ctx) {
 		// if I need to in the future, I can load the permission here then run the test
 		const op = field.incomingSettings[type];
 
@@ -175,29 +172,24 @@ class StructureActions {
 		}, []);
 	}
 
-	remap(schema){
+	remap(schema) {
 		const imploded = implode(schema);
 
 		return new StructureActions(
-			Object.keys(imploded).map(
-				(path) => {
-					const field = this.index[imploded[path]];
+			Object.keys(imploded).map((path) => {
+				const field = this.index[imploded[path]];
 
-					if (!field){
-						throw create(
-							`unknown field: ${imploded[path]}`,
-							{
-								code: 'BMOOR_CRUD_STRUCTURE_ACTION_FIELD',
-								context: {
-									available: Object.keys(this.index)
-								}
-							}
-						);
-					}
-
-					return field.extend(path);
+				if (!field) {
+					throw create(`unknown field: ${imploded[path]}`, {
+						code: 'BMOOR_CRUD_STRUCTURE_ACTION_FIELD',
+						context: {
+							available: Object.keys(this.index)
+						}
+					});
 				}
-			)
+
+				return field.extend(path);
+			})
 		);
 	}
 }

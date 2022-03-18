@@ -482,7 +482,7 @@ describe('src/services/crud.js', function () {
 			});
 		});
 
-		it('should work with remapping', async function(){
+		it('should work with remapping', async function () {
 			const model = new Model('model-1', nexus);
 
 			connector.execute = async function (request, myCtx) {
@@ -583,27 +583,29 @@ describe('src/services/crud.js', function () {
 
 			await service.build();
 
-			return service.read(123, context, {
-				actions: service.actions.remap({
-					info: {
-						id: 'id',
-						name: 'name',
-						title: 'title'
-					},
-					content: 'json'
+			return service
+				.read(123, context, {
+					actions: service.actions.remap({
+						info: {
+							id: 'id',
+							name: 'name',
+							title: 'title'
+						},
+						content: 'json'
+					})
 				})
-			}).then((res) => {
-				expect(res).to.deep.equal({
-					info: {
-						id: 'something-1',
-						name: 'v-1',
-						title: 't-1'
-					},
-					content: {
-						foo: 'bar'
-					}
+				.then((res) => {
+					expect(res).to.deep.equal({
+						info: {
+							id: 'something-1',
+							name: 'v-1',
+							title: 't-1'
+						},
+						content: {
+							foo: 'bar'
+						}
+					});
 				});
-			});
 		});
 	});
 
@@ -1286,8 +1288,8 @@ describe('src/services/crud.js', function () {
 					{
 						id: 'something-1',
 						// title: removed because of access
-						name: 'v-1',
-						// foo: not copied because 
+						name: 'v-1'
+						// foo: not copied because
 					}
 				]);
 			});
@@ -2292,7 +2294,7 @@ describe('src/services/crud.js', function () {
 		});
 	});
 
-	describe('::actions', function(){
+	describe('::actions', function () {
 		let context = null;
 		let service = null;
 		let permissions = null;
@@ -2350,32 +2352,38 @@ describe('src/services/crud.js', function () {
 			await service.build();
 		});
 
-		describe('::cleanForIndex', function(){
-			it('it should work', function(){
+		describe('::cleanForIndex', function () {
+			it('it should work', function () {
 				expect(
-					service.actions.cleanForIndex({
-						foo: 'bar',
-						name: 'val-0',
-						index: 'val-1',
-						query: 'val-2',
-						other: 'val-3'
-					}, context)
+					service.actions.cleanForIndex(
+						{
+							foo: 'bar',
+							name: 'val-0',
+							index: 'val-1',
+							query: 'val-2',
+							other: 'val-3'
+						},
+						context
+					)
 				).to.deep.equal({
 					index: 'val-1'
 				});
 			});
 
-			it('it should work with permissions', function(){
+			it('it should work with permissions', function () {
 				permissions['can-dex'] = true;
 
 				expect(
-					service.actions.cleanForIndex({
-						foo: 'bar',
-						name: 'val-0',
-						index: 'val-1',
-						query: 'val-2',
-						other: 'val-3'
-					}, context)
+					service.actions.cleanForIndex(
+						{
+							foo: 'bar',
+							name: 'val-0',
+							index: 'val-1',
+							query: 'val-2',
+							other: 'val-3'
+						},
+						context
+					)
 				).to.deep.equal({
 					index: 'val-1',
 					other: 'val-3'
@@ -2383,32 +2391,38 @@ describe('src/services/crud.js', function () {
 			});
 		});
 
-		describe('::cleanForQuery', function(){
-			it('it should work', function(){
+		describe('::cleanForQuery', function () {
+			it('it should work', function () {
 				expect(
-					service.actions.cleanForQuery({
-						foo: 'bar',
-						name: 'val-0',
-						index: 'val-1',
-						query: 'val-2',
-						other: 'val-3'
-					}, context)
+					service.actions.cleanForQuery(
+						{
+							foo: 'bar',
+							name: 'val-0',
+							index: 'val-1',
+							query: 'val-2',
+							other: 'val-3'
+						},
+						context
+					)
 				).to.deep.equal({
 					query: 'val-2'
 				});
 			});
 
-			it('it should work with permissions', function(){
+			it('it should work with permissions', function () {
 				permissions['can-dex'] = true;
-				
+
 				expect(
-					service.actions.cleanForQuery({
-						foo: 'bar',
-						name: 'val-0',
-						index: 'val-1',
-						query: 'val-2',
-						other: 'val-3'
-					}, context)
+					service.actions.cleanForQuery(
+						{
+							foo: 'bar',
+							name: 'val-0',
+							index: 'val-1',
+							query: 'val-2',
+							other: 'val-3'
+						},
+						context
+					)
 				).to.deep.equal({
 					query: 'val-2',
 					other: 'val-3'

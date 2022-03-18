@@ -54,7 +54,7 @@ class QueryShard extends QueryStatement {
 
 	addTempField(series, name, internal) {
 		this.temps.push(name);
-		
+
 		this.addFields(series, [new StatementField(internal, name)]);
 
 		return name;

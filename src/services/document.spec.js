@@ -1430,16 +1430,20 @@ describe('src/services/document.js', function () {
 
 	describe('::query', function () {
 		it('should handle a sub', async function () {
-			stubs.execute.onCall(0).resolves([{
-				item: 'item-1',
-				sub_0: 123,
-				categoryName: 'category-1',
-			}]);
+			stubs.execute.onCall(0).resolves([
+				{
+					item: 'item-1',
+					sub_0: 123,
+					categoryName: 'category-1'
+				}
+			]);
 
-			stubs.execute.onCall(1).resolves([{
-				tag: 'tag-1',
-				mask: 'mask-1'
-			}]);
+			stubs.execute.onCall(1).resolves([
+				{
+					tag: 'tag-1',
+					mask: 'mask-1'
+				}
+			]);
 
 			nexus.configureComposite('test-tags', {
 				base: 'test-item-material',
@@ -1595,20 +1599,26 @@ describe('src/services/document.js', function () {
 		});
 
 		it('should handle a sub with a pivot', async function () {
-			stubs.execute.onCall(0).resolves([{
+			stubs.execute.onCall(0).resolves([
+				{
 					item: 'item-1',
 					categoryName: 'category-1',
 					sub_0: 123,
 					sub_1: 456
-				}]);
+				}
+			]);
 
-			stubs.execute.onCall(1).resolves([{
-				name: 'name-1',
-			}]);
+			stubs.execute.onCall(1).resolves([
+				{
+					name: 'name-1'
+				}
+			]);
 
-			stubs.execute.onCall(2).resolves([{
-				name: 'name-1.1',
-			}]);
+			stubs.execute.onCall(2).resolves([
+				{
+					name: 'name-1.1'
+				}
+			]);
 
 			nexus.configureComposite('test-stuff', {
 				base: 'test-material',

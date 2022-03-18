@@ -18,24 +18,23 @@ class View {
 		this.cleaners = {};
 		this.hooks = {};
 		this.security = {};
-
 	}
 
 	async configure(settings = {}) {
 		this.incomingSettings = settings;
 	}
 
-	async build(){
+	async build() {
 		await this.structure.build();
 
 		/***
 		 * Here's how permissions / security will work.  I am going to treat
 		 * the framework like a red/green network topography.  Everything
 		 * services and schemas will be assumed sanitized, and controllers
-		 * will sanitize any incoming things.  This reduces the number of 
+		 * will sanitize any incoming things.  This reduces the number of
 		 * unneccisary copies made of data. So cleanFor are used to apply permissions
 		 * to a known data shape and copyFor is to sanitize data from the outside.
-		 * 
+		 *
 		 * Deflate will act as a copyFor, so I don't need one for create or update
 		 ***/
 		this.actions = new ViewActions(
@@ -59,15 +58,15 @@ class View {
 		return stmt.run(ctx, settings);
 	}
 
-	async process(stmt, ctx, settings={}) {
+	async process(stmt, ctx, settings = {}) {
 		const actions = settings.actions || this.actions;
 
 		return runFilter(
 			await Promise.all(
 				// converts from internal => external
-				(await this.run(stmt, ctx, settings)).map(
-					async (datum) => actions.inflate(datum, ctx)
-				)
+				(
+					await this.run(stmt, ctx, settings)
+				).map(async (datum) => actions.inflate(datum, ctx))
 			),
 			this,
 			ctx

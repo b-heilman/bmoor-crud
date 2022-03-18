@@ -70,17 +70,16 @@ class Guard extends Controller {
 
 		const content = await ctx.getContent();
 
-		if (content){
+		if (content) {
 			fields = content.fields;
 		}
 
-		if (!fields){
+		if (!fields) {
 			fields = ctx.getQuery('fields');
 		}
 
 		const actions = fields ? this.view.actions.remap(fields) : null;
 
-		console.log('settings', fields, actions);
 		return {
 			actions
 		};
@@ -108,24 +107,30 @@ class Guard extends Controller {
 				} else if (ids.length > 1) {
 					return this.view.readMany(ids, ctx, await this.parseSettings(ctx));
 				} else {
-					return this.view.read(ids[0], ctx, await this.parseSettings(ctx)).then((res) => {
-						if (!res) {
-							throw error.create('called read without result', {
-								code: 'CRUD_CONTROLLER_READ_ONE',
-								type: 'warn',
-								status: 404
-							});
-						}
+					return this.view
+						.read(ids[0], ctx, await this.parseSettings(ctx))
+						.then((res) => {
+							if (!res) {
+								throw error.create('called read without result', {
+									code: 'CRUD_CONTROLLER_READ_ONE',
+									type: 'warn',
+									status: 404
+								});
+							}
 
-						return res;
-					});
+							return res;
+						});
 				}
 			} else if (ctx.hasQuery()) {
 				if (!this.incomingSettings.query) {
 					operationNotAllowed('query');
 				}
 
-				return this.view.query(await parseQuery(ctx, this.view), ctx, await this.parseSettings(ctx));
+				return this.view.query(
+					await parseQuery(ctx, this.view),
+					ctx,
+					await this.parseSettings(ctx)
+				);
 			} else {
 				return this.view.readAll(ctx, await this.parseSettings(ctx));
 			}
