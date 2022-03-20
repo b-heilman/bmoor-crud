@@ -160,7 +160,7 @@ class Guard extends Controller {
 				action: 'create'
 			});
 
-			return this.view.create(payload, ctx, this.parseSettings(ctx));
+			return this.view.create(payload, ctx, await this.parseSettings(ctx));
 		} else if (ctx.getMethod() === 'put') {
 			const ids = (ctx.getParam('id') || '').trim();
 

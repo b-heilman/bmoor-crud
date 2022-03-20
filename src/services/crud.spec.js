@@ -162,6 +162,137 @@ describe('src/services/crud.js', function () {
 				});
 		});
 
+		//for now, submitted data needs to match original target
+		it('should allow fields to be remapped', async function(){
+			connector.execute = async function (request, myCtx) {
+				expect(myCtx).to.equal(context);
+
+				expect(request.toJSON()).to.deep.equal({
+					method: 'create',
+					models: [
+						{
+							series: 'model-1',
+							schema: 'model-1',
+							payload: {
+								name: 'name-1',
+								title: 'title-1',
+								json: '{"hello":"world"}'
+							}
+						}
+					],
+					fields: [
+						{
+							series: 'model-1',
+							as: 'info.id',
+							path: 'id'
+						},
+						{
+							series: 'model-1',
+							as: 'info.name',
+							path: 'name'
+						},
+						{
+							series: 'model-1',
+							as: 'info.title',
+							path: 'title'
+						},
+						{
+							series: 'model-1',
+							as: 'content',
+							path: 'json'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
+				});
+
+				return Promise.resolve([
+					{
+						info: {
+							id: 'something-1'
+						},
+						value: 'v-1',
+						content: '{"foo":"bar"}'
+					}
+				]);
+			};
+
+			const model = new Model('model-1', nexus);
+
+			await model.configure({
+				source: 'test-1',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						delete: true,
+						index: true
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true
+					},
+					json: {
+						create: true,
+						read: true,
+						update: true,
+						usage: 'json'
+					}
+				}
+			});
+
+			const service = new Crud(model);
+
+			await service.configure();
+
+			await service.build();
+
+			return service
+				.create(
+					{
+						name: 'name-1',
+						title: 'title-1',
+						junk: 'junk',
+						json: {
+							hello: 'world'
+						}
+					},
+					context,
+					{
+						actions: service.actions.remap({
+							info: {
+								id: 'id',
+								name: 'name',
+								title: 'title'
+							},
+							content: 'json'
+						})
+					}
+				)
+				.then((res) => {
+					expect(res).to.deep.equal({
+						info: {
+							id: 'something-1'
+						},
+						content: {
+							foo: 'bar'
+						}
+					});
+				});
+		});
+
 		it('should not fail if a type field is blank', async function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
@@ -1408,6 +1539,137 @@ describe('src/services/crud.js', function () {
 						id: 'something-1',
 						name: 'v-1',
 						title: 't-1'
+					});
+
+					expect(stubs.read.getCall(0).args[0]).to.equal('1');
+				});
+		});
+
+		it('should allow fields to be remapped', async function(){
+			const model = new Model('model-1', nexus);
+
+			connector.execute = async function (request, myCtx) {
+				expect(myCtx).to.equal(context);
+
+				expect(request.toJSON()).to.deep.equal({
+					method: 'update',
+					models: [
+						{
+							series: 'model-1',
+							schema: 'model-1',
+							payload: {
+								name: 'test-1',
+								title: 'title-1'
+							}
+						}
+					],
+					fields: [
+						{
+							series: 'model-1',
+							as: 'info.id',
+							path: 'id'
+						},
+						{
+							series: 'model-1',
+							as: 'info.name',
+							path: 'name'
+						},
+						{
+							series: 'model-1',
+							as: 'info.title',
+							path: 'title'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								series: 'model-1',
+								path: 'id',
+								operation: '=',
+								value: '1',
+								settings: {}
+							}
+						]
+					}
+				});
+
+				return Promise.resolve([
+					{
+						info: {
+							id: 'something-1',
+							name: 'v-1',
+							title: 't-1'
+						}
+					}
+				]);
+			};
+
+			await model.configure({
+				source: 'test-1',
+				fields: {
+					id: {
+						key: true,
+						read: true
+					},
+					name: {
+						create: true,
+						read: true,
+						update: true,
+						delete: true,
+						index: true
+					},
+					title: {
+						create: true,
+						read: true,
+						update: true
+					},
+					json: {
+						update: true,
+						usage: 'json'
+					}
+				}
+			});
+
+			const service = new Crud(model);
+
+			await service.configure();
+
+			await service.build();
+
+			stubs.read = sinon.stub(service, 'read').resolves({id: 123});
+
+			return service
+				.update(
+					'1',
+					{
+						id: 1,
+						name: 'test-1',
+						title: 'title-1'
+					},
+					context,
+					{
+						actions: service.actions.remap({
+							info: {
+								id: 'id',
+								name: 'name',
+								title: 'title'
+							},
+							content: 'json'
+						})
+					}
+				)
+				.then((res) => {
+					expect(res).to.deep.equal({
+						info: {
+							id: 'something-1',
+							name: 'v-1',
+							title: 't-1'
+						}
 					});
 
 					expect(stubs.read.getCall(0).args[0]).to.equal('1');

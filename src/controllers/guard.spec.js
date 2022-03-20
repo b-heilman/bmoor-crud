@@ -509,6 +509,69 @@ describe('src/controller/guard.js', function () {
 					expect(args[0]).to.deep.equal({weAre: 'Penn State'});
 				});
 
+				it('should allow override of fields via query during create', async function(){
+					// the create statement
+					stubs.execute.onCall(0).resolves([{
+						other: 10,
+						mother: 20
+					}]);
+
+					const res = await controller.write(
+						new Context(
+							{
+								method: 'post',
+								body: {
+									payload: {
+										weAre: 'Penn State'
+									}
+								},
+								query: {
+									fields: {
+										other: 'eins'
+									}
+								}
+							},
+							{content: 'body'}
+						)
+					);
+
+					expect(res).to.deep.equal({
+						other: 10
+					});
+				});
+
+				it('should allow override of fields via body during create', async function(){
+					// the create statement
+					stubs.execute.onCall(0).resolves([{
+						other: 10,
+						mother: 20
+					}]);
+
+					const res = await controller.write(
+						new Context(
+							{
+								method: 'post',
+								body: {
+									payload: {
+										weAre: 'Penn State'
+									},
+									fields: {
+										other: 'eins'
+									}
+								},
+								query: {
+									
+								}
+							},
+							{content: 'body'}
+						)
+					);
+
+					expect(res).to.deep.equal({
+						other: 10
+					});
+				});
+
 				// test update - put
 				it('should allow put', async function () {
 					const content = {hello: 'world'};
@@ -537,6 +600,84 @@ describe('src/controller/guard.js', function () {
 					const args = stubs.create.getCall(0).args;
 					expect(args[0]).to.deep.equal('1');
 					expect(args[1]).to.deep.equal({weAre: 'Penn State'});
+				});
+
+				it('should allow override of fields via query during update', async function(){
+					// the read for update
+					stubs.execute.onCall(0).resolves([{
+						eins: 1,
+						zwei: 2
+					}]);
+
+					// the read for update
+					stubs.execute.onCall(1).resolves([{
+						other: 10,
+						mother: 20
+					}]);
+
+					const res = await controller.write(
+						new Context(
+							{
+								method: 'put',
+								body: {
+									payload: {
+										weAre: 'Penn State'
+									}
+								},
+								params: {
+									id: '1'
+								},
+								query: {
+									fields: {
+										other: 'eins'
+									}
+								}
+							},
+							{content: 'body'}
+						)
+					);
+
+					expect(res).to.deep.equal({
+						other: 10
+					});
+				});
+
+				it('should allow override of fields via body during update', async function(){
+					// the read for update
+					stubs.execute.onCall(0).resolves([{
+						eins: 1,
+						zwei: 2
+					}]);
+
+					// the read for update
+					stubs.execute.onCall(1).resolves([{
+						other: 10,
+						mother: 20
+					}]);
+
+					const res = await controller.write(
+						new Context(
+							{
+								method: 'put',
+								body: {
+									payload: {
+										weAre: 'Penn State'
+									},
+									fields: {
+										other: 'eins'
+									}
+								},
+								params: {
+									id: '1'
+								}
+							},
+							{content: 'body'}
+						)
+					);
+
+					expect(res).to.deep.equal({
+						other: 10
+					});
 				});
 
 				it('should allow put with multiple ids', async function () {

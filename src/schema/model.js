@@ -160,20 +160,20 @@ class Model extends Structure {
 		return exe;
 	}
 
-	async getExecutable(method, settings, ctx) {
+	async getExecutable(method, request, ctx, settings={}) {
 		const exe = this.preparedExecutable.clone();
 
 		exe.setMethod(method);
 
-		if (settings.payload) {
-			exe.setPayload(this.name, settings.payload);
+		if (request.payload) {
+			exe.setPayload(this.name, request.payload);
 		}
 
 		await this.extendStatement(
 			exe,
 			{
-				fields: settings.fields,
-				params: settings.params
+				actions: settings.actions,
+				params: request.params
 			},
 			ctx
 		);

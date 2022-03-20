@@ -17,11 +17,11 @@ class Crud extends View {
 		Object.assign(this, decoration);
 	}
 
-	async _create(datum, ctx) {
-		const payload = this.actions.deflateCreate(datum, ctx);
-
+	async _create(datum, ctx, settings={}) {
+		// this needs to be based on external representation, so if I ever start
+		// to accept custom forms, I need to remap
 		const errors = await this.validate(
-			payload, // this will be in storage structure
+			datum, 
 			structureConfig.get('writeModes.create'),
 			ctx
 		);
@@ -40,15 +40,17 @@ class Crud extends View {
 			await this.structure.getExecutable(
 				methods.create,
 				{
-					payload
+					payload: this.actions.deflateCreate(datum, ctx)
 				},
-				ctx
+				ctx,
+				settings
 			),
-			ctx
+			ctx,
+			settings
 		);
 	}
 
-	async create(proto, ctx) {
+	async create(proto, ctx, settings={}) {
 		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
@@ -75,7 +77,7 @@ class Crud extends View {
 			}
 		}
 
-		const datum = (await this._create(proto, ctx))[0];
+		const datum = (await this._create(proto, ctx, settings))[0];
 
 		const id = this.structure.getKey(datum);
 		if (hooks.afterCreate) {
@@ -95,7 +97,7 @@ class Crud extends View {
 			throw create(`missing ctx in read of ${name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_QUERY_CTX',
-				context: schema
+				context: schema,
 			});
 		}
 
@@ -214,11 +216,9 @@ class Crud extends View {
 		);
 	}
 
-	async _update(delta, tgt, params, ctx) {
-		const payload = this.actions.deflateUpdate(delta, ctx);
-
+	async _update(delta, tgt, params, ctx, settings={}) {
 		const errors = await this.validate(
-			payload, // this will be in storage structure
+			delta, // this will be in external structure
 			structureConfig.get('writeModes.update'),
 			ctx
 		);
@@ -238,11 +238,13 @@ class Crud extends View {
 				methods.update,
 				{
 					params,
-					payload
+					payload: this.actions.deflateUpdate(delta, ctx)
 				},
-				ctx
+				ctx,
+				settings
 			),
-			ctx
+			ctx,
+			settings
 		);
 	}
 
@@ -251,7 +253,7 @@ class Crud extends View {
 		const hooks = this.hooks;
 		const security = this.security;
 
-		const tgt = await this.read(id, ctx, settings);
+		const tgt = await this.read(id, ctx/*, settings*/); // no settings, no custom fields
 
 		if (security.canUpdate) {
 			if (!(await security.canUpdate(tgt, ctx))) {
@@ -265,6 +267,9 @@ class Crud extends View {
 			}
 		}
 
+		// if I want to allow custom structures for update, and I'm not sure
+		// I want to, I need to allow for remapping the delta here
+
 		if (hooks.beforeUpdate) {
 			await hooks.beforeUpdate(tgt, ctx, this, delta);
 		}
@@ -276,7 +281,8 @@ class Crud extends View {
 				{
 					[this.structure.settings.key]: id
 				},
-				ctx
+				ctx,
+				settings
 			)
 		)[0];
 
@@ -291,16 +297,18 @@ class Crud extends View {
 		return datum;
 	}
 
-	async _delete(params, ctx) {
+	async _delete(params, ctx, settings={}) {
 		return this.execute(
 			await this.structure.getExecutable(
 				methods.delete,
 				{
 					params
 				},
-				ctx
+				ctx,
+				settings
 			),
-			ctx
+			ctx,
+			settings
 		);
 	}
 
@@ -314,7 +322,7 @@ class Crud extends View {
 		const hooks = this.hooks;
 		const security = this.security;
 
-		const datum = await this.read(id, ctx, settings);
+		const datum = await this.read(id, ctx, settings); // settings is allowed here
 
 		if (security.canDelete) {
 			if (!(await security.canDelete(datum, ctx))) {
@@ -336,7 +344,8 @@ class Crud extends View {
 			{
 				[this.structure.settings.key]: id
 			},
-			ctx
+			ctx,
+			settings
 		);
 
 		if (hooks.afterDelete) {
