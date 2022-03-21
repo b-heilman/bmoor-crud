@@ -1,3 +1,5 @@
+const {set} = require('bmoor/src/core.js');
+
 const {Statement, methods} = require('../statement.js');
 
 class ExecutableStatement extends Statement {
@@ -38,7 +40,21 @@ class ExecutableStatement extends Statement {
 			alias: base.series,
 			// note the absence of joins here
 			payload: base.payload,
-			...super.toRequest()
+			...super.toRequest(),
+			remap: Object.values(this.models).reduce(
+				(agg, model) => {
+					model.fields.forEach((field) => {
+						set(
+							agg,
+							field.as || field.path,
+							field.path
+						);
+					});
+
+					return agg;
+				},
+				{}
+			)
 		};
 	}
 

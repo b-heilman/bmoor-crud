@@ -254,7 +254,7 @@ describe('src/controller/guard.js', function () {
 						new Context({
 							method: 'get',
 							query: {
-								fields: {
+								remap: {
 									other: 'eins'
 								},
 								param: {
@@ -526,7 +526,7 @@ describe('src/controller/guard.js', function () {
 									}
 								},
 								query: {
-									fields: {
+									remap: {
 										other: 'eins'
 									}
 								}
@@ -555,7 +555,7 @@ describe('src/controller/guard.js', function () {
 									payload: {
 										weAre: 'Penn State'
 									},
-									fields: {
+									remap: {
 										other: 'eins'
 									}
 								},
@@ -628,7 +628,7 @@ describe('src/controller/guard.js', function () {
 									id: '1'
 								},
 								query: {
-									fields: {
+									remap: {
 										other: 'eins'
 									}
 								}
@@ -663,7 +663,7 @@ describe('src/controller/guard.js', function () {
 									payload: {
 										weAre: 'Penn State'
 									},
-									fields: {
+									remap: {
 										other: 'eins'
 									}
 								},

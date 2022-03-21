@@ -66,19 +66,19 @@ async function runUpdate(ids, guard, delta, ctx) {
 
 class Guard extends Controller {
 	async parseSettings(ctx) {
-		let fields = null;
+		let remap = null;
 
 		const content = await ctx.getContent();
 
 		if (content) {
-			fields = content.fields;
+			remap = content.remap;
 		}
 
-		if (!fields) {
-			fields = ctx.getQuery('fields');
+		if (!remap) {
+			remap = ctx.getQuery('remap');
 		}
 
-		const actions = fields ? this.view.actions.remap(fields) : null;
+		const actions = remap ? this.view.actions.remap(remap) : null;
 
 		return {
 			actions

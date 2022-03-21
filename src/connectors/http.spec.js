@@ -32,8 +32,8 @@ describe('src/connectors/http.js', function () {
 				const stmt = new ExecutableStatement('model-1')
 					.setMethod(methods.create)
 					.addFields('model-1', [
-						new StatementField('id'),
-						new StatementField('name'),
+						new StatementField('id', 'key'),
+						new StatementField('name', 'other'),
 						new StatementField('title'),
 						new StatementField('json')
 					])
@@ -62,11 +62,11 @@ describe('src/connectors/http.js', function () {
 				expect(JSON.parse(content.body)).to.deep.equal({
 					base: 'model-1',
 					alias: 'model-1',
-					fields: {
-						id: '$model-1.id',
-						name: '$model-1.name',
-						title: '$model-1.title',
-						json: '$model-1.json'
+					remap: {
+						key: 'id',
+						other: 'name',
+						title: 'title',
+						json: 'json'
 					},
 					payload: {
 						hello: 'world'
@@ -113,11 +113,11 @@ describe('src/connectors/http.js', function () {
 				expect(JSON.parse(content.body)).to.deep.equal({
 					base: 'model-1',
 					alias: 'model-1',
-					fields: {
-						id: '$model-1.id',
-						name: '$model-1.name',
-						title: '$model-1.title',
-						json: '$model-1.json'
+					remap: {
+						id: 'id',
+						name: 'name',
+						title: 'title',
+						json: 'json'
 					},
 					payload: {
 						hello: 'world'
@@ -161,11 +161,11 @@ describe('src/connectors/http.js', function () {
 				expect(JSON.parse(content.body)).to.deep.equal({
 					base: 'model-1',
 					alias: 'model-1',
-					fields: {
-						id: '$model-1.id',
-						name: '$model-1.name',
-						title: '$model-1.title',
-						json: '$model-1.json'
+					remap: {
+						id: 'id',
+						name: 'name',
+						title: 'title',
+						json: 'json'
 					},
 					payload: null
 				});

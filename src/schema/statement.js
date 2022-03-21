@@ -1,5 +1,3 @@
-const {set} = require('bmoor/src/core.js');
-
 const {StatementExpression, joiners} = require('./statement/expression.js');
 
 const methods = {
@@ -180,23 +178,7 @@ class Statement {
 
 		const query = queryStmts.length ? queryStmts.join(' & ') : undefined;
 
-		return Object.values(this.models).reduce(
-			(agg, model) => {
-				model.fields.forEach((field) => {
-					set(
-						agg.fields,
-						field.as || field.path,
-						`$${model.series}.${field.path}`
-					);
-				});
-
-				return agg;
-			},
-			{
-				fields: {},
-				query
-			}
-		);
+		return { query };
 	}
 
 	toJSON() {

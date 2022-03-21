@@ -1,3 +1,5 @@
+const {set} = require('bmoor/src/core.js');
+
 const {Statement, methods, reduceExpression} = require('../statement.js');
 
 class QueryStatement extends Statement {
@@ -194,6 +196,21 @@ class QueryStatement extends Statement {
 				base: base.schema,
 				alias: base.series,
 				...super.toRequest(),
+				fields: Object.values(this.models).reduce(
+					(agg, model) => {
+						model.fields.forEach((field) => {
+							set(
+								agg,
+								field.as || field.path,
+								`$${model.series}.${field.path}`
+							);
+						});
+
+						return agg;
+					},
+					{
+					}
+				),
 				joins: []
 			}
 		);
