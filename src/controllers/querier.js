@@ -1,48 +1,49 @@
-   
 const {Config} = require('bmoor/src/lib/config.js');
 
-const config = new Config({
-});
+const config = new Config({});
 
 const {Controller, parseQuery} = require('../server/controller.js');
 const {Composite} = require('../schema/composite.js');
 const {Document} = require('../services/document.js');
 
 class Querier extends Controller {
-	constructor(nexus){
+	constructor(nexus) {
 		super(null);
 
 		this.nexus = nexus;
 	}
 
-	async query(ctx){
-		const [content, query] = await Promise.all([
+	async search(ctx) {
+		const [content, settings] = await Promise.all([
 			ctx.getContent(),
-			parseQuery(null, ctx)
+			parseQuery(ctx)
 		]);
 
-		const composite = new Composite('comp-'+Date.now(), this.nexus);
+		const composite = new Composite('comp-' + Date.now(), this.nexus);
 
 		await composite.configure(content);
 
 		const doc = new Document(composite);
 
 		await doc.configure({});
+		await doc.build();
 
-		return doc.query(query, ctx);
+		return doc.query(settings, ctx);
 	}
 
-	_buildRoutes(){
-		return [{
-			// create
-			route: {
-				path: '',
-				method: 'post'
-			}, 
-			fn: (ctx) => this.query(ctx),
-			hidden: false,
-			structure: {}
-		}];
+	_buildRoutes() {
+		return [
+			{
+				// create
+				route: {
+					path: '',
+					method: 'post'
+				},
+				fn: (ctx) => this.search(ctx),
+				hidden: false,
+				structure: {}
+			}
+		];
 	}
 }
 

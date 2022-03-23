@@ -1,40 +1,33 @@
-
 const error = require('bmoor/src/lib/error.js');
-const {Config} = require('bmoor/src/lib/config.js');
 
-const {connector: sqlConnector} = require('./sql.js');
+const {factory: sqlFactory} = require('./sql.js');
 
-const config = new Config({
-	knex: null
-});
+function buildConnector(settings) {
+	const connector = sqlFactory();
 
-const connector = Object.create(sqlConnector);
+	connector.run = async function (sql, params) {
+		const {knex} = settings;
 
-connector.run = async function(sql, params/*, stmt*/){
-	const knex = config.get('knex');
+		if (!knex) {
+			throw error('no knex connector configured', {
+				code: 'BMOOR_CRUD_CONNECTOR_KNEX'
+			});
+		}
 
-	if (!knex){
-		throw error('no knex connector configured', {
-			code: 'BMOOR_CRUD_CONNECTOR_KNEX'
+		const rtn = knex.raw(sql, params).then((res) => res[0]);
+
+		rtn.catch(() => {
+			console.log('knex fail =>\n', sql, '\n', params);
 		});
-	}
 
-	const rtn = knex.raw(sql, params)
-	.then(res => res[0]);
+		return rtn;
+	};
 
-	rtn.catch(() => {
-		console.log('knex fail =>\n', sql, '\n', params);
-	});
-
-	return rtn;
-};
+	return connector;
+}
 
 module.exports = {
-	config,
-
-	connector,
-
-	factory(){
-		return connector;
+	factory(settings) {
+		return buildConnector(settings);
 	}
 };

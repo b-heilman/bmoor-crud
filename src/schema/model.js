@@ -1,39 +1,41 @@
-
 const {Structure} = require('./structure.js');
-const {Query} = require('./query.js');
+const {QueryStatement} = require('./query/statement.js');
+const {ExecutableStatement} = require('./executable/statement.js');
 
-function buildSettings(properties, field){
+function buildSettings(properties, field) {
 	const path = field.path;
 
 	const settings = field.incomingSettings;
 
-	if (settings.create){
+	if (settings.create) {
 		properties.create.push(path);
 	}
 
-	if (settings.read){
+	if (settings.read) {
 		properties.read.push(path);
 	}
 
-	if (settings.update){
+	if (settings.update) {
 		properties.update.push(path);
 
-		if (settings.updateType){
+		if (settings.updateType) {
 			properties.updateType[path] = settings.updateType;
 		}
 	}
 
-	if (settings.index){
+	if (settings.index) {
 		properties.index.push(path);
 	}
 
-	if (settings.query){
+	if (settings.query) {
 		properties.query.push(path);
 	}
 
-	if (settings.key){
-		if (properties.key){
-			throw new Error(`bmoor-data.Structure does not support compound keys: (${properties.key}, ${path})`);
+	if (settings.key) {
+		if (properties.key) {
+			throw new Error(
+				`bmoor-data.Structure does not support compound keys: (${properties.key}, ${path})`
+			);
 		}
 
 		properties.key = path;
@@ -43,8 +45,8 @@ function buildSettings(properties, field){
 }
 
 class Model extends Structure {
-	async build(){
-		if (!this.settings){
+	async build() {
+		if (!this.settings) {
 			await super.build();
 
 			Object.assign(this.settings, {
@@ -56,30 +58,30 @@ class Model extends Structure {
 				index: [],
 				query: []
 			});
-			
+
 			this.fields.reduce(buildSettings, this.settings);
 		}
 	}
 
-	async configure(settings){
+	async configure(settings) {
 		await super.configure(settings);
-		
-		this.settings = null;
+
 		this.schema = settings.schema || this.name;
-		this.connector = settings.connector;
+		this.setSource(await this.nexus.loadSource(settings.source));
+		this.settings = null;
 
 		const fields = settings.fields;
 
-		for (let property in fields){
+		for (let property in fields) {
 			let field = fields[property];
 
-			if (field === true){
+			if (field === true) {
 				field = {
 					create: true,
 					read: true,
 					update: true
 				};
-			} else if (field === false){
+			} else if (field === false) {
 				field = {
 					create: false,
 					read: true,
@@ -90,75 +92,120 @@ class Model extends Structure {
 			this.addField(property, field);
 		}
 
-		return this.build();
+		await this.build();
+
+		this.preparedQuery = await this.prepareBaseQuery();
+		this.preparedExecutable = await this.prepareBaseExecutable();
 	}
 
-	getKeyField(){
+	getKeyField() {
 		return this.settings.key;
 	}
 
-	getKey(delta){
-		if (!delta){
+	getKey(delta) {
+		if (!delta) {
 			throw new Error('Can not getKey of undefined delta');
 		}
 
 		return delta[this.settings.key];
 	}
 
-	hasIndex(){
+	hasIndex() {
 		return this.settings.index.length !== 0;
 	}
 
-	clean(type, datum){
-		if (!this.settings){
+	clean(type, datum) {
+		// TODO: I should be able to assume build has already been run
+		if (!this.settings) {
 			this.build();
 		}
 
-		return this.settings[type]
-		.reduce(
-			(agg, field) => {
-				if (field in datum){
-					agg[field] = datum[field];
-				}
+		return this.settings[type].reduce((agg, field) => {
+			if (field in datum) {
+				agg[field] = datum[field];
+			}
 
-				return agg;
-			}, 
-			{}
-		);
+			return agg;
+		}, {});
 	}
 
-	cleanDelta(delta, type='update'){
+	cleanDelta(delta, type = 'update') {
+		// TODO: remove
 		return this.clean(type, delta);
 	}
 
-	getChanges(datum, delta){
+	getChanges(datum, delta) {
 		delta = this.clean('update', delta);
 
-		return this.settings.update
-		.reduce(
-			(agg, field) => {
-				if (field in delta && datum[field] !== delta[field]){
-					agg[field] = delta[field];
-				}
+		return this.settings.update.reduce((agg, field) => {
+			if (field in delta && datum[field] !== delta[field]) {
+				agg[field] = delta[field];
+			}
 
-				return agg;
+			return agg;
+		}, {});
+	}
+
+	getBaseExecutable() {
+		return new ExecutableStatement(this.name);
+	}
+
+	async prepareBaseExecutable() {
+		const exe = this.getBaseExecutable();
+
+		exe.setModel(this.name, this);
+
+		await this.extendBaseStatement(exe);
+
+		return exe;
+	}
+
+	async getExecutable(method, request, ctx, settings={}) {
+		const exe = this.preparedExecutable.clone();
+
+		exe.setMethod(method);
+
+		if (request.payload) {
+			exe.setPayload(this.name, request.payload);
+		}
+
+		await this.extendStatement(
+			exe,
+			{
+				actions: settings.actions,
+				params: request.params
 			},
-			{}
+			ctx
 		);
+
+		return exe;
+	}
+
+	getBaseQuery() {
+		return new QueryStatement(this.name);
+	}
+
+	async prepareBaseQuery() {
+		const query = await super.prepareBaseQuery();
+
+		query.setModel(this.name, this);
+
+		return query;
 	}
 
 	// produces representation for interface layer
 	// similar to lookup, which is a combination of models
-	async getQuery(settings, ctx){
-		const query = settings.baseQuery || new Query(this.name);
+	async getQuery(request, ctx, settings = {}) {
+		const query = this.preparedQuery.clone();
 
-		query.setSchema(this.name, this.schema);
-
-		return super.getQuery(
+		return this.extendQuery(
+			query,
 			{
-				query: query,
-				joins: settings.joins,
-				params: settings.params
+				actions: settings.actions,
+				joins: request.joins,
+				query: request.query,
+				params: request.params,
+				sort: request.sort
 			},
 			ctx
 		);

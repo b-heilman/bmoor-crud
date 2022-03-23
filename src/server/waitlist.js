@@ -1,4 +1,3 @@
-
 const {Config} = require('bmoor/src/lib/config.js');
 const {Broadcast} = require('bmoor/src/eventing/broadcast.js');
 
@@ -7,15 +6,15 @@ const config = new Config({
 });
 
 class Waitlist {
-	constructor(){
+	constructor() {
 		this.broadcast = new Broadcast();
 		this.definitions = {};
 	}
 
-	getModel(model){
+	getModel(model) {
 		let rtn = this.definitions[model];
 
-		if (!rtn){
+		if (!rtn) {
 			rtn = {};
 
 			this.definitions[model] = rtn;
@@ -25,23 +24,23 @@ class Waitlist {
 	}
 
 	// TODO: await and resolve should have the same invoke structure
-	async await(modelName, ref){
+	async await(modelName, ref) {
 		const waiting = this.getModel(modelName);
 
 		let rtn = waiting[ref];
 
-		if (!rtn){
+		if (!rtn) {
 			rtn = new Promise((resolve, reject) => {
 				const looking = `${modelName}.${ref}`;
 				const timeout = config.get('timeout');
 
-				const clear = setTimeout(function(){
-					reject(new Error('waitlist timed out: '+looking));
+				const clear = setTimeout(function () {
+					reject(new Error('waitlist timed out: ' + looking));
 				}, timeout);
 
-				this.broadcast.once(looking, function(info){
+				this.broadcast.once(looking, function (info) {
 					clearTimeout(clear);
-					
+
 					resolve(info);
 				});
 			});
@@ -52,7 +51,7 @@ class Waitlist {
 		return rtn;
 	}
 
-	async resolve(service, ref, datum){
+	async resolve(service, ref, datum) {
 		const modelName = service.structure.name;
 		const waiting = this.getModel(modelName);
 

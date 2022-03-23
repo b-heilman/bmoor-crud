@@ -1,12 +1,11 @@
-
 const expect = require('chai').expect;
 
 const {Mapper} = require('./mapper.js');
 const {Network} = require('./network.js');
 
-describe('src/graph/network', function(){
-	describe('::search', function(){
-		it('should work linearly', function(){
+describe('src/graph/network', function () {
+	describe('::search', function () {
+		it('should work linearly', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -16,12 +15,11 @@ describe('src/graph/network', function(){
 			const network = new Network(mapper);
 
 			expect(
-				network.search(['table-1','table-2','table-4'], 3)
-				.map(t => t.name)
+				network.search(['table-1', 'table-2', 'table-4'], 3).map((t) => t.name)
 			).to.deep.equal(['table-1', 'table-2', 'table-4', 'table-3']);
 		});
 
-		it('should pick the shortest route - 1', function(){
+		it('should pick the shortest route - 1', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -32,12 +30,11 @@ describe('src/graph/network', function(){
 			const network = new Network(mapper);
 
 			expect(
-				network.search(['table-1','table-2','table-4'], 3)
-				.map(t => t.name)
+				network.search(['table-1', 'table-2', 'table-4'], 3).map((t) => t.name)
 			).to.deep.equal(['table-1', 'table-2', 'table-4']);
 		});
 
-		it('should pick the shortest route - 2', function(){
+		it('should pick the shortest route - 2', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -48,12 +45,11 @@ describe('src/graph/network', function(){
 			const network = new Network(mapper);
 
 			expect(
-				network.search(['table-1','table-3','table-4'], 3)
-				.map(t => t.name)
+				network.search(['table-1', 'table-3', 'table-4'], 3).map((t) => t.name)
 			).to.deep.equal(['table-1', 'table-3', 'table-4']);
 		});
 
-		it('should pick the shortest route - 3', function(){
+		it('should pick the shortest route - 3', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -65,17 +61,16 @@ describe('src/graph/network', function(){
 			let failed = false;
 
 			try {
-				network.search(['table-1','table-2','table-4'], 1);
-			} catch(ex){
+				network.search(['table-1', 'table-2', 'table-4'], 1);
+			} catch (ex) {
 				failed = true;
 			}
 
-			expect(failed)
-			.to.equal(true);
+			expect(failed).to.equal(true);
 		});
 
-		describe('with stub', function(){
-			it('should pick the correct route', function(){
+		describe('with stub', function () {
+			it('should pick the correct route', function () {
 				const mapper = new Mapper();
 
 				mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -87,15 +82,17 @@ describe('src/graph/network', function(){
 				const network = new Network(mapper);
 
 				expect(
-					network.search(['table-1','table-3'], 3, {
-						stub: ['table-2']
-					}).map(t => t.name)
+					network
+						.search(['table-1', 'table-3'], 3, {
+							stub: ['table-2']
+						})
+						.map((t) => t.name)
 				).to.deep.equal(['table-1', 'table-3', 'table-5', 'table-4']);
 			});
 		});
 
-		describe('with with join', function(){
-			it('should link correctly in the short way', function(){
+		describe('with with join', function () {
+			it('should link correctly in the short way', function () {
 				const mapper = new Mapper();
 
 				mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -108,15 +105,17 @@ describe('src/graph/network', function(){
 				const network = new Network(mapper);
 
 				expect(
-					network.search(['table-1','table-3'], 3, {
-						join: {
-							'table-4': ['table-3'] // only table-4 can link to table-3
-						}
-					}).map(t => t.name)
+					network
+						.search(['table-1', 'table-3'], 3, {
+							join: {
+								'table-4': ['table-3'] // only table-4 can link to table-3
+							}
+						})
+						.map((t) => t.name)
 				).to.deep.equal(['table-1', 'table-3', 'table-2', 'table-4']);
 			});
 
-			it('should link correctly in the long way', function(){
+			it('should link correctly in the long way', function () {
 				const mapper = new Mapper();
 
 				mapper.addLink('table-1', 'id', 'table-2', 'eins');
@@ -129,19 +128,21 @@ describe('src/graph/network', function(){
 				const network = new Network(mapper);
 
 				expect(
-					network.search(['table-1','table-3'], 3, {
-						join: {
-							'table-4': ['table-3'], // only table-4 can link to table-3
-							'table-3': ['table-2']
-						}
-					}).map(t => t.name)
+					network
+						.search(['table-1', 'table-3'], 3, {
+							join: {
+								'table-4': ['table-3'], // only table-4 can link to table-3
+								'table-3': ['table-2']
+							}
+						})
+						.map((t) => t.name)
 				).to.deep.equal(['table-1', 'table-3', 'table-5', 'table-4']);
 			});
 		});
 	});
 
-	describe('::requirements', function(){
-		it('should order them correctly - order 1', function(){
+	describe('::requirements', function () {
+		it('should order them correctly - order 1', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'table1Id');
@@ -154,37 +155,56 @@ describe('src/graph/network', function(){
 			const network = new Network(mapper);
 
 			expect(
-				network.requirements(['table-6','table-3','table-4'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-6','table-4','table-5','table-3']);
+				network
+					.requirements(['table-6', 'table-3', 'table-4'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-6', 'table-4', 'table-5', 'table-3']);
 
 			expect(
-				network.requirements(['table-3','table-4','table-6'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-4','table-6','table-5','table-3']);
+				network
+					.requirements(['table-3', 'table-4', 'table-6'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-4', 'table-6', 'table-5', 'table-3']);
 
 			expect(
-				network.requirements(['table-6','table-4','table-3'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-6','table-4','table-5','table-3']);
+				network
+					.requirements(['table-6', 'table-4', 'table-3'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-6', 'table-4', 'table-5', 'table-3']);
 
-			let master = ['table-1','table-7','table-2','table-3','table-4','table-6','table-5'];
-			expect(
-				network.requirements(master, 3)
-				.map(t => t.name)
-			).to.deep.equal(
-				['table-7','table-2','table-4','table-6','table-5','table-3','table-1']
-			);
+			let master = [
+				'table-1',
+				'table-7',
+				'table-2',
+				'table-3',
+				'table-4',
+				'table-6',
+				'table-5'
+			];
+			expect(network.requirements(master, 3).map((t) => t.name)).to.deep.equal([
+				'table-7',
+				'table-2',
+				'table-4',
+				'table-6',
+				'table-5',
+				'table-3',
+				'table-1'
+			]);
 
 			expect(
-				network.requirements(master.reverse(), 3)
-				.map(t => t.name)
-			).to.deep.equal(
-				['table-4','table-2','table-7','table-6','table-5','table-3','table-1']
-			);
+				network.requirements(master.reverse(), 3).map((t) => t.name)
+			).to.deep.equal([
+				'table-4',
+				'table-2',
+				'table-7',
+				'table-6',
+				'table-5',
+				'table-3',
+				'table-1'
+			]);
 		});
 
-		it('should order them correctly - order 2', function(){
+		it('should order them correctly - order 2', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'table2Id', 'table-2', 'id');
@@ -197,18 +217,22 @@ describe('src/graph/network', function(){
 
 			const network = new Network(mapper);
 
-			let results = network.requirements([
-				'table-7',
-				'table-6',
-				'table-5',
-				'table-4',
-				'table-3',
-				'table-2',
-				'table-1'
-			], 1).map(t => t.name);
+			let results = network
+				.requirements(
+					[
+						'table-7',
+						'table-6',
+						'table-5',
+						'table-4',
+						'table-3',
+						'table-2',
+						'table-1'
+					],
+					1
+				)
+				.map((t) => t.name);
 
-			expect(results)
-			.to.deep.equal([
+			expect(results).to.deep.equal([
 				'table-4',
 				'table-3',
 				'table-6',
@@ -218,18 +242,22 @@ describe('src/graph/network', function(){
 				'table-1'
 			]);
 
-			results = network.requirements([
-				'table-1',
-				'table-2',
-				'table-3',
-				'table-4',
-				'table-5',
-				'table-6',
-				'table-7'
-			], 1).map(t => t.name);
+			results = network
+				.requirements(
+					[
+						'table-1',
+						'table-2',
+						'table-3',
+						'table-4',
+						'table-5',
+						'table-6',
+						'table-7'
+					],
+					1
+				)
+				.map((t) => t.name);
 
-			expect(results)
-			.to.deep.equal([
+			expect(results).to.deep.equal([
 				'table-3',
 				'table-4',
 				'table-2',
@@ -239,18 +267,22 @@ describe('src/graph/network', function(){
 				'table-7'
 			]);
 
-			results = network.requirements([
-				'table-1',
-				'table-7',
-				'table-3',
-				'table-4',
-				'table-2',
-				'table-6',
-				'table-5'
-			], 1).map(t => t.name);
+			results = network
+				.requirements(
+					[
+						'table-1',
+						'table-7',
+						'table-3',
+						'table-4',
+						'table-2',
+						'table-6',
+						'table-5'
+					],
+					1
+				)
+				.map((t) => t.name);
 
-			expect(results)
-			.to.deep.equal([
+			expect(results).to.deep.equal([
 				'table-3',
 				'table-4',
 				'table-2',
@@ -261,7 +293,7 @@ describe('src/graph/network', function(){
 			]);
 		});
 
-		it('should order them correctly - order 3', function(){
+		it('should order them correctly - order 3', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'table2Id', 'table-2', 'id');
@@ -276,18 +308,22 @@ describe('src/graph/network', function(){
 
 			const network = new Network(mapper);
 
-			let results = network.requirements([
-				'table-7',
-				'table-6',
-				'table-5',
-				'table-4',
-				'table-3',
-				'table-2',
-				'table-1'
-			], 1).map(t => t.name);
+			let results = network
+				.requirements(
+					[
+						'table-7',
+						'table-6',
+						'table-5',
+						'table-4',
+						'table-3',
+						'table-2',
+						'table-1'
+					],
+					1
+				)
+				.map((t) => t.name);
 
-			expect(results)
-			.to.deep.equal([
+			expect(results).to.deep.equal([
 				'table-7',
 				'table-6',
 				'table-3',
@@ -299,8 +335,8 @@ describe('src/graph/network', function(){
 		});
 	});
 
-	describe('::anchored', function(){
-		it('should order them correctly - order 1', function(){
+	describe('::anchored', function () {
+		it('should order them correctly - order 1', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'table1Id');
@@ -313,39 +349,58 @@ describe('src/graph/network', function(){
 			const network = new Network(mapper);
 
 			expect(
-				network.anchored(['table-6','table-3','table-4'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-3','table-4','table-5','table-6']);
+				network
+					.anchored(['table-6', 'table-3', 'table-4'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-3', 'table-4', 'table-5', 'table-6']);
 
 			expect(
-				network.anchored(['table-3','table-4','table-6'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-3','table-4','table-5','table-6']);
+				network
+					.anchored(['table-3', 'table-4', 'table-6'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-3', 'table-4', 'table-5', 'table-6']);
 
 			expect(
-				network.anchored(['table-6','table-4','table-3'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-3','table-4','table-5','table-6']);
+				network
+					.anchored(['table-6', 'table-4', 'table-3'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-3', 'table-4', 'table-5', 'table-6']);
 
-			let master = ['table-1','table-7','table-2','table-3','table-4','table-6','table-5'];
-			expect(
-				network.anchored(master, 3)
-				.map(t => t.name)
-			).to.deep.equal(
-				['table-3','table-1','table-4','table-5','table-2','table-6','table-7']
-			);
+			let master = [
+				'table-1',
+				'table-7',
+				'table-2',
+				'table-3',
+				'table-4',
+				'table-6',
+				'table-5'
+			];
+			expect(network.anchored(master, 3).map((t) => t.name)).to.deep.equal([
+				'table-3',
+				'table-1',
+				'table-4',
+				'table-5',
+				'table-2',
+				'table-6',
+				'table-7'
+			]);
 
 			expect(
-				network.anchored(master.reverse(), 3)
-				.map(t => t.name)
-			).to.deep.equal(
-				['table-3','table-5','table-4','table-1','table-6','table-2','table-7']
-			);
+				network.anchored(master.reverse(), 3).map((t) => t.name)
+			).to.deep.equal([
+				'table-3',
+				'table-5',
+				'table-4',
+				'table-1',
+				'table-6',
+				'table-2',
+				'table-7'
+			]);
 		});
 	});
 
-	describe('::path', function(){
-		it('should order them correctly - order 1', function(){
+	describe('::path', function () {
+		it('should order them correctly - order 1', function () {
 			const mapper = new Mapper();
 
 			mapper.addLink('table-1', 'id', 'table-2', 'table1Id');
@@ -359,24 +414,43 @@ describe('src/graph/network', function(){
 			const network = new Network(mapper);
 
 			expect(
-				network.path('table-6', 'table-4', ['table-6','table-3','table-4'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-6','table-5','table-3','table-4']);
-			
-			expect(
-				network.path('table-1', 'table-4', ['table-1','table-2','table-3', 'table-4'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-1','table-3','table-4']);
+				network
+					.path('table-6', 'table-4', ['table-6', 'table-3', 'table-4'], 3)
+					.map((t) => t.name)
+			).to.deep.equal(['table-6', 'table-5', 'table-3', 'table-4']);
 
 			expect(
-				network.path('table-1', 'table-3', ['table-1','table-2','table-3', 'table-4'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-1','table-3']);
+				network
+					.path(
+						'table-1',
+						'table-4',
+						['table-1', 'table-2', 'table-3', 'table-4'],
+						3
+					)
+					.map((t) => t.name)
+			).to.deep.equal(['table-1', 'table-3', 'table-4']);
 
 			expect(
-				network.path('table-4', 'table-1', ['table-1','table-2','table-3', 'table-4'], 3)
-				.map(t => t.name)
-			).to.deep.equal(['table-4','table-3','table-1']);
+				network
+					.path(
+						'table-1',
+						'table-3',
+						['table-1', 'table-2', 'table-3', 'table-4'],
+						3
+					)
+					.map((t) => t.name)
+			).to.deep.equal(['table-1', 'table-3']);
+
+			expect(
+				network
+					.path(
+						'table-4',
+						'table-1',
+						['table-1', 'table-2', 'table-3', 'table-4'],
+						3
+					)
+					.map((t) => t.name)
+			).to.deep.equal(['table-4', 'table-3', 'table-1']);
 		});
 	});
 });

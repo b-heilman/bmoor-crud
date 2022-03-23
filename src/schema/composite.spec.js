@@ -1,19 +1,29 @@
-
 const expect = require('chai').expect;
 
 const {Nexus, config: nexusConfig} = require('../env/nexus.js');
 const {config} = require('./structure.js');
-const {Composite} = require('./composite.js');
 
-describe('src/schema/composite.js', function(){
+describe('src/schema/composite.js', function () {
+	const {Composite} = require('./composite.js');
+
 	let nexus = null;
 
-	beforeEach(async function(){
+	beforeEach(async function () {
 		nexusConfig.set('timeout', 500);
 
 		nexus = new Nexus();
 
+		await nexus.setConnector('connect-1', function () {
+			return {};
+		});
+
+		await nexus.configureSource('source-1', {
+			connector: 'connect-1',
+			isFlat: false
+		});
+
 		await nexus.configureModel('test-1', {
+			source: 'source-1',
 			fields: {
 				id: {
 					read: true,
@@ -33,6 +43,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-2', {
+			source: 'source-1',
 			schema: 'table_2',
 			fields: {
 				id: {
@@ -59,6 +70,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-3', {
+			source: 'source-1',
 			isFlat: true,
 			fields: {
 				id: {
@@ -66,7 +78,8 @@ describe('src/schema/composite.js', function(){
 					key: true
 				},
 				name: {
-					read: true
+					read: true,
+					query: true
 				},
 				title: {
 					read: true
@@ -82,6 +95,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-3-1', {
+			source: 'source-1',
 			isFlat: true,
 			fields: {
 				id: {
@@ -104,8 +118,8 @@ describe('src/schema/composite.js', function(){
 			}
 		});
 
-
 		await nexus.configureModel('test-pivot', {
+			source: 'source-1',
 			fields: {
 				id: {
 					read: true
@@ -128,6 +142,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-4', {
+			source: 'source-1',
 			isFlat: false,
 			fields: {
 				id: {
@@ -144,6 +159,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-5', {
+			source: 'source-1',
 			fields: {
 				id: {
 					read: true,
@@ -173,6 +189,7 @@ describe('src/schema/composite.js', function(){
 		});
 
 		await nexus.configureModel('test-6', {
+			source: 'source-1',
 			fields: {
 				table5Id: {
 					read: true,
@@ -185,13 +202,11 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
-	describe('::configure', function(){
-		it('should run correctly', async function(){
-			await (new Composite('foo-bar-1', nexus)).configure({
+	describe('::configure', function () {
+		it('should run correctly', async function () {
+			await new Composite('foo-bar-1', nexus).configure({
 				base: 'test-1',
-				joins: [
-					'> $test-2'
-				],
+				joins: ['> $test-2'],
 				fields: {
 					name: '.name',
 					version: '$test-2.name'
@@ -199,12 +214,11 @@ describe('src/schema/composite.js', function(){
 			});
 		});
 
-		describe('via nexus', function(){
-			it('should allow a child composite', async function(){
+		describe('via nexus', function () {
+			it('should allow a child composite', async function () {
 				await nexus.configureComposite('hello-world-1', {
 					base: 'test-2',
-					joins: [
-					],
+					joins: [],
 					fields: {
 						version: '$test-2.name'
 					}
@@ -212,13 +226,8 @@ describe('src/schema/composite.js', function(){
 
 				const lookup = await nexus.configureComposite('hello-world-2', {
 					base: 'test-3',
-					joins: [
-						'> $test-pivot',
-						'> #hello-world-1'
-					],
-					params: {
-						'$test-pivot.boom': true
-					},
+					joins: ['> $test-pivot', '> #hello-world-1'],
+					filters: '$test-pivot.boom=true',
 					fields: {
 						name: '.name',
 						version: '#hello-world-1'
@@ -231,68 +240,87 @@ describe('src/schema/composite.js', function(){
 					}
 				});
 
-				expect(query.toJSON())
-				.to.deep.equal({
-					models: [{
-						series: 'test-3',
-						schema: 'test-3',
-						joins: []
-					}, {
-						series: 'test-pivot',
-						schema: 'test-pivot',
-						joins: [{
-							name: 'test-3',
-							optional: false,
-							mappings: [{
-								from: 'test3Id',
-								to: 'id'
-							}]
-						}]
-					}],
-					fields: [{
-						series: 'test-3',
-						as: 'name',
-						path: 'name'
-					}, {
-						series: 'test-3',
-						as: 'sub_0',
-						path: 'test2Id'
-					}],
-					params: [{
-						operation: '=',
-						path: 'doo',
-						series: 'test-3',
-						settings: {},
-						value: 5
-					}, {
-						operation: '=',
-						path: 'boom',
-						series: 'test-pivot',
-						settings: {},
-						value: true
-					}]
+				expect(query.toJSON()).to.deep.equal({
+					method: 'read',
+					models: [
+						{
+							series: 'test-3',
+							schema: 'test-3',
+							joins: []
+						},
+						{
+							series: 'test-pivot',
+							schema: 'test-pivot',
+							joins: [
+								{
+									name: 'test-3',
+									optional: false,
+									mappings: [
+										{
+											from: 'test3Id',
+											to: 'id'
+										}
+									]
+								}
+							]
+						}
+					],
+					fields: [
+						{
+							series: 'test-3',
+							as: 'name',
+							path: 'name'
+						},
+						{
+							series: 'test-3',
+							as: 'sub_0',
+							path: 'test2Id'
+						}
+					],
+					filters: {
+						expressables: [
+							{
+								operation: '=',
+								path: 'boom',
+								series: 'test-pivot',
+								settings: {},
+								value: true
+							}
+						],
+						join: 'and'
+					},
+					params: {
+						join: 'and',
+						expressables: [
+							{
+								operation: '=',
+								path: 'doo',
+								series: 'test-3',
+								settings: {},
+								value: 5
+							}
+						]
+					}
 				});
 
 				const subs = lookup.subs;
 
-				expect(lookup.subs.length)
-				.to.equal(1);
+				expect(lookup.subs.length).to.equal(1);
 
-				expect(subs[0].mounts)
-				.to.deep.equal([{
-					path: 'sub_0',
-					clear: true,
-					param: '$test-2.id',
-					joinPath: ''
-				}]);
+				expect(subs[0].mounts).to.deep.equal([
+					{
+						path: 'sub_0',
+						clear: true,
+						param: '$test-2.id',
+						joinPath: ''
+					}
+				]);
 			});
 
-			it('should allow a child composite with a step', async function(){
+			it('should allow a child composite with a step', async function () {
 				await nexus.configureComposite('foo-bar-1', {
 					base: 'test-1',
-					joins: [
-						'> $test-2'
-					],
+					joins: ['> $test-2'],
 					fields: {
 						name: '.name',
 						version: '$test-2.name'
@@ -301,9 +329,7 @@ describe('src/schema/composite.js', function(){
 
 				const lookup = await nexus.configureComposite('foo-bar-2', {
 					base: 'test-3',
-					joins: [
-						'> $test-2 > #foo-bar-1'
-					],
+					joins: ['> $test-2 > #foo-bar-1'],
 					fields: {
 						name: '.name',
 						version: '#foo-bar-1'
@@ -312,45 +338,55 @@ describe('src/schema/composite.js', function(){
 
 				const query = await lookup.getQuery();
 
-				expect(query.toJSON())
-				.to.deep.equal({
-					models: [{
-						series: 'test-3',
-						schema: 'test-3',
-						joins: []
-					}],
-					fields: [{
-						series: 'test-3',
-						as: 'name',
-						path: 'name'
-					}, {
-						series: 'test-3',
-						as: 'sub_0',
-						path: 'test2Id'
-					}],
-					params: []
+				expect(query.toJSON()).to.deep.equal({
+					method: 'read',
+					models: [
+						{
+							series: 'test-3',
+							schema: 'test-3',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'test-3',
+							as: 'name',
+							path: 'name'
+						},
+						{
+							series: 'test-3',
+							as: 'sub_0',
+							path: 'test2Id'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 
 				const subs = lookup.subs;
 
-				expect(lookup.subs.length)
-				.to.equal(1);
+				expect(lookup.subs.length).to.equal(1);
 
-				expect(subs[0].mounts)
-				.to.deep.equal([{
-					path: 'sub_0',
-					clear: true,
-					param: '$test-2.id',
-					joinPath: '$test-2.test1Id>.id$test-1'
-				}]);
+				expect(subs[0].mounts).to.deep.equal([
+					{
+						path: 'sub_0',
+						clear: true,
+						param: '$test-2.id',
+						joinPath: '$test-2.test1Id>.id$test-1'
+					}
+				]);
 			});
 
-			it('should allow a child composite, from same base', async function(){
+			it('should allow a child composite, from same base', async function () {
 				await nexus.configureComposite('foo-bar-1', {
 					base: 'test-1',
-					joins: [
-						'> $test-2'
-					],
+					joins: ['> $test-2'],
 					fields: {
 						name: '.name',
 						version: '$test-2.name'
@@ -359,10 +395,7 @@ describe('src/schema/composite.js', function(){
 
 				const lookup = await nexus.configureComposite('foo-bar-2', {
 					base: 'test-1',
-					joins: [
-						'> #alias:foo-bar-1',
-						'> #alias-2:foo-bar-1'
-					],
+					joins: ['> #alias:foo-bar-1', '> #alias-2:foo-bar-1'],
 					fields: {
 						json: '.json',
 						foo: '#alias',
@@ -372,37 +405,51 @@ describe('src/schema/composite.js', function(){
 
 				const query = await lookup.getQuery();
 
-				expect(query.toJSON())
-				.to.deep.equal({
-					models: [{
-						series: 'test-1',
-						schema: 'test-1',
-						joins: []
-					}],
-					fields: [{
-						series: 'test-1',
-						as: 'json',
-						path: 'json'
-					}, {
-						series: 'test-1',
-						as: 'sub_0',
-						path: 'id'
-					}, {
-						series: 'test-1',
-						as: 'sub_1',
-						path: 'id'
-					}],
-					params: []
+				expect(query.toJSON()).to.deep.equal({
+					method: 'read',
+					models: [
+						{
+							series: 'test-1',
+							schema: 'test-1',
+							joins: []
+						}
+					],
+					fields: [
+						{
+							series: 'test-1',
+							as: 'json',
+							path: 'json'
+						},
+						{
+							series: 'test-1',
+							as: 'sub_0',
+							path: 'id'
+						},
+						{
+							series: 'test-1',
+							as: 'sub_1',
+							path: 'id'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 		});
 	});
 
-	describe('::getChangeType', function(){
+	describe('::getChangeType', function () {
 		let sut = null;
 
-		beforeEach(async function(){
+		beforeEach(async function () {
 			await nexus.configureModel('test-10', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -423,6 +470,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			await nexus.configureModel('test-11', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -448,9 +496,7 @@ describe('src/schema/composite.js', function(){
 			sut = new Composite('foo-bar-1', nexus);
 			await sut.configure({
 				base: 'test-10',
-				joins: [
-					'> $test-11'
-				],
+				joins: ['> $test-11'],
 				fields: {
 					eins: '.eins',
 					zwei: '.zwei',
@@ -465,7 +511,7 @@ describe('src/schema/composite.js', function(){
 			});
 		});
 
-		it('pull in a singlar value', async function(){
+		it('pull in a singlar value', async function () {
 			expect(
 				sut.getChangeType({
 					zwei: 2,
@@ -525,14 +571,15 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
-	describe('::validate', function(){
+	describe('::validate', function () {
 		let sut = true;
 
 		const createMode = config.get('writeModes.create');
 		const updateMode = config.get('writeModes.update');
 
-		beforeEach(async function(){
+		beforeEach(async function () {
 			await nexus.configureModel('test-10', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -547,6 +594,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			await nexus.configureModel('test-11', {
+				source: 'source-1',
 				fields: {
 					eins: {
 						update: false
@@ -570,9 +618,7 @@ describe('src/schema/composite.js', function(){
 			sut = new Composite('foo-bar-1', nexus);
 			await sut.configure({
 				base: 'test-10',
-				joins: [
-					'> $test-11'
-				],
+				joins: ['> $test-11'],
 				fields: {
 					eins: '.eins',
 					zwei: '.zwei',
@@ -584,64 +630,80 @@ describe('src/schema/composite.js', function(){
 			});
 		});
 
-		it('should work on create', async function(){
+		it('should work on create', async function () {
 			expect(
-				sut.validate({
-					eins: 1,
-					zwei: 2,
-					eins2: 1,
-					other: {
-						zwei: 3
-					}
-				}, createMode)
+				sut.validate(
+					{
+						eins: 1,
+						zwei: 2,
+						eins2: 1,
+						other: {
+							zwei: 3
+						}
+					},
+					createMode
+				)
 			).to.deep.equal([]);
 
 			expect(
-				sut.validate({
-					eins: 1,
-					fier: 4
-				}, createMode)
+				sut.validate(
+					{
+						eins: 1,
+						fier: 4
+					},
+					createMode
+				)
 			).to.deep.equal([
 				{path: 'zwei', message: 'can not be empty'},
 				{path: 'other.zwei', message: 'can not be empty'}
 			]);
 
 			expect(
-				sut.validate({
-					eins: 1,
-					zwei: 2
-				}, createMode)
-			).to.deep.equal([
-				{path: 'other.zwei', message: 'can not be empty'}
-			]);
+				sut.validate(
+					{
+						eins: 1,
+						zwei: 2
+					},
+					createMode
+				)
+			).to.deep.equal([{path: 'other.zwei', message: 'can not be empty'}]);
 		});
 
-		it('should work on update', async function(){
+		it('should work on update', async function () {
 			expect(
-				sut.validate({
-					eins: 1, 
-					zwei: 2, 
-					other: {
-						zwei: 2
-					}
-				}, updateMode)
+				sut.validate(
+					{
+						eins: 1,
+						zwei: 2,
+						other: {
+							zwei: 2
+						}
+					},
+					updateMode
+				)
 			).to.deep.equal([]);
 
 			expect(
-				sut.validate({
-					eins: 1, 
-					eins2: 1
-				}, updateMode)
+				sut.validate(
+					{
+						eins: 1,
+						eins2: 1
+					},
+					updateMode
+				)
 			).to.deep.equal([]);
 
 			expect(
-				sut.validate({
-					eins: 1, 
-					zwei: null, 
-					other: {
-						zwei: null
-					}
-				}, updateMode)
+				sut.validate(
+					{
+						eins: 1,
+						zwei: null,
+						other: {
+							zwei: null
+						}
+					},
+					updateMode
+				)
 			).to.deep.equal([
 				{path: 'zwei', message: 'can not be empty'},
 				{path: 'other.zwei', message: 'can not be empty'}
@@ -649,12 +711,14 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
-	describe('::getQuery', function(){
+	describe('::getQuery', function () {
+		let lookup = null;
 		// TODO: run this against models that have alias schemas
-		it('should work', async function(){
-			const lookup = new Composite('foo-bar', nexus);
+		beforeEach(async function () {
+			lookup = new Composite('foo-bar', nexus);
 
 			await nexus.configureModel('my-model', {
+				source: 'source-1',
 				schema: 'a_schema',
 				fields: {
 					id: {
@@ -675,6 +739,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			await nexus.configureModel('my-tail', {
+				source: 'source-1',
 				schema: 'tail_schema',
 				fields: {
 					id: {
@@ -688,6 +753,7 @@ describe('src/schema/composite.js', function(){
 			});
 
 			await nexus.configureModel('my-pivot', {
+				source: 'source-1',
 				schema: 'pivot_schema',
 				fields: {
 					id: {
@@ -716,11 +782,7 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				joins: [
-					'> $test-2 > $test-3',
-					'> $my-model',
-					'> $my-pivot > $my-tail'
-				],
+				joins: ['> $test-2 > $test-3', '> $my-model', '> $my-pivot > $my-tail'],
 				fields: {
 					eins: '.name',
 					zwei: '$test-2.name',
@@ -731,132 +793,204 @@ describe('src/schema/composite.js', function(){
 					tail: '$my-tail.name'
 				}
 			});
+		});
 
+		it('should work', async function () {
 			const query = await lookup.getQuery({
 				params: {
-					'$test-1.name': 'foo-bar',
-					'$test-3.name': {
-						'eq': 'hello-world'
-					}
-				}
+					'$test-1.name': 'foo-bar'
+				},
+				query: '$test-3.name="hello-world"'
 			});
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-1',
-					schema: 'test-1',
-					joins: []
-				}, {
-					series: 'test-2',
-					schema: 'table_2',
-					joins: [{
-						name: 'test-1',
-						optional: false,
-						mappings: [{
-							from: 'test1Id',
-							to: 'id'
-						}]
-					}]
-				}, {
-					series: 'my-model',
-					schema: 'a_schema',
-					joins: [{
-						name: 'test-1',
-						optional: false,
-						mappings: [{
-							from: 'test1Id',
-							to: 'id'
-						}]
-					}]
-				}, {
-					series: 'my-pivot',
-					schema: 'pivot_schema',
-					joins: [{
-						name: 'test-1',
-						optional: false,
-						mappings: [{
-							from: 'test1Id',
-							to: 'id'
-						}]
-					}]
-				}, {
-					series: 'test-3',
-					schema: 'test-3',
-					joins: [{
-						name: 'test-2',
-						optional: false,
-						mappings: [{
-							from: 'test2Id',
-							to: 'id'
-						}]
-					}]
-				}, {
-					series: 'my-tail',
-					schema: 'tail_schema',
-					joins: [{
-						name: 'my-pivot',
-						optional: false,
-						mappings: [{
-							to: 'myTailId',
-							from: 'id'
-						}]
-					}]
-				}],
-				fields: [{
-					series: 'test-1',
-					as: 'eins',
-					path: 'name'
-				}, {
-					series: 'test-2',
-					as: 'zwei',
-					path: 'name'
-				}, {
-					series: 'test-2',
-					as: 'drei',
-					path: 'title'
-				}, {
-					series: 'my-model',
-					as: 'aliased',
-					path: 'name'
-				}, {
-					series: 'my-pivot',
-					as: 'pivot',
-					path: 'name'
-				}, {
-					series: 'test-3',
-					as: 'fier',
-					path: 'name'
-				}, {
-					series: 'my-tail',
-					as: 'tail',
-					path: 'name'
-				}],
-				params: [{
-					series: 'test-1',
-					path: 'name',
-					operation: '=',
-					value: 'foo-bar',
-					settings: {}
-				},{
-					series: 'test-3',
-					path: 'name',
-					operation: 'eq',
-					value: 'hello-world',
-					settings: {}
-				}]
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-1',
+						schema: 'test-1',
+						joins: []
+					},
+					{
+						series: 'test-2',
+						schema: 'table_2',
+						joins: [
+							{
+								name: 'test-1',
+								optional: false,
+								mappings: [
+									{
+										from: 'test1Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'my-model',
+						schema: 'a_schema',
+						joins: [
+							{
+								name: 'test-1',
+								optional: false,
+								mappings: [
+									{
+										from: 'test1Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'my-pivot',
+						schema: 'pivot_schema',
+						joins: [
+							{
+								name: 'test-1',
+								optional: false,
+								mappings: [
+									{
+										from: 'test1Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'test-3',
+						schema: 'test-3',
+						joins: [
+							{
+								name: 'test-2',
+								optional: false,
+								mappings: [
+									{
+										from: 'test2Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'my-tail',
+						schema: 'tail_schema',
+						joins: [
+							{
+								name: 'my-pivot',
+								optional: false,
+								mappings: [
+									{
+										to: 'myTailId',
+										from: 'id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						series: 'test-1',
+						as: 'eins',
+						path: 'name'
+					},
+					{
+						series: 'test-2',
+						as: 'zwei',
+						path: 'name'
+					},
+					{
+						series: 'test-2',
+						as: 'drei',
+						path: 'title'
+					},
+					{
+						series: 'my-model',
+						as: 'aliased',
+						path: 'name'
+					},
+					{
+						series: 'my-pivot',
+						as: 'pivot',
+						path: 'name'
+					},
+					{
+						series: 'test-3',
+						as: 'fier',
+						path: 'name'
+					},
+					{
+						series: 'my-tail',
+						as: 'tail',
+						path: 'name'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-3',
+							path: 'name',
+							operation: '=',
+							value: 'hello-world',
+							settings: {}
+						},
+						{
+							series: 'test-1',
+							path: 'name',
+							operation: '=',
+							value: 'foo-bar',
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 
-		it('should succeed with a basic alignment', async function(){
+		it('should succeed if validating a valid field', async function () {
+			let failed = false;
+			try {
+				await lookup.getQuery({
+					query: '$test-3.name="hello-world"',
+					validate: true
+				});
+			} catch (ex) {
+				failed = true;
+			}
+
+			expect(failed).to.equal(false);
+		});
+
+		it('should fail if validating an invalid field', async function () {
+			let failed = false;
+			try {
+				await lookup.getQuery({
+					query: '$test-3.title="hello-world"',
+					validate: true
+				});
+			} catch (ex) {
+				expect(ex.message).to.equal('unqueriable field: test-3.title');
+
+				failed = true;
+			}
+
+			expect(failed).to.equal(true);
+		});
+
+		it('should succeed with a basic alignment', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
-				joins: [
-					'> $test-2 > $test-3',
-					'$test-2 > $test-3-1'
-				],
+				joins: ['> $test-2 > $test-3', '$test-2 > $test-3-1'],
 				fields: {
 					eins: '.name',
 					zwei: '$test-2.name',
@@ -868,80 +1002,107 @@ describe('src/schema/composite.js', function(){
 
 			const query = await lookup.getQuery();
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-1',
-					schema: 'test-1',
-					joins: []
-				}, {
-					series: 'test-2',
-					schema: 'table_2',
-					joins: [{
-						name: 'test-1',
-						optional: false,
-						mappings: [{
-							from: 'test1Id',
-							to: 'id'
-						}]
-					}]
-				}, {
-					series: 'test-3',
-					schema: 'test-3',
-					joins: [{
-						name: 'test-2',
-						optional: false,
-						mappings: [{
-							from: 'test2Id',
-							to: 'id'
-						}]
-					}]
-				}, {
-					series: 'test-3-1',
-					schema: 'test-3-1',
-					joins: [{
-						name: 'test-2',
-						optional: false,
-						mappings: [{
-							from: 'test2Id',
-							to: 'id'
-						}]
-					}]
-				}],
-				fields: [{
-					series: 'test-1',
-					as: 'eins',
-					path: 'name'
-				}, {
-					series: 'test-2',
-					as: 'zwei',
-					path: 'name'
-				}, {
-					series: 'test-2',
-					as: 'drei',
-					path: 'title'
-				}, {
-					series: 'test-3',
-					as: 'fier',
-					path: 'name'
-				}, {
-					series: 'test-3-1',
-					as: 'other',
-					path: 'name'
-				}],
-				params: []
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-1',
+						schema: 'test-1',
+						joins: []
+					},
+					{
+						series: 'test-2',
+						schema: 'table_2',
+						joins: [
+							{
+								name: 'test-1',
+								optional: false,
+								mappings: [
+									{
+										from: 'test1Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'test-3',
+						schema: 'test-3',
+						joins: [
+							{
+								name: 'test-2',
+								optional: false,
+								mappings: [
+									{
+										from: 'test2Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'test-3-1',
+						schema: 'test-3-1',
+						joins: [
+							{
+								name: 'test-2',
+								optional: false,
+								mappings: [
+									{
+										from: 'test2Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						series: 'test-1',
+						as: 'eins',
+						path: 'name'
+					},
+					{
+						series: 'test-2',
+						as: 'zwei',
+						path: 'name'
+					},
+					{
+						series: 'test-2',
+						as: 'drei',
+						path: 'title'
+					},
+					{
+						series: 'test-3',
+						as: 'fier',
+						path: 'name'
+					},
+					{
+						series: 'test-3-1',
+						as: 'other',
+						path: 'name'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					expressables: [],
+					join: 'and'
+				}
 			});
 		});
 
-		it('should succeed with a alias alignment', async function(){
+		it('should succeed with a alias alignment', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-5',
-				joins: [
-					'.creator1Id > $creator:test-1',
-					'.owner1Id > ?$owner:test-1'
-				],
+				joins: ['.creator1Id > $creator:test-1', '.owner1Id > ?$owner:test-1'],
 				fields: {
 					eins: '$creator.name',
 					zwei: '$creator.title',
@@ -950,113 +1111,140 @@ describe('src/schema/composite.js', function(){
 					funf: '$owner.title'
 				}
 			});
-			
+
 			const query = await lookup.getQuery({
-				joins: [
-					'$junk:test-6 > .id$test-5'
-				],
+				joins: ['$junk:test-6 > .id$test-5'],
 				params: {
-					'$creator.id': 123,
-					'$junk.foo': {
-						gt: 456,
-						lt: 789
-					}
-				}
+					'$creator.id': 123
+				},
+				query: '$junk.foo>456&$junk.foo<789'
 			});
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-5',
-					schema: 'test-5',
-					joins: []
-				}, {
-					series: 'creator',
-					schema: 'test-1',
-					joins: [{
-						name: 'test-5',
-						optional: false,
-						mappings: [{
-							from: 'id',
-							to: 'creator1Id'
-						}]
-					}]
-				}, {
-					series: 'owner',
-					schema: 'test-1',
-					joins: [{
-						name: 'test-5',
-						optional: true,
-						mappings: [{
-							from: 'id',
-							to: 'owner1Id'
-						}]
-					}]
-				}, {
-					series: 'junk',
-					schema: 'test-6',
-					joins: [{
-						name: 'test-5',
-						optional: false,
-						mappings: [{
-							from: 'table5Id',
-							to: 'id'
-						}]
-					}]
-				}],
-				fields: [{
-					series: 'test-5',
-					as: 'drei',
-					path: 'title'
-				}, {
-					series: 'creator',
-					as: 'eins',
-					path: 'name'
-				}, {
-					series: 'creator',
-					as: 'zwei',
-					path: 'title'
-				}, {
-					series: 'owner',
-					as: 'fier',
-					path: 'name'
-				}, {
-					series: 'owner',
-					as: 'funf',
-					path: 'title'
-				}],
-				params: [{
-					series: 'creator',
-					path: 'id',
-					operation: '=',
-					value: 123,
-					settings: {}
-				}, {
-					series: 'junk',
-					path: 'foo',
-					operation: 'gt',
-					value: 456,
-					settings: {}
-				}, {
-					series: 'junk',
-					path: 'foo',
-					operation: 'lt',
-					value: 789,
-					settings: {}
-				}]
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-5',
+						schema: 'test-5',
+						joins: []
+					},
+					{
+						series: 'creator',
+						schema: 'test-1',
+						joins: [
+							{
+								name: 'test-5',
+								optional: false,
+								mappings: [
+									{
+										from: 'id',
+										to: 'creator1Id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'owner',
+						schema: 'test-1',
+						joins: [
+							{
+								name: 'test-5',
+								optional: true,
+								mappings: [
+									{
+										from: 'id',
+										to: 'owner1Id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'junk',
+						schema: 'test-6',
+						joins: [
+							{
+								name: 'test-5',
+								optional: false,
+								mappings: [
+									{
+										from: 'table5Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						series: 'test-5',
+						as: 'drei',
+						path: 'title'
+					},
+					{
+						series: 'creator',
+						as: 'eins',
+						path: 'name'
+					},
+					{
+						series: 'creator',
+						as: 'zwei',
+						path: 'title'
+					},
+					{
+						series: 'owner',
+						as: 'fier',
+						path: 'name'
+					},
+					{
+						series: 'owner',
+						as: 'funf',
+						path: 'title'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'junk',
+							path: 'foo',
+							operation: '>',
+							value: 456,
+							settings: {}
+						},
+						{
+							series: 'junk',
+							path: 'foo',
+							operation: '<',
+							value: 789,
+							settings: {}
+						},
+						{
+							series: 'creator',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
 
-	describe('::calculateDynamics', function(){
-		it('should work', async function(){
+	describe('::calculateDynamics', function () {
+		it('should work', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
-				joins: [
-					'> $test-2 > $test-3'
-				],
+				joins: ['> $test-2 > $test-3'],
 				fields: {
 					eins: '$test-1.name',
 					zwei: '$test-2.name',
@@ -1064,12 +1252,12 @@ describe('src/schema/composite.js', function(){
 					fier: '$test-3.name'
 				},
 				dynamics: {
-					foo: function(datum, variables){
+					foo: function (datum, variables) {
 						return variables.one + variables.two;
 					},
 					hello: {
-						world: function(datum){
-							return datum.eins+':'+datum.zwei;
+						world: function (datum) {
+							return datum.eins + ':' + datum.zwei;
 						}
 					}
 				}
@@ -1082,8 +1270,7 @@ describe('src/schema/composite.js', function(){
 
 			lookup.calculateDynamics(datum, {one: 1, two: 2});
 
-			expect(datum)
-			.to.deep.equal({
+			expect(datum).to.deep.equal({
 				eins: 'eins',
 				zwei: 'zwei',
 				foo: 3,
@@ -1094,8 +1281,8 @@ describe('src/schema/composite.js', function(){
 		});
 	});
 
-	describe('::encodeResults', function(){
-		it('should work', async function(){
+	describe('::encodeResults', function () {
+		it('should work', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
@@ -1104,16 +1291,15 @@ describe('src/schema/composite.js', function(){
 				fields: {
 					eins: '.name'
 				},
-				encode: function(){
+				encode: function () {
 					return 'ok';
 				}
 			});
 
-			expect(await lookup.encodeResults({one: 1, two: 2}))
-			.to.deep.equal('ok');
+			expect(await lookup.encodeResults({one: 1, two: 2})).to.deep.equal('ok');
 		});
 
-		it('should correctly default', async function(){
+		it('should correctly default', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
@@ -1124,11 +1310,13 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			expect(await lookup.encodeResults({one: 1, two: 2}))
-			.to.deep.equal({one: 1, two: 2});
+			expect(await lookup.encodeResults({one: 1, two: 2})).to.deep.equal({
+				one: 1,
+				two: 2
+			});
 		});
 
-		it('should correctly stack', async function(){
+		it('should correctly stack', async function () {
 			await nexus.configureComposite('foo-bar-1', {
 				base: 'test-1',
 				joins: ['> $test-2'],
@@ -1136,9 +1324,8 @@ describe('src/schema/composite.js', function(){
 					name: '.name',
 					version: '$test-2.name'
 				},
-				encode: function(datum){
-					expect(datum)
-					.to.deep.equal({hello: 'world'});
+				encode: function (datum) {
+					expect(datum).to.deep.equal({hello: 'world'});
 
 					datum.foo = 'bar';
 
@@ -1154,9 +1341,8 @@ describe('src/schema/composite.js', function(){
 					json: '.json',
 					other: '#foo-bar-1'
 				},
-				encode: function(datum){
-					expect(datum)
-					.to.deep.equal({hello: 'world', foo: 'bar'});
+				encode: function (datum) {
+					expect(datum).to.deep.equal({hello: 'world', foo: 'bar'});
 
 					datum.eins = 'zwei';
 
@@ -1164,20 +1350,21 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			expect(await lookup.encodeResults({hello: 'world'}))
-			.to.deep.equal({hello: 'world', foo: 'bar', eins: 'zwei'});
+			expect(await lookup.encodeResults({hello: 'world'})).to.deep.equal({
+				hello: 'world',
+				foo: 'bar',
+				eins: 'zwei'
+			});
 		});
 	});
 
-	describe('::getKeyQueryByModel', function(){
-		it('should work', async function(){
+	describe('::getKeyQueryByModel', function () {
+		it('should work', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-1',
-				joins: [
-					'> $test-2 > $test-3'
-				],
+				joins: ['> $test-2 > $test-3'],
 				fields: {
 					eins: '$test-1.name',
 					zwei: '$test-2.name',
@@ -1188,116 +1375,167 @@ describe('src/schema/composite.js', function(){
 
 			let query = await lookup.getKeyQueryByModel('test-1', 1, {});
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-1',
-					schema: 'test-1',
-					joins: []
-				}],
-				fields: [{
-					series: 'test-1',
-					as: 'key',
-					path: 'id'
-				}],
-				params: [{
-					series: 'test-1',
-					path: 'id',
-					operation: '=',
-					value: 1,
-					settings: {}
-				}]
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-1',
+						schema: 'test-1',
+						joins: []
+					}
+				],
+				fields: [
+					{
+						series: 'test-1',
+						as: 'key',
+						path: 'id'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-1',
+							path: 'id',
+							operation: '=',
+							value: 1,
+							settings: {}
+						}
+					]
+				}
 			});
 
 			query = await lookup.getKeyQueryByModel('test-2', 2, {});
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-1',
-					schema: 'test-1',
-					joins: []
-				}, {
-					series: 'test-2',
-					schema: 'table_2',
-					joins: [{
-						name: 'test-1',
-						optional: false,
-						mappings: [{
-							from: 'test1Id',
-							to: 'id'
-						}]
-					}]
-				}],
-				fields: [{
-					series: 'test-1',
-					as: 'key',
-					path: 'id'
-				}],
-				params: [{
-					series: 'test-2',
-					path: 'id',
-					operation: '=',
-					value: 2,
-					settings: {}
-				}]
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-1',
+						schema: 'test-1',
+						joins: []
+					},
+					{
+						series: 'test-2',
+						schema: 'table_2',
+						joins: [
+							{
+								name: 'test-1',
+								optional: false,
+								mappings: [
+									{
+										from: 'test1Id',
+										to: 'id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						series: 'test-1',
+						as: 'key',
+						path: 'id'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-2',
+							path: 'id',
+							operation: '=',
+							value: 2,
+							settings: {}
+						}
+					]
+				}
 			});
 
 			query = await lookup.getKeyQueryByModel('test-3', 3, {});
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-1',
-					schema: 'test-1',
-					joins: []
-				}, {
-					series: 'test-2',
-					schema: 'table_2',
-					joins: [{
-						name: 'test-1',
-						optional: false,
-						mappings: [{
-							to: 'id',
-							from: 'test1Id'
-						}]
-					}]
-				}, {
-					series: 'test-3',
-					schema: 'test-3',
-					joins: [{
-						name: 'test-2',
-						optional: false,
-						mappings: [{
-							to: 'id',
-							from: 'test2Id'
-						}]
-					}]
-				}],
-				fields: [{
-					series: 'test-1',
-					as: 'key',
-					path: 'id'
-				}],
-				params: [{
-					series: 'test-3',
-					path: 'id',
-					operation: '=',
-					value: 3,
-					settings: {}
-				}]
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-1',
+						schema: 'test-1',
+						joins: []
+					},
+					{
+						series: 'test-2',
+						schema: 'table_2',
+						joins: [
+							{
+								name: 'test-1',
+								optional: false,
+								mappings: [
+									{
+										to: 'id',
+										from: 'test1Id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'test-3',
+						schema: 'test-3',
+						joins: [
+							{
+								name: 'test-2',
+								optional: false,
+								mappings: [
+									{
+										to: 'id',
+										from: 'test2Id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						series: 'test-1',
+						as: 'key',
+						path: 'id'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'test-3',
+							path: 'id',
+							operation: '=',
+							value: 3,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 
-		it('should succeed with a alias alignment', async function(){
+		it('should succeed with a alias alignment', async function () {
 			const lookup = new Composite('foo-bar', nexus);
 
 			await lookup.configure({
 				base: 'test-5',
-				joins: [
-					'.creator1Id > $creator:test-1',
-					'.owner1Id > ?$owner:test-1'
-				],
+				joins: ['.creator1Id > $creator:test-1', '.owner1Id > ?$owner:test-1'],
 				fields: {
 					eins: '$creator.name',
 					zwei: '$creator.title',
@@ -1306,62 +1544,86 @@ describe('src/schema/composite.js', function(){
 					funf: '$owner.title'
 				}
 			});
-			
+
 			let query = await lookup.getKeyQueryByModel('test-1', 123);
 
-			expect(query.toJSON())
-			.to.deep.equal({
-				models: [{
-					series: 'test-5',
-					schema: 'test-5',
-					joins: []
-				}, {
-					series: 'owner',
-					schema: 'test-1',
-					joins: [{
-						name: 'test-5',
-						optional: true,
-						mappings: [{
-							from: 'id',
-							to: 'owner1Id'
-						}]
-					}]
-				}, {
-					series: 'creator',
-					schema: 'test-1',
-					joins: [{
-						name: 'test-5',
-						optional: false,
-						mappings: [{
-							from: 'id',
-							to: 'creator1Id'
-						}]
-					}]
-				}],
-				fields: [{
-					series: 'test-5',
-					as: 'key',
-					path: 'id'
-				}],
-				params: [{
-					series: 'owner',
-					path: 'id',
-					operation: '=',
-					value: 123,
-					settings: {}
-				}, {
-					series: 'creator',
-					path: 'id',
-					operation: '=',
-					value: 123,
-					settings: {}
-				}]
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
+				models: [
+					{
+						series: 'test-5',
+						schema: 'test-5',
+						joins: []
+					},
+					{
+						series: 'owner',
+						schema: 'test-1',
+						joins: [
+							{
+								name: 'test-5',
+								optional: true,
+								mappings: [
+									{
+										from: 'id',
+										to: 'owner1Id'
+									}
+								]
+							}
+						]
+					},
+					{
+						series: 'creator',
+						schema: 'test-1',
+						joins: [
+							{
+								name: 'test-5',
+								optional: false,
+								mappings: [
+									{
+										from: 'id',
+										to: 'creator1Id'
+									}
+								]
+							}
+						]
+					}
+				],
+				fields: [
+					{
+						series: 'test-5',
+						as: 'key',
+						path: 'id'
+					}
+				],
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'owner',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						},
+						{
+							series: 'creator',
+							path: 'id',
+							operation: '=',
+							value: 123,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
 
-	describe('::getKeyQueryBySeries', function(){
-		it('should work', async function(){
+	describe('::getKeyQueryBySeries', function () {
+		it('should work', async function () {
 			const sub = new Composite('sub', nexus);
 
 			await sub.configure({
@@ -1373,9 +1635,8 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			nexus.loadComposite = async function(name){
-				expect(name)
-				.to.equal('sub');
+			nexus.loadComposite = async function (name) {
+				expect(name).to.equal('sub');
 
 				return sub;
 			};
@@ -1384,9 +1645,7 @@ describe('src/schema/composite.js', function(){
 
 			await lookup.configure({
 				base: 'test-1',
-				joins: [
-					'> $test-2 > $test-3 > $test-pivot > #sub'
-				],
+				joins: ['> $test-2 > $test-3 > $test-pivot > #sub'],
 				fields: {
 					eins: '.name',
 					title: '.title',
@@ -1395,221 +1654,110 @@ describe('src/schema/composite.js', function(){
 				}
 			});
 
-			let query = await lookup.getKeyQueryBySeries(
-				'sub', 3, {}
-			);
+			let query = await lookup.getKeyQueryBySeries('sub', 3, {});
 
-			expect(query.toJSON())
-			.to.deep.equal({
+			expect(query.toJSON()).to.deep.equal({
+				method: 'read',
 				models: [
 					{
-						'series': 'test-1',
-						'schema': 'test-1',
-						'joins': []
+						series: 'test-1',
+						schema: 'test-1',
+						joins: []
 					},
 					{
-						'series': 'test-2',
-						'schema': 'table_2',
-						'joins': [
+						series: 'test-2',
+						schema: 'table_2',
+						joins: [
 							{
-								'name': 'test-1',
-								'mappings': [
+								name: 'test-1',
+								mappings: [
 									{
-										'from': 'test1Id',
-										'to': 'id'
+										from: 'test1Id',
+										to: 'id'
 									}
 								],
-								'optional': false
+								optional: false
 							}
 						]
 					},
 					{
-						'series': 'test-3',
-						'schema': 'test-3',
-						'joins': [
+						series: 'test-3',
+						schema: 'test-3',
+						joins: [
 							{
-								'name': 'test-2',
-								'mappings': [
+								name: 'test-2',
+								mappings: [
 									{
-										'from': 'test2Id',
-										'to': 'id'
+										from: 'test2Id',
+										to: 'id'
 									}
 								],
-								'optional': false
+								optional: false
 							}
 						]
 					},
 					{
-						'series': 'test-pivot',
-						'schema': 'test-pivot',
-						'joins': [
+						series: 'test-pivot',
+						schema: 'test-pivot',
+						joins: [
 							{
-								'name': 'test-3',
-								'mappings': [
+								name: 'test-3',
+								mappings: [
 									{
-										'from': 'test3Id',
-										'to': 'id'
+										from: 'test3Id',
+										to: 'id'
 									}
 								],
-								'optional': false
+								optional: false
 							}
 						]
 					},
 					{
-						'series': 'sub',
-						'schema': 'test-4',
-						'joins': [
+						series: 'sub',
+						schema: 'test-4',
+						joins: [
 							{
-								'name': 'test-pivot',
-								'mappings': [
+								name: 'test-pivot',
+								mappings: [
 									{
-										'from': 'id',
-										'to': 'test4Id'
+										from: 'id',
+										to: 'test4Id'
 									}
 								],
-								'optional': false
+								optional: false
 							}
 						]
 					}
 				],
 				fields: [
 					{
-						'series': 'test-1',
-						'path': 'id',
-						'as': 'key'
+						series: 'test-1',
+						path: 'id',
+						as: 'key'
 					}
 				],
-				params: [
-					{
-						'series': 'sub',
-						'path': 'id',
-						'operation': '=',
-						'value': 3,
-						'settings': {}
-					}
-				]
+				filters: {
+					expressables: [],
+					join: 'and'
+				},
+				params: {
+					join: 'and',
+					expressables: [
+						{
+							series: 'sub',
+							path: 'id',
+							operation: '=',
+							value: 3,
+							settings: {}
+						}
+					]
+				}
 			});
 		});
 	});
 
-	describe('::getInflater', function(){
-		it('should work', async function(){
-			const lookup = new Composite('blah', nexus);
-
-			await lookup.configure({
-				base: 'test-1',
-				joins: ['> $test-2 > $test-3'],
-				fields: {
-					eins: '.name',
-					zwei: '$test-2.name',
-					drei: '$test-2.title',
-					fier: '$test-3.name'
-				}
-			});
-
-			const inflate = await lookup.getInflater({});
-
-			const datum = inflate({
-				'eins': 'field-1',
-				'zwei': 'field-2',
-				'drei': 'field-3',
-				'fier': 'field-4'
-			});
-
-			expect(datum)
-			.to.deep.equal({
-				eins: 'field-1',
-				zwei: 'field-2',
-				drei: 'field-3',
-				fier: 'field-4'
-			});
-		});
-
-		it('should work with types and isFlat', async function(){
-			const lookup = new Composite('blah', nexus);
-
-			await lookup.configure({
-				base: 'test-1',
-				joins: ['> $test-2 > $test-3'],
-				fields: {
-					eins: '.json',
-					zwei: '$test-2.json',
-					drei: '$test-2.title',
-					fier: {
-						value: '$test-3.name'
-					}
-				}
-			});
-
-			const inflate = await lookup.getInflater({});
-
-			const datum = inflate({
-				'eins': '{"foo":"bar"}',
-				'zwei': '{"hello":"world"}',
-				'drei': 'field-3',
-				'fier.value': 'field-4'
-			});
-
-			expect(datum)
-			.to.deep.equal({
-				eins: {
-					foo: 'bar'
-				},
-				zwei: {
-					hello: 'world'
-				},
-				drei: 'field-3',
-				fier: {
-					value: 'field-4'
-				}
-			});
-		});
-
-		it('should work with types and isFlat:false', async function(){
-			const lookup = new Composite('blah', nexus);
-
-			await lookup.configure({
-				base: 'test-1',
-				joins: ['> $test-2 > $test-3'],
-				fields: {
-					eins: '.json',
-					zwei: '$test-2.json',
-					drei: {
-						value: '$test-2.title'
-					},
-					fier: '$test-3.name'
-				}
-			});
-
-			const inflate = await lookup.getInflater({});
-
-			const datum = inflate({
-				'eins': '{"foo":"bar"}',
-				'zwei': '{"hello":"world"}',
-				'drei': {
-					value: 'field-3'
-				},
-				'fier': 'field-4'
-			});
-
-			expect(datum)
-			.to.deep.equal({
-				eins: {
-					foo: 'bar'
-				},
-				zwei: {
-					hello: 'world'
-				},
-				drei: {
-					value: 'field-3'
-				},
-				fier: 'field-4'
-			});
-		});
-	});
-
-	describe('schema', function(){
-		it('should define the correct properties', async function(){
+	describe('schema', function () {
+		it('should define the correct properties', async function () {
 			const comp = new Composite('test', nexus);
 
 			await comp.configure({
@@ -1625,36 +1773,36 @@ describe('src/schema/composite.js', function(){
 
 			await comp.link();
 
-			const test = comp.fields.map(
-				field => field.toJSON()
-			);
+			const test = comp.fields.map((field) => field.toJSON());
 
-			expect(test)
-			.to.deep.equal([{
-				path: 'name',
-				storage: {
-					schema: 'test-2',
-					path: 'name'
+			expect(test).to.deep.equal([
+				{
+					path: 'name',
+					storage: {
+						schema: 'test-2',
+						path: 'name'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
 				},
-				usage: {
-					type: undefined,
-					description: undefined
+				{
+					path: 'foo.bar',
+					storage: {
+						schema: 'test-2',
+						path: 'title'
+					},
+					usage: {
+						type: undefined,
+						description: undefined
+					}
 				}
-			}, {
-				path: 'foo.bar',
-				storage: {
-					schema: 'test-2',
-					path: 'title'
-				},
-				usage: {
-					type: undefined,
-					description: undefined
-				}
-			}]);
+			]);
 		});
 
-		describe('extends', function(){
-			it('should pull in all the extended fields', async function(){
+		describe('extends', function () {
+			it('should pull in all the extended fields', async function () {
 				await nexus.configureComposite('base', {
 					base: 'test-1',
 					joins: [],
@@ -1676,35 +1824,35 @@ describe('src/schema/composite.js', function(){
 
 				await comp.link();
 
-				const test = comp.fields.map(
-					field => field.toJSON()
-				);
+				const test = comp.fields.map((field) => field.toJSON());
 
-				expect(test)
-				.to.deep.equal([{
-					path: 'myName',
-					storage: {
-						schema: 'test-2',
-						path: 'name'
+				expect(test).to.deep.equal([
+					{
+						path: 'myName',
+						storage: {
+							schema: 'test-2',
+							path: 'name'
+						},
+						usage: {
+							type: undefined,
+							description: undefined
+						}
 					},
-					usage: {
-						type: undefined,
-						description: undefined
+					{
+						path: 'name',
+						storage: {
+							schema: 'test-1',
+							path: 'name'
+						},
+						usage: {
+							type: undefined,
+							description: undefined
+						}
 					}
-				}, {
-					path: 'name',
-					storage: {
-						schema: 'test-1',
-						path: 'name'
-					},
-					usage: {
-						type: undefined,
-						description: undefined
-					}
-				}]);
+				]);
 			});
 
-			it('should be able to extend an extension', async function(){
+			it('should be able to extend an extension', async function () {
 				await nexus.configureComposite('base', {
 					base: 'test-1',
 					joins: [],
@@ -1735,47 +1883,48 @@ describe('src/schema/composite.js', function(){
 
 				await comp.link();
 
-				const test = comp.fields.map(
-					field => field.toJSON()
-				);
+				const test = comp.fields.map((field) => field.toJSON());
 
-				expect(test)
-				.to.deep.equal([{
-					path: 'reallyMyName',
-					storage: {
-						schema: 'test-3',
-						path: 'name'
+				expect(test).to.deep.equal([
+					{
+						path: 'reallyMyName',
+						storage: {
+							schema: 'test-3',
+							path: 'name'
+						},
+						usage: {
+							type: undefined,
+							description: undefined
+						}
 					},
-					usage: {
-						type: undefined,
-						description: undefined
-					}
-				},{
-					path: 'myName',
-					storage: {
-						schema: 'test-2',
-						path: 'name'
+					{
+						path: 'myName',
+						storage: {
+							schema: 'test-2',
+							path: 'name'
+						},
+						usage: {
+							type: undefined,
+							description: undefined
+						}
 					},
-					usage: {
-						type: undefined,
-						description: undefined
+					{
+						path: 'name',
+						storage: {
+							schema: 'test-1',
+							path: 'name'
+						},
+						usage: {
+							type: undefined,
+							description: undefined
+						}
 					}
-				}, {
-					path: 'name',
-					storage: {
-						schema: 'test-1',
-						path: 'name'
-					},
-					usage: {
-						type: undefined,
-						description: undefined
-					}
-				}]);
+				]);
 			});
 		});
 
-		describe('flatten', function(){
-			it('should pull in all the extended fields', async function(){
+		describe('flatten', function () {
+			it('should pull in all the extended fields', async function () {
 				await nexus.configureComposite('base', {
 					base: 'test-1',
 					joins: [],
@@ -1789,9 +1938,7 @@ describe('src/schema/composite.js', function(){
 				await comp.configure({
 					base: 'test-2',
 					optimize: true,
-					joins: [
-						'> #base'
-					],
+					joins: ['> #base'],
 					fields: {
 						myName: '.name',
 						parent: '#base'
@@ -1802,38 +1949,55 @@ describe('src/schema/composite.js', function(){
 
 				const query = await comp.getQuery();
 
-				expect(query.toJSON())
-				.to.deep.equal({
-					models: [{
-						series: 'test-2',
-						schema: 'table_2',
-						joins: []
-					}, {
-						series: 'basetest-1',
-						schema: 'test-1',
-						joins: [{
-							name: 'test-2',
-							optional: false,
-							mappings: [{
-								from: 'id',
-								to: 'test1Id'
-							}]
-						}]
-					}],
-					fields: [{
-						series: 'test-2',
-						path: 'name',
-						as: 'myName'
-					}, {
-						series: 'basetest-1',
-						path: 'name',
-						as: 'parent.name'
-					}],
-					params: []
+				expect(query.toJSON()).to.deep.equal({
+					method: 'read',
+					models: [
+						{
+							series: 'test-2',
+							schema: 'table_2',
+							joins: []
+						},
+						{
+							series: 'basetest-1',
+							schema: 'test-1',
+							joins: [
+								{
+									name: 'test-2',
+									optional: false,
+									mappings: [
+										{
+											from: 'id',
+											to: 'test1Id'
+										}
+									]
+								}
+							]
+						}
+					],
+					fields: [
+						{
+							series: 'test-2',
+							path: 'name',
+							as: 'myName'
+						},
+						{
+							series: 'basetest-1',
+							path: 'name',
+							as: 'parent.name'
+						}
+					],
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 
-			it('should be able to extend an extension', async function(){
+			it('should be able to extend an extension', async function () {
 				await nexus.configureComposite('base', {
 					base: 'test-1',
 					joins: [],
@@ -1844,9 +2008,7 @@ describe('src/schema/composite.js', function(){
 
 				await nexus.configureComposite('extends', {
 					base: 'test-1',
-					joins: [
-						'> #base'
-					],
+					joins: ['> #base'],
 					fields: {
 						myName: '.name',
 						extend: '#base'
@@ -1858,9 +2020,7 @@ describe('src/schema/composite.js', function(){
 				await comp.configure({
 					base: 'test-2',
 					optimize: true,
-					joins: [
-						'> #extends'
-					],
+					joins: ['> #extends'],
 					fields: {
 						reallyMyName: '.name',
 						stuff: '#extends'
@@ -1871,69 +2031,76 @@ describe('src/schema/composite.js', function(){
 
 				const query = await comp.getQuery();
 
-				expect(query.toJSON())
-				.to.deep.equal({
-					'models': [
+				expect(query.toJSON()).to.deep.equal({
+					method: 'read',
+					models: [
 						{
-							'series': 'test-2',
-							'schema': 'table_2',
-							'joins': []
+							series: 'test-2',
+							schema: 'table_2',
+							joins: []
 						},
 						{
-							'series': 'extendstest-1',
-							'schema': 'test-1',
-							'joins': [
+							series: 'extendstest-1',
+							schema: 'test-1',
+							joins: [
 								{
-									'name': 'test-2',
-									'mappings': [
+									name: 'test-2',
+									mappings: [
 										{
-											'from': 'id',
-											'to': 'test1Id'
+											from: 'id',
+											to: 'test1Id'
 										}
 									],
-									'optional': false
+									optional: false
 								}
 							]
 						},
 						{
-							'series': 'extendsbasetest-1',
-							'schema': 'test-1',
-							'joins': [
+							series: 'extendsbasetest-1',
+							schema: 'test-1',
+							joins: [
 								{
-									'name': 'extendstest-1',
-									'mappings': [
+									name: 'extendstest-1',
+									mappings: [
 										{
-											'from': 'id',
-											'to': 'id'
+											from: 'id',
+											to: 'id'
 										}
 									],
-									'optional': false
+									optional: false
 								}
 							]
 						}
 					],
-					'fields': [
+					fields: [
 						{
-							'series': 'test-2',
-							'path': 'name',
-							'as': 'reallyMyName'
+							series: 'test-2',
+							path: 'name',
+							as: 'reallyMyName'
 						},
 						{
-							'series': 'extendstest-1',
-							'path': 'name',
-							'as': 'stuff.myName'
+							series: 'extendstest-1',
+							path: 'name',
+							as: 'stuff.myName'
 						},
 						{
-							'series': 'extendsbasetest-1',
-							'path': 'name',
-							'as': 'stuff.extend.name'
+							series: 'extendsbasetest-1',
+							path: 'name',
+							as: 'stuff.extend.name'
 						}
 					],
-					'params': []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 
-			it('should not flatten array linked composites', async function(){
+			it('should not flatten array linked composites', async function () {
 				await nexus.configureComposite('base', {
 					base: 'test-1',
 					joins: [],
@@ -1944,9 +2111,7 @@ describe('src/schema/composite.js', function(){
 
 				await nexus.configureComposite('extends', {
 					base: 'test-1',
-					joins: [
-						'> #base'
-					],
+					joins: ['> #base'],
 					fields: {
 						myName: '.name',
 						extend: ['#base']
@@ -1958,69 +2123,72 @@ describe('src/schema/composite.js', function(){
 				await comp.configure({
 					base: 'test-2',
 					optimize: true,
-					joins: [
-						'> #extends'
-					],
+					joins: ['> #extends'],
 					fields: {
 						reallyMyName: '.name',
 						stuff: '#extends'
 					}
 				});
 
-				await comp.build();
-
 				const query = await comp.getQuery();
 
-				expect(query.toJSON())
-				.to.deep.equal({
-					'models': [
+				expect(query.toJSON()).to.deep.equal({
+					method: 'read',
+					models: [
 						{
-							'series': 'test-2',
-							'schema': 'table_2',
-							'joins': []
+							series: 'test-2',
+							schema: 'table_2',
+							joins: []
 						},
 						{
-							'series': 'extendstest-1',
-							'schema': 'test-1',
-							'joins': [
+							series: 'extendstest-1',
+							schema: 'test-1',
+							joins: [
 								{
-									'name': 'test-2',
-									'mappings': [
+									name: 'test-2',
+									mappings: [
 										{
-											'from': 'id',
-											'to': 'test1Id'
+											from: 'id',
+											to: 'test1Id'
 										}
 									],
-									'optional': false
+									optional: false
 								}
 							]
 						}
 					],
-					'fields': [
+					fields: [
 						{
-							'series': 'test-2',
-							'path': 'name',
-							'as': 'reallyMyName'
+							series: 'test-2',
+							path: 'name',
+							as: 'reallyMyName'
 						},
 						{
-							'series': 'extendstest-1',
-							'path': 'name',
-							'as': 'stuff.myName'
+							series: 'extendstest-1',
+							path: 'name',
+							as: 'stuff.myName'
 						},
 						{
-							'series': 'extendstest-1',
-							'path': 'id',
-							'as': 'sub_0'
+							series: 'extendstest-1',
+							path: 'id',
+							as: 'sub_0'
 						}
 					],
-					'params': []
+					filters: {
+						expressables: [],
+						join: 'and'
+					},
+					params: {
+						expressables: [],
+						join: 'and'
+					}
 				});
 			});
 		});
 	});
 
-	describe('error management', function(){
-		it('should fail if it tries to load a model that does not exist', async function(){
+	describe('error management', function () {
+		it('should fail if it tries to load a model that does not exist', async function () {
 			const comp = new Composite('failure', nexus);
 
 			let failed = false;
@@ -2028,9 +2196,7 @@ describe('src/schema/composite.js', function(){
 				await comp.configure({
 					base: 'test-2',
 					optimize: true,
-					joins: [
-						'> $boom'
-					],
+					joins: ['> $boom'],
 					fields: {
 						reallyMyName: '.name',
 						stuff: '$boom.field'
@@ -2038,21 +2204,18 @@ describe('src/schema/composite.js', function(){
 				});
 
 				await comp.build();
-			} catch(ex){
+			} catch (ex) {
 				failed = true;
-				
-				expect(ex.message.indexOf('configured.model.boom'))
-				.to.not.equal(-1);
 
-				expect(ex.context.composite)
-				.to.equal('failure');
+				expect(ex.message.indexOf('configured.model.boom')).to.not.equal(-1);
+
+				expect(ex.context.composite).to.equal('failure');
 			}
 
-			expect(failed)
-			.to.equal(true);
+			expect(failed).to.equal(true);
 		});
 
-		it('should fail if it tries to load a composite that does not exist', async function(){
+		it('should fail if it tries to load a composite that does not exist', async function () {
 			const comp = new Composite('failure', nexus);
 
 			let failed = false;
@@ -2060,9 +2223,7 @@ describe('src/schema/composite.js', function(){
 				await comp.configure({
 					base: 'test-2',
 					optimize: true,
-					joins: [
-						'> #boom'
-					],
+					joins: ['> #boom'],
 					fields: {
 						reallyMyName: '.name',
 						stuff: '#boom'
@@ -2070,18 +2231,17 @@ describe('src/schema/composite.js', function(){
 				});
 
 				await comp.build();
-			} catch(ex){
+			} catch (ex) {
 				failed = true;
-				
-				expect(ex.message.indexOf('configured.composite.boom'))
-				.to.not.equal(-1);
 
-				expect(ex.context.composite)
-				.to.equal('failure');
+				expect(ex.message.indexOf('configured.composite.boom')).to.not.equal(
+					-1
+				);
+
+				expect(ex.context.composite).to.equal('failure');
 			}
 
-			expect(failed)
-			.to.equal(true);
+			expect(failed).to.equal(true);
 		});
 	});
 });

@@ -1,31 +1,30 @@
+const {set} = require('bmoor/src/core.js');
 
-const {set} =  require('bmoor/src/core.js');
-
-class Value{
-	constructor(value){
+class Value {
+	constructor(value) {
 		this.value = value;
 	}
 
-	toJSON(){
+	toJSON() {
 		return this.value;
 	}
 }
 
-class Builder{
-	constructor(content = {}){
+class Builder {
+	constructor(content = {}) {
 		this.content = content;
 		this.holders = 0;
 	}
 
-	getPlaceHolder(){
-		return new Value('ref-'+(this.holders++));
+	getPlaceHolder() {
+		return new Value('ref-' + this.holders++);
 	}
 
-	set(path, value){
+	set(path, value) {
 		set(this.content, path, value);
 	}
 
-	toJSON(){
+	toJSON() {
 		return this.content;
 	}
 }

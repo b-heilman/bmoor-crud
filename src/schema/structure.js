@@ -1,11 +1,15 @@
-
 const {Config} = require('bmoor/src/lib/config.js');
-const {makeGetter} = require('bmoor/src/core.js');
-const {apply, create} = require('bmoor/src/lib/error.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
 const {Path} = require('../graph/path.js');
-const {Query, QueryField, QueryParam, QueryJoin, QuerySort, QueryPosition} = require('./query.js');
+const {StructureActions} = require('./structure/actions.js');
+const {StatementField} = require('./statement/field.js');
+const {StatementVariable} = require('./statement/variable.js');
+const {buildExpression} = require('./statement/expression/compiler.js');
+const {QueryJoin} = require('./query/join.js');
+const {QuerySort} = require('./query/sort.js');
+const {QueryPosition} = require('./query/position.js');
 
 const major = Symbol('major');
 const minor = Symbol('minor');
@@ -33,34 +37,34 @@ const config = new Config({
 
 const usages = new Config({
 	json: {
-		onInflate: function(tgt, src, setter, getter){
-			const value = getter(src);
+		onInflate: function (datum, setter, getter) {
+			const value = getter(datum);
 
-			if (value){
-				setter(tgt, JSON.parse(value));
+			if (value) {
+				setter(datum, JSON.parse(value));
 			}
 		},
-		onDeflate: function(tgt, src, setter, getter){
-			const value = getter(src);
+		onDeflate: function (datum, setter, getter) {
+			const value = getter(datum);
 
-			if (value){
-				setter(tgt, JSON.stringify(value));
+			if (value) {
+				setter(datum, JSON.stringify(value));
 			}
 		}
 	},
 	monitor: {
-		onCreate: function(tgt, src, setter, getter, cfg){
-			const target = cfg.getTarget(src);
+		onCreate: function (datum, setter, getter, cfg) {
+			const target = cfg.getTarget(datum);
 
-			if (target !== undefined){
-				setter(tgt, Date.now());
+			if (target !== undefined) {
+				setter(datum, Date.now());
 			}
 		},
-		onUpdate: function(tgt, src, setter, getter, cfg){
-			const target = cfg.getTarget(src);
+		onUpdate: function (datum, setter, getter, cfg) {
+			const target = cfg.getTarget(datum);
 
-			if (target !== undefined){
-				setter(tgt, Date.now());
+			if (target !== undefined) {
+				setter(datum, Date.now());
 			}
 		}
 	}
@@ -98,238 +102,41 @@ structure: {
 }
 **/
 
-function actionExtend(op, getter, setter, old, cfg){
-	if (old){
-		return function(tgt, src, ctx){
-			op(old(tgt, src, ctx), src, setter, getter, cfg, ctx);
+function buildSorts(query, sorts) {
+	sorts.split(',').map((option) => {
+		option = option.trimStart();
 
-			return tgt;
-		};
-	} else {
-		return function(tgt, src, ctx){
-			op(tgt, src, setter, getter, cfg, ctx);
+		let ascending = true;
+		let char = option[0];
 
-			return tgt;
-		};
-	}
-}
-
-function buildActions(actions, field){
-	const path = field.path;
-	const reference = field.reference;
-	const storagePath = field.storagePath;
-	
-	const settings = field.incomingSettings;
-
-	let cfg = {};
-
-	if (settings.cfg){
-		cfg = settings.cfg;
-		// this is to allow one field type to watch another field type
-		if (cfg.target){
-			cfg.getTarget = makeGetter(cfg.target);
+		if (char === '-') {
+			ascending = false;
+			option = option.substr(1);
+		} else if (char === '+') {
+			option = option.substr(1);
 		}
-	}
 
-	if (settings.onCreate){
-		actions.create = actionExtend(
-			settings.onCreate,
-			field.externalGetter,
-			field.externalSetter, 
-			actions.create, 
-			cfg
-		);
-	}
+		let base = query.baseSeries.series;
+		if (option[0] === '$') {
+			const pos = option.indexOf('.');
 
-	if (settings.onUpdate){
-		actions.update = actionExtend(
-			settings.onUpdate,
-			field.externalGetter,
-			field.externalSetter, 
-			actions.update,
-			cfg
-		);
-	}
-
-	// inflate are changes out of the database
-	if (settings.onInflate){
-		actions.inflate = actionExtend(
-			settings.onInflate, 
-			field.internalGetter,
-			field.externalSetter,
-			actions.inflate,
-			cfg
-		);
-	}
-
-	// deflate are changes into the database
-	if (settings.onDeflate){
-		actions.deflate = actionExtend(
-			settings.onDeflate, 
-			field.externalGetter, 
-			field.internalSetter, 
-			actions.deflate, 
-			cfg
-		);
-	}
-
-	if (path !== reference){
-		// data changes from internal to external
-		actions.mutatesInflate = true;
-	}
-
-	if (path !== storagePath){
-		// data changes from external to internal
-		actions.mutatesDeflate = true;
-	}
-
-	return actions;
-}
-
-function buildInflate(baseInflate, fields){
-	const mutator = fields.reduce(
-		(old, field) => {
-			const structureSettings = (field.original ?
-				field.original.structure : field.structure).incomingSettings;
-			
-			if (field.incomingSettings.onInflate){
-				// this means the mapping is handled by the function and is already
-				// being passed in
-				return old;
-			} else {
-				// TODO: isFlat needs to come from the adapter? but how...
-				// TODO: should the below be internalGetter and the field always
-				//   knows its context based on reference?
-				const getter = structureSettings.isFlat ?
-					(datum) => datum[field.reference] : field.internalGetter;
-				const setter = field.externalSetter;
-
-				if (old){
-					return function(src){
-						const tgt = old(src);
-
-						const val = getter(src);
-						if (val !== undefined){
-							setter(tgt, val);
-						}
-
-						return tgt;
-					};
-				} else {
-					return function(src){
-						const tgt = {};
-
-						const val = getter(src);
-						if (val !== undefined){
-							setter(tgt, val);
-						}
-
-						return tgt;
-					};
-				}
-			}
-		},
-		null
-	);
-
-	if (baseInflate && mutator){
-		return function mutateInflaterFn(datum, ctx){
-			return baseInflate(mutator(datum), datum, ctx);
-		};
-	} else if (baseInflate){
-		return function inflaterFn(datum, ctx){
-			return baseInflate({}, datum, ctx);
-		};
-	} else if (mutator){
-		return function mutatorFn(datum/*, ctx*/){
-			return mutator(datum);
-		};
-	} else {
-		return (datum) => datum;
-	}
-}
-
-function buildDeflate(baseDeflate, fields){
-	const mutator = fields.reduce(
-		(old, field) => {
-			const structureSettings = (field.original ?
-				field.original.structure : field.structure).incomingSettings;
-
-			if (field.incomingSettings.onDeflate){
-				return old;
-			} else {
-				const getter = field.externalGetter;
-				const setter = structureSettings.isFlat ?
-					function(datum, value) {datum[field.storagePath] = value;} :
-					field.internalSetter;
-
-				if (old){
-					return function(src){
-						const tgt = old(src);
-
-						const val = getter(src);
-						if (val !== undefined){
-							setter(tgt, val);
-						}
-
-						return tgt;
-					};
-				} else {
-					return function(src){
-						const tgt = {};
-
-						const val = getter(src);
-						if (val !== undefined){
-							setter(tgt, val);
-						}
-
-						return tgt;
-					};
-				}
-			}
-		},
-		null
-	);
-
-	if (baseDeflate && mutator){
-		return function mutateDeflaterFn(datum, ctx){
-			return baseDeflate(mutator(datum), datum, ctx);
-		};
-	} else if (baseDeflate){
-		return function deflaterFn(datum, ctx){
-			return baseDeflate({}, datum, ctx);
-		};
-	} else if (mutator){
-		return function mutatorFn(datum/*, ctx*/){
-			return mutator(datum);
-		};
-	} else {
-		return (datum) => datum;
-	}
-}
-
-function buildParam(field, v){
-	if (v && typeof(v) === 'object'){
-		if (Array.isArray(v)){
-			return new QueryParam(field, v, '=');
-		} else {
-			return Object.keys(v).map(
-				op => new QueryParam(field, v[op], op)
-			);
+			base = option.substr(1, pos - 1);
+			option = option.substr(pos + 1);
+		} else if (option[0] === '.') {
+			option = option.substr(1);
 		}
-	} else {
-		
-		return new QueryParam(field, v, '=');
-	}
+
+		query.addSort(new QuerySort(base, option, ascending));
+	});
 }
 
-function buildValidator(old, field, validation){
-	function validate(datum, mode=updateMode){
+function buildValidator(old, field, validation) {
+	function validate(datum, mode = updateMode) {
 		const rtn = [];
 		const value = field.externalGetter(datum);
 
-		if (validation.required){
-			if (!value && (mode === createMode || value !== undefined)){
+		if (validation.required) {
+			if (!value && (mode === createMode || value !== undefined)) {
 				rtn.push({
 					path: field.path,
 					message: 'can not be empty'
@@ -340,8 +147,8 @@ function buildValidator(old, field, validation){
 		return rtn;
 	}
 
-	if (old){
-		return function(datum, mode){
+	if (old) {
+		return function (datum, mode) {
 			return old(datum, mode).concat(validate(datum, mode));
 		};
 	} else {
@@ -349,44 +156,45 @@ function buildValidator(old, field, validation){
 	}
 }
 
-function compareChanges(was, now){
+function compareChanges(was, now) {
 	let rtn = was;
 
-	if (now){
-		if (!was){
-			rtn = now; 
+	if (now) {
+		if (!was) {
+			rtn = now;
 		} else {
 			const rankings = config.get('changeRankings');
 
-			if (rankings[now] > rankings[was]){
+			if (rankings[now] > rankings[was]) {
 				rtn = now;
 			}
 		}
 	}
-	
+
 	return rtn;
 }
 
-function buildChangeCompare(old, field, type){
-	if (old){
-		return function(delta){
+function buildChangeCompare(old, field, type) {
+	if (old) {
+		return function (delta) {
 			return compareChanges(
 				old(delta),
 				field.externalGetter(delta) === undefined ? null : type
 			);
 		};
 	} else {
-		return function(delta){
-			return field.externalGetter(delta) === undefined ? 
-				config.get('changeTypes.none') : type;
+		return function (delta) {
+			return field.externalGetter(delta) === undefined
+				? config.get('changeTypes.none')
+				: type;
 		};
 	}
 }
 
-function buildSettings(properties, field){
+function buildSettings(properties, field) {
 	const settings = field.incomingSettings;
 
-	if (settings.validation){
+	if (settings.validation) {
 		properties.validation = buildValidator(
 			properties.validation,
 			field,
@@ -394,7 +202,7 @@ function buildSettings(properties, field){
 		);
 	}
 
-	if (settings.updateType){
+	if (settings.updateType) {
 		properties.calculateChangeType = buildChangeCompare(
 			properties.calculateChangeType,
 			field,
@@ -405,39 +213,44 @@ function buildSettings(properties, field){
 	return properties;
 }
 
-async function addAccessorsToQuery(accessors, query, nexus){
-	return accessors.reduce(
-		async (prev, accessor) => {
-			let relationship = null;
-			let from = null;
-			let to = null;
+async function addAccessorsToQuery(accessors, query, nexus) {
+	return accessors.reduce(async (prev, accessor) => {
+		let relationship = null;
+		let from = null;
+		let to = null;
 
-			prev = await prev;
+		prev = await prev;
 
-			let pSeries = prev.series;
-			let aSeries = accessor.series;
+		let pSeries = prev.series;
+		let aSeries = accessor.series;
 
-			const model = nexus.getModel(accessor.model);
-			query.setSchema(aSeries, model.schema);
-			
-			// this ensures everything is linked accordingly
-			// await addStuff(this, prev, subAccessor);
-			if (accessor.target) {
-				relationship = nexus.mapper.getRelationship(
-					accessor.model, prev.model, accessor.target
-				);
-				from = aSeries;
-				to = pSeries;
-			} else {
-				relationship = nexus.mapper.getRelationship(
-					prev.model, accessor.model, prev.field
-				);
-				from = pSeries;
-				to = aSeries;
-			}
+		const model = nexus.getModel(accessor.model);
+		query.setModel(aSeries, model);
 
-			if (!relationship){
-				throw create(`accessor relationship failed: ${prev.model} -> ${accessor.model}`, {
+		// this ensures everything is linked accordingly
+		// await addStuff(this, prev, subAccessor);
+		if (accessor.target) {
+			relationship = nexus.mapper.getRelationship(
+				accessor.model,
+				prev.model,
+				accessor.target
+			);
+			from = aSeries;
+			to = pSeries;
+		} else {
+			relationship = nexus.mapper.getRelationship(
+				prev.model,
+				accessor.model,
+				prev.field
+			);
+			from = pSeries;
+			to = aSeries;
+		}
+
+		if (!relationship) {
+			throw create(
+				`accessor relationship failed: ${prev.model} -> ${accessor.model}`,
+				{
 					code: 'BMOOR_CRUD_STRUCTURE_RELATIONSHIP',
 					context: {
 						accessorModel: accessor.model,
@@ -445,64 +258,58 @@ async function addAccessorsToQuery(accessors, query, nexus){
 						prevModel: prev.model,
 						prevField: prev.field
 					}
-				});
-			}
-
-			query.addJoins(from, [
-				new QueryJoin(to, [{
-					from: relationship.local,
-					to: relationship.remote
-				}], accessor.optional)
-			]);
-			
-			return accessor;
+				}
+			);
 		}
-	);
+
+		query.addJoins(from, [
+			new QueryJoin(
+				to,
+				[
+					{
+						from: relationship.local,
+						to: relationship.remote
+					}
+				],
+				accessor.optional
+			)
+		]);
+
+		return accessor;
+	});
 }
 
 class Structure {
-	constructor(name, nexus){
+	constructor(name, nexus) {
 		this.name = name;
 		this.nexus = nexus;
 	}
 
-	configure(settings){
+	async configure(settings) {
 		this.incomingSettings = settings;
-		
+
 		this.fields = [];
 		this.index = {};
 	}
 
-	async build(){
-		if (!this.actions){
-			this.actions = this.fields.reduce(buildActions, {
-				mutates: false
-			});
+	// optimization phase
+	async build() {
+		this.actions = new StructureActions(this.fields);
 
-			this.actions.inflate = buildInflate(
-				this.actions.inflate,
-				this.fields,
-				this.incomingSettings
-			);
-
-			this.actions.deflate = buildDeflate(
-				this.actions.deflate,
-				this.fields,
-				this.incomingSettings
-			);
-		}
-
-		if (!this.settings){
-			this.settings = this.fields.reduce(buildSettings, {
-				validation: null,
-				calculateChangeType: null
-			});
-		}
+		// TODO: StructureSettings
+		this.settings = this.fields.reduce(buildSettings, {
+			validation: null,
+			calculateChangeType: null
+		});
 	}
 
-	assignField(field){
+	setSource(source) {
+		this.source = source;
+	}
+
+	assignField(field) {
 		const found = this.index[field.path];
-		if (found){
+		if (found) {
 			throw create(`Path collision`, {
 				code: 'BMOOR_CRUD_STRUCTURE_COLLISION',
 				context: {
@@ -519,279 +326,257 @@ class Structure {
 		return field;
 	}
 
-	defineField(path, settings){
-		if (settings.usage){
+	defineField(path, settings) {
+		if (settings.usage) {
 			// this allows types to define onCreate, onRead, onUpdate, onDelete
-			Object.assign(settings, usages.get(settings.usage)||{});
+			Object.assign(settings, usages.get(settings.usage) || {});
 		}
 
 		return new Field(path, this, settings);
 	}
 
-	createField(path, settings){
+	createField(path, settings) {
 		return this.assignField(this.defineField(path, settings), settings);
 	}
 
-	async addField(path, settings){
+	async addField(path, settings) {
 		return this.createField(path, settings);
 	}
 
-	getField(path){
+	getField(path) {
 		return this.index[path];
 	}
 
-	getFields(){
+	getFields() {
 		return this.fields;
 	}
 
-	hasField(searchField){
+	hasField(searchField) {
 		let found = false;
 
-		for (let i = 0, c = this.fields.length; i < c && !found; i++){
+		for (let i = 0, c = this.fields.length; i < c && !found; i++) {
 			const field = this.fields[i];
 
-			found = (field === searchField || field.original === searchField);
+			found = field === searchField || field.original === searchField;
 		}
 
 		return found;
 	}
 
-	async testFields(type, ctx){
-		return this.fields.reduce(
-			async (prom, field) => {
-				const agg = await prom;
-				const op = field.incomingSettings[type];
+	getFieldSeries() {
+		const rtn = new Set();
 
-				if (op){
-					if (typeof(op) === 'string'){
-						try {
-							if (ctx.hasPermission(op)){
-								agg.push(field);
-							}
-						} catch(ex){
-							apply(ex, {
-								code: 'BMOOR_CRUD_SCHEMA_TEST_FIELD',
-								context: {
-									type,
-									external: field.path,
-									structure: field.structure.name
-								}
-							});
+		this.fields.forEach((field) => {
+			rtn.add(field.series);
+		});
 
-							throw ex;
-						}
-					} else {
-						agg.push(field);
-					}
-				}
-
-				return agg;
-			},
-			[]
-		);
+		return rtn;
 	}
 
-	deflate(datum, ctx){
-		if (!this.actions){
+	deflate(datum, ctx) {
+		if (!this.actions) {
 			this.build();
 		}
 
 		return this.actions.deflate(datum, ctx);
 	}
 
-	inflate(datum, ctx){
-		if (!this.actions){
+	inflate(datum, ctx) {
+		if (!this.actions) {
 			this.build();
 		}
 
 		return this.actions.inflate(datum, ctx);
 	}
 
-	async getQuery(settings, ctx){
-		const query = settings.query || new Query(this.name);
+	// generates the base query object for the class, stubed under structure
+	getBaseQuery() {
+		throw new Error('must be extended');
+	}
 
-		(await this.testFields('read', ctx))
-		.forEach(
-			(field) => {
-				query.addFields(field.series, [
-					new QueryField(field.storagePath, field.reference || null)
+	// used to extend all statements (query or executable).  These are contextless
+	// properties
+	async extendBaseStatement(statement) {
+		const filters = this.incomingSettings.filters;
+		if (filters) {
+			statement.addFilterExpression(buildExpression(filters));
+		}
+	}
+
+	// create a base statement and extend it
+	async prepareBaseQuery() {
+		const query = this.getBaseQuery();
+
+		await this.extendBaseStatement(query);
+
+		const sorts = this.incomingSettings.sort;
+		if (sorts) {
+			buildSorts(query, sorts);
+		}
+
+		return query;
+	}
+
+	// Add content to a statement based on the given context.  This will be run
+	// each invocation, unlike the prepare which is univeral across all contexts
+	async extendStatement(statement, settings, ctx) {
+		// this is in extended because some fields are based on permission.
+		// I could preload some and do the rest, but for now this is how
+		// it will work
+		((settings.actions && settings.actions.structure) || this.actions)
+			.testFields('read', ctx)
+			.forEach((field) => {
+				statement.addFields(field.series, [
+					new StatementField(field.storagePath, field.reference || null)
 				]);
-			}
-		);
+			});
 
+		// I'm doing this so people have a way around validation if they deem in neccisary.  I'm sure this
+		// will result in someone getting hacked, but I want to trust the devs using this
+
+		// supports complex query structures
+		const query = settings.query;
+		if (query) {
+			let isValid = true;
+			const exp = buildExpression(query);
+
+			if (settings.validate) {
+				isValid = exp.validate((series, path) => {
+					if (statement.hasSeries(series)) {
+						const model = statement.getSeries(series).model;
+
+						const field = model.getField(path);
+
+						if (!field) {
+							throw new Error(`unknown field: ${series}.${path}`);
+						} else if (!field.incomingSettings.query) {
+							throw new Error(`unqueriable field: ${series}.${path}`);
+						}
+					} else {
+						throw new Error(`unknown series: ${series}`);
+					}
+				});
+			}
+
+			if (isValid) {
+				statement.addParamExpression(exp);
+			}
+		}
+
+		// params are designed for simple joins or references
+		/** structure
+		 * {
+		 * 	[inside series].[inside property]: [inside value]
+		 * }
+		 **/
+		//since this is no longer exposed externally, I can change the structure
+		const params = settings.params;
+		if (params) {
+			Object.keys(params).map((field) => {
+				let path = null;
+				let {series} = statement.baseSeries;
+
+				const param = params[field];
+
+				if (field[0] === '$') {
+					const pos = field.indexOf('.');
+
+					series = field.substr(1, pos - 1);
+					path = field.substr(pos + 1);
+				} else {
+					if (field[0] === '.') {
+						field = field.substr(1);
+					}
+
+					path = field;
+				}
+
+				statement.addParam(new StatementVariable(series, path, param, '='));
+			});
+		}
+	}
+
+	// assigns query specific fields
+	async extendQuery(query, settings, ctx) {
 		// this is the query property.  It allows you to 'join in' from the outside
 		/** structure
 		 * {
 		 * 	[[outside property][outside series] > [inside series]]: [outside value]
 		 * }
 		 **/
-		if (settings.joins){
-			await settings.joins.reduce(
-				async (prom, path) => {
-					await prom;
-					
-					path = path.trimStart();
+		if (settings.joins) {
+			await settings.joins.reduce(async (prom, path) => {
+				await prom;
 
-					if (path[0] === '.'){
-						/**
-						 * I want to allow .property notion here, but I don't want to break
-						 * .aField$series so I have to check
-						 **/
-						const seriesPos = path.indexOf('$');
+				path = path.trimStart();
 
-						if (seriesPos === -1){
-							path = '$'+query.base+path;
-						}
+				if (path[0] === '.') {
+					/**
+					 * I want to allow .property notion here, but I don't want to break
+					 * .aField$series so I have to check
+					 **/
+					const seriesPos = path.indexOf('$');
+
+					if (seriesPos === -1) {
+						path = '$' + query.base + path;
 					}
-
-					const access = (new Path(path)).access;
-
-					// links in are [model].value > [existingModel]
-					const mountAccessor = access[access.length-1];
-					const mountSeries = mountAccessor.series;
-
-					// this verified the mount point is inside the model
-					if (!query.hasSeries(mountSeries)){
-						throw new Error(`unable to mount: ${mountSeries} from ${path}`);
-					}
-
-					await addAccessorsToQuery(
-						access, query, this.nexus
-					);
-					
-					const rootAccessor = access[0];
-					
-					const model = this.nexus.getModel(rootAccessor.model); // has to be defined by now
-					query.setSchema(rootAccessor.series, model.schema);
-				}, 
-				Promise.resolve(true)
-			);
-		}
-
-		// parameters we can querying off of, must already be inside the structure
-		/** structure
-		 * {
-		 * 	[inside series].[inside property]: [inside value]
-		 * }
-		 **/
-		if (settings.params){
-			Object.keys(settings.params).map(
-				field => {
-					let path = null;
-					let series = query.base;
-
-					const param = settings.params[field];
-
-					if (field[0] === '$'){
-						const pos = field.indexOf('.');
-
-						series = field.substr(1, pos-1);
-						path = field.substr(pos+1);
-					} else {
-						if (field[0] === '.'){
-							field = field.substr(1);
-						}
-
-						path = field;
-					}
-
-					query.addParams(
-						series,
-						[buildParam(path, param)]
-					);
 				}
-			);
+
+				const access = new Path(path).access;
+
+				// links in are [model].value > [existingModel]
+				const mountAccessor = access[access.length - 1];
+				const mountSeries = mountAccessor.series;
+
+				// this verified the mount point is inside the model
+				if (!query.hasSeries(mountSeries)) {
+					throw new Error(`unable to mount: ${mountSeries} from ${path}`);
+				}
+
+				// this defined the series' model
+				await addAccessorsToQuery(access, query, this.nexus);
+
+				const rootAccessor = access[0];
+
+				const model = this.nexus.getModel(rootAccessor.model); // has to be defined by now
+				query.setModel(rootAccessor.series, model);
+			}, Promise.resolve(true));
 		}
 
-		if (settings.sort){
-			const sorts = settings.sort.split(',')
-				.map(option => {
-					option = option.trimStart();
+		await this.extendStatement(query, settings, ctx);
 
-					let ascending = true;
-					let char = option[0];
-
-					if (char === '-'){
-						ascending = false;
-						option = option.substr(1);
-					} else if (char === '+'){
-						option = option.substr(1);
-					}
-
-					let base = query.base;
-					if (option[0] === '$'){
-						const pos = option.indexOf('.');
-
-						base = option.substr(1, pos-1);
-						option = option.substr(pos+1);
-					} else if (option[0] === '.'){
-						option = option.substr(1);
-					}
-
-					return new QuerySort(base, option, ascending);
-				});
-
-			query.setSorts(sorts);
+		if (settings.sort) {
+			buildSorts(query, settings.sort);
 		}
 
-		if (settings.position && settings.position.limit){
+		if (settings.position && settings.position.limit) {
 			query.setPosition(new QueryPosition(0, settings.position.limit));
 		}
 
 		return query;
 	}
 
-	async execute(stmt/*, ctx*/){
-		if (!this.connector){
-			throw create(`missing connector for ${this.name}`, {
-				code: 'BMOOR_CRUD_STRUCTURE_CONNECTOR'
-			});
-		}
-
-		try {
-			return this.nexus.execute(
-				this.connector, 
-				this.incomingSettings.connectorSettings || {},
-				stmt
-			);
-		} catch(ex) {
-			apply(ex, {
-				code: 'BMOOR_CRUD_STRUCTURE_EXECUTE',
-				context: {
-					name: this.name
-				},
-				protected: {
-					stmt
-				}
-			});
-
-			throw ex;
-		}
-	}
-
-	getChangeType(delta){
-		if (this.settings.calculateChangeType){
+	getChangeType(delta) {
+		if (this.settings.calculateChangeType) {
 			return this.settings.calculateChangeType(delta);
 		} else {
 			return none;
 		}
 	}
 
-	validate(delta, mode){
-		if (this.settings.validation){
+	validate(delta, mode) {
+		if (this.settings.validation) {
 			return this.settings.validation(delta, mode);
 		} else {
 			return [];
 		}
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			$schema: 'bmoor-crud:structure',
 			name: this.name,
-			fields: this.fields.map(
-				field => field.toJSON()
-			)
+			fields: this.fields.map((field) => field.toJSON())
 		};
 	}
 }
@@ -799,11 +584,6 @@ class Structure {
 module.exports = {
 	usages,
 	config,
-	actionExtend,
-	buildActions,
-	buildInflate,
-	buildDeflate,
-	buildParam,
 	compareChanges,
 	addAccessorsToQuery,
 	Structure

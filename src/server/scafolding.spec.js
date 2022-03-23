@@ -1,17 +1,15 @@
-
 const {expect} = require('chai');
 const sinon = require('sinon');
 
 const sut = require('./scafolding.js');
 
-describe('src/server/scafolding.js', function(){
+describe('src/server/scafolding.js', function () {
 	let cfg = null;
 	let app = null;
 	let stubs = null;
 	let mockery = null;
-	let bootstrap = null;
 
-	beforeEach(function(){
+	beforeEach(function () {
 		stubs = {};
 
 		stubs.routerUse = sinon.stub();
@@ -23,9 +21,14 @@ describe('src/server/scafolding.js', function(){
 
 		cfg = sut.config.extend({
 			connectors: {
-				'http': () => ({
+				http: () => ({
 					execute: stubs.execute
 				})
+			},
+			sources: {
+				'test-1': {
+					connector: 'http'
+				}
 			},
 			directories: {
 				models: '/models',
@@ -52,174 +55,185 @@ describe('src/server/scafolding.js', function(){
 
 		mockery = cfg.sub('stubs');
 
-		mockery.set('cruds', [{
-			name: 'service-1',
-			path: 'model-path-1',
-			settings: {
-				connector: 'http',
-				fields: {
-					id: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
+		mockery.set('cruds', [
+			{
+				name: 'service-1',
+				path: 'model-path-1',
+				settings: {
+					source: 'test-1',
+					fields: {
+						id: {
+							create: false,
+							read: true,
+							update: false,
+							delete: true,
+							key: true
+						},
+						name: true
 					},
-					name: true
-				},
-				security: {
-					filter: 'can-read'
+					security: {
+						filter: 'can-read'
+					}
 				}
-			}
-		},{
-			name: 'service-2',
-			path: 'model-path-2',
-			settings: {
-				connector: 'http',
-				fields: {
-					id: {
-						create: false,
-						read: true,
-						update: false,
-						delete: true,
-						key: true
-					},
-					name: true,
-					service1Id: {
-						link: {
-							name: 'service-1',
-							field: 'id'
+			},
+			{
+				name: 'service-2',
+				path: 'model-path-2',
+				settings: {
+					source: 'test-1',
+					fields: {
+						id: {
+							create: false,
+							read: true,
+							update: false,
+							delete: true,
+							key: true
+						},
+						name: true,
+						service1Id: {
+							link: {
+								name: 'service-1',
+								field: 'id'
+							}
 						}
 					}
 				}
 			}
-		}]);
+		]);
 
 		// composites
-		mockery.set('documents', [{
-			name: 'composite-1',
-			settings: {
-				base: 'service-1',
-				joins: [
-					'> $service-2'
-				],
-				connector: 'http',
-				fields: {
-					'id': '.id',
-					'name': '.name',
-					'other': '$service-2.name'
+		mockery.set('documents', [
+			{
+				name: 'composite-1',
+				settings: {
+					base: 'service-1',
+					joins: ['> $service-2'],
+					connector: 'http',
+					fields: {
+						id: '.id',
+						name: '.name',
+						other: '$service-2.name'
+					}
 				}
 			}
-		}]);
+		]);
 
 		// decorators
-		mockery.set('decorators', [{
-			name: 'service-1',
-			path: 'decorator-path-1',
-			settings: {
-				hello: function(){
-					expect(this.create)
-					.to.not.equal(undefined);
+		mockery.set('decorators', [
+			{
+				name: 'service-1',
+				path: 'decorator-path-1',
+				settings: {
+					hello: function () {
+						expect(this.create).to.not.equal(undefined);
 
-					return 'world';
+						return 'world';
+					}
 				}
 			}
-		}]);
+		]);
 
 		const trace = [];
 		// hooks
-		mockery.set('hooks', [{
-			name: 'service-1',
-			path: 'hook-path-1',
-			settings: {
-				afterCreate: async function(){
-					trace.push(1);
+		mockery.set('hooks', [
+			{
+				name: 'service-1',
+				path: 'hook-path-1',
+				settings: {
+					afterCreate: async function () {
+						trace.push(1);
+					}
 				}
 			}
-		}]);
+		]);
 
 		// actions
 		stubs.action = sinon.stub();
-		mockery.set('effects', [{
-			name: 'service-1',
-			path: 'action-path-1',
-			settings: [{
-				model: 'service-2',
-				action: 'update',
-				callback: stubs.action
-			}]
-		}]);
-
-		mockery.set('guards', [{
-			name: 'service-1',
-			settings: {
-				read: true,
-				query: true,
-				create: true,
-				update: true,
-				delete: true
+		mockery.set('effects', [
+			{
+				name: 'service-1',
+				path: 'action-path-1',
+				settings: [
+					{
+						model: 'service-2',
+						action: 'update',
+						callback: stubs.action
+					}
+				]
 			}
-		}]);
+		]);
 
-		mockery.set('actions', [{
-			name: 'service-1',
-			settings: {
-				hello: {
-					method: 'get'
+		mockery.set('guards', [
+			{
+				name: 'service-1',
+				settings: {
+					read: true,
+					query: true,
+					create: true,
+					update: true,
+					delete: true
 				}
 			}
-		}]);
+		]);
 
-		mockery.set('utilities', [{
-			name: 'service-1',
-			settings: {
-				hello: {
-					method: 'get'
+		mockery.set('actions', [
+			{
+				name: 'service-1',
+				settings: {
+					hello: {
+						method: 'get'
+					}
 				}
 			}
-		}]);
+		]);
 
-		mockery.set('synthetics', [{
-			name: 'composite-1',
-			settings: {
-				readable: true
-				// read: 'can-read'
+		mockery.set('utilities', [
+			{
+				name: 'service-1',
+				settings: {
+					hello: {
+						method: 'get'
+					}
+				}
 			}
-		}]);
+		]);
+
+		mockery.set('synthetics', [
+			{
+				name: 'composite-1',
+				settings: {
+					readable: true
+					// read: 'can-read'
+				}
+			}
+		]);
 	});
 
-	it('should build correctly', async function(){
+	it('should build correctly', async function () {
 		stubs.appUse = sinon.stub();
 
 		app = {
 			use: stubs.appUse
 		};
 
-		bootstrap = await sut.build(app, cfg, mockery);
+		await sut.build(app, cfg, mockery);
 
-		expect(stubs.appUse.callCount)
-		.to.equal(1);
+		expect(stubs.appUse.callCount).to.equal(1);
 
-		expect(stubs.routerUse.callCount)
-		.to.equal(8);
+		expect(stubs.routerUse.callCount).to.equal(8);
 
-		expect(stubs.routerGet.callCount)
-		.to.equal(6);
+		expect(stubs.routerGet.callCount).to.equal(6);
 
-		expect(stubs.routerPut.callCount)
-		.to.equal(1);
+		expect(stubs.routerPut.callCount).to.equal(1);
 
-		expect(stubs.routerPost.callCount)
-		.to.equal(1);
+		expect(stubs.routerPost.callCount).to.equal(1);
 
-		expect(stubs.routerPatch.callCount)
-		.to.equal(1);
+		expect(stubs.routerPatch.callCount).to.equal(2);
 
-		expect(stubs.routerDelete.callCount)
-		.to.equal(2);
+		expect(stubs.routerDelete.callCount).to.equal(2);
 	});
 
-	it('should fail to build if unable to connect models', async function(){
+	it('should fail to build if unable to connect models', async function () {
 		mockery.settings.cruds.push({
 			name: 'service-3',
 			path: 'model-path-3',
@@ -242,14 +256,12 @@ describe('src/server/scafolding.js', function(){
 			name: 'composite-2',
 			settings: {
 				base: 'service-1',
-				joins: [
-					'> $service-3'
-				],
+				joins: ['> $service-3'],
 				connector: 'http',
 				fields: {
-					'id': '.id',
-					'name': '.name',
-					'other': '$service-3.name'
+					id: '.id',
+					name: '.name',
+					other: '$service-3.name'
 				}
 			}
 		});
@@ -271,12 +283,11 @@ describe('src/server/scafolding.js', function(){
 				use: stubs.appUse
 			};
 
-			bootstrap = await sut.build(app, cfg, mockery);
-		} catch(ex){
+			await sut.build(app, cfg, mockery);
+		} catch (ex) {
 			failed = true;
 		}
 
-		expect(failed)
-		.to.equal(true);
+		expect(failed).to.equal(true);
 	});
 });

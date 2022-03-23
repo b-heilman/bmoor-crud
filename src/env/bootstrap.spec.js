@@ -1,29 +1,28 @@
-
 const {expect} = require('chai');
 const sinon = require('sinon');
 const {Config} = require('bmoor/src/lib/config.js');
 
 const sut = require('./bootstrap.js');
 
-describe('src/env/bootstrap.js', function(){
+describe('src/env/bootstrap.js', function () {
 	let stubs = null;
 
-	beforeEach(function(){
+	beforeEach(function () {
 		stubs = {};
 	});
 
-	afterEach(function(){
-		for(let key in stubs){
-			if (stubs[key].restore){
+	afterEach(function () {
+		for (let key in stubs) {
+			if (stubs[key].restore) {
 				stubs[key].restore();
 			}
 		}
 	});
 
-	describe('::install', function(){
+	describe('::install', function () {
 		let bootstrap = null;
 
-		beforeEach('should load everything correctly', async function(){
+		beforeEach('should load everything correctly', async function () {
 			stubs.execute = sinon.stub();
 
 			/*
@@ -31,13 +30,21 @@ describe('src/env/bootstrap.js', function(){
 				method: '',
 				permissions
 			});
-			*/ 
+			*/
 
 			const cfg = sut.config.extend({
 				connectors: {
-					'http': () => ({
+					http: () => ({
 						execute: stubs.execute
 					})
+				},
+				sources: {
+					's-1': {
+						connector: 'http'
+					},
+					's-2': {
+						connector: 'http'
+					}
 				},
 				directories: {
 					model: '/models',
@@ -51,7 +58,7 @@ describe('src/env/bootstrap.js', function(){
 					document: '/documents'
 				}
 			});
-			
+
 			bootstrap = new sut.Bootstrap(cfg);
 
 			stubs.action = sinon.stub();
@@ -59,411 +66,478 @@ describe('src/env/bootstrap.js', function(){
 			const trace = [];
 
 			const mockery = new Config({
-				cruds: [{
-					name: 'service-1',
-					settings: {
-						connector: 'http',
-						fields: {
-							id: {
-								create: false,
-								read: true,
-								update: false,
-								delete: true,
-								key: true
-							},
-							name: true
+				cruds: [
+					{
+						name: 'service-1',
+						settings: {
+							source: 's-1',
+							fields: {
+								id: {
+									create: false,
+									read: true,
+									update: false,
+									delete: true,
+									key: true
+								},
+								name: true
+							}
 						}
-					}
-				}, {
-					name: 'service-2',
-					settings: {
-						connector: 'http',
-						fields: {
-							id: {
-								create: false,
-								read: true,
-								update: false,
-								delete: true,
-								key: true
-							},
-							name: {
-								create: true,
-								read: true,
-								update: true,
-								link: {
-									name: 'service-1',
-									field: 'id'
+					},
+					{
+						name: 'service-2',
+						settings: {
+							source: 's-2',
+							fields: {
+								id: {
+									create: false,
+									read: true,
+									update: false,
+									delete: true,
+									key: true
+								},
+								name: {
+									create: true,
+									read: true,
+									update: true,
+									link: {
+										name: 'service-1',
+										field: 'id'
+									}
 								}
 							}
 						}
 					}
-				}],
-				documents: [{
-					name: 'composite-1',
-					settings: {
-						base: 'service-1',
-						joins: ['> $service-2'],
-						fields: {
-							'id': '.id',
-							'name': '.name',
-							'other': '$service-2.name'
+				],
+				documents: [
+					{
+						name: 'composite-1',
+						settings: {
+							base: 'service-1',
+							joins: ['> $service-2'],
+							fields: {
+								id: '.id',
+								name: '.name',
+								other: '$service-2.name'
+							}
 						}
 					}
-				}],
-				decorators: [{
-					name: 'service-1',
-					settings: {
-						hello: function(){
-							expect(this.create)
-							.to.not.equal(undefined);
+				],
+				decorators: [
+					{
+						name: 'service-1',
+						settings: {
+							hello: function () {
+								expect(this.create).to.not.equal(undefined);
 
-							return 'world';
+								return 'world';
+							}
 						}
 					}
-				}],
-				hooks: [{
-					name: 'service-1',
-					settings: {
-						afterCreate: async function(){
-							trace.push(1);
+				],
+				hooks: [
+					{
+						name: 'service-1',
+						settings: {
+							afterCreate: async function () {
+								trace.push(1);
+							}
 						}
 					}
-				}],
-				effects: [{
-					name: 'service-1',
-					settings: [{
-						model: 'service-2',
-						action: 'update',
-						callback: stubs.action
-					}]
-				}],
-				guards: [{
-					name: 'service-1',
-					settings: {
-						read: true,
-						query: true,
-						create: true,
-						update: true,
-						delete: true
+				],
+				effects: [
+					{
+						name: 'service-1',
+						settings: [
+							{
+								model: 'service-2',
+								action: 'update',
+								callback: stubs.action
+							}
+						]
 					}
-				}],
-				actions: [{
-					name: 'service-1',
-					settings:{
-						hello: {
-							method: 'get'
+				],
+				guards: [
+					{
+						name: 'service-1',
+						settings: {
+							read: true,
+							query: true,
+							create: true,
+							update: true,
+							delete: true
 						}
 					}
-				}],
-				utilities: [{
-					name: 'service-1',
-					settings: {
-						hello: {
-							method: 'get'
+				],
+				actions: [
+					{
+						name: 'service-1',
+						settings: {
+							hello: {
+								method: 'get'
+							}
 						}
 					}
-				}],
-				synthetics: [{
-					name: 'composite-1',
-					settings: {
-						read: 'can-read'
+				],
+				utilities: [
+					{
+						name: 'service-1',
+						settings: {
+							hello: {
+								method: 'get'
+							}
+						}
 					}
-				}]
+				],
+				synthetics: [
+					{
+						name: 'composite-1',
+						settings: {
+							read: 'can-read'
+						}
+					}
+				]
 			});
 
 			await bootstrap.install(mockery);
 		});
 
-		it('should install correctly', async function(){
+		it('should install correctly', async function () {
 			const res = JSON.parse(JSON.stringify(bootstrap));
 
-			expect(res.crud)
-			.to.deep.equal({
-				services: [{
-					'$schema': 'bmoor-crud:view',
-					'structure': {
-						'$schema': 'bmoor-crud:structure',
-						'name': 'service-1',
-						'fields': [{
-							'path': 'id',
-							'storage': {
-								'schema': 'service-1',
-								'path': 'id'
-							},
-							'usage': {}
-						},
-						{
-							'path': 'name',
-							'storage': {
-								'schema': 'service-1',
-								'path': 'name'
-							},
-							'usage': {}
-						}]
+			expect(res.crud).to.deep.equal({
+				services: [
+					{
+						$schema: 'bmoor-crud:view',
+						structure: {
+							$schema: 'bmoor-crud:structure',
+							name: 'service-1',
+							fields: [
+								{
+									path: 'id',
+									storage: {
+										schema: 'service-1',
+										path: 'id'
+									},
+									usage: {}
+								},
+								{
+									path: 'name',
+									storage: {
+										schema: 'service-1',
+										path: 'name'
+									},
+									usage: {}
+								}
+							]
+						}
+					},
+					{
+						$schema: 'bmoor-crud:view',
+						structure: {
+							$schema: 'bmoor-crud:structure',
+							name: 'service-2',
+							fields: [
+								{
+									path: 'id',
+									storage: {
+										schema: 'service-2',
+										path: 'id'
+									},
+									usage: {}
+								},
+								{
+									path: 'name',
+									storage: {
+										schema: 'service-2',
+										path: 'name'
+									},
+									usage: {}
+								}
+							]
+						}
 					}
-				}, {
-					'$schema': 'bmoor-crud:view',
-					'structure': {
-						'$schema': 'bmoor-crud:structure',
-						'name': 'service-2',
-						'fields': [{
-							'path': 'id',
-							'storage': {
-								'schema': 'service-2',
-								'path': 'id'
-							},
-							'usage': {}
-						}, {
-							'path': 'name',
-							'storage': {
-								'schema': 'service-2',
-								'path': 'name'
-							},
-							'usage': {}
-						}]
+				],
+				documents: [
+					{
+						$schema: 'bmoor-crud:view',
+						structure: {
+							$schema: 'bmoor-crud:structure',
+							name: 'composite-1',
+							fields: [
+								{
+									path: 'id',
+									storage: {
+										schema: 'service-1',
+										path: 'id'
+									},
+									usage: {}
+								},
+								{
+									path: 'name',
+									storage: {
+										schema: 'service-1',
+										path: 'name'
+									},
+									usage: {}
+								},
+								{
+									path: 'other',
+									storage: {
+										schema: 'service-2',
+										path: 'name'
+									},
+									usage: {}
+								}
+							]
+						}
 					}
-				}],
-				documents: [{
-					'$schema': 'bmoor-crud:view',
-					'structure': {
-						'$schema': 'bmoor-crud:structure',
-						'name': 'composite-1',
-						'fields': [{
-							'path': 'id',
-							'storage': {
-								'schema': 'service-1',
-								'path': 'id'
-							},
-							'usage': {}
-						},
-						{
-							'path': 'name',
-							'storage': {
-								'schema': 'service-1',
-								'path': 'name'
-							},
-							'usage': {}
-						}, {
-							'path': 'other',
-							'storage': {
-								'schema': 'service-2',
-								'path': 'name'
-							},
-							'usage': {}
-						}]
-					}
-				}]
+				]
 			});
 
-			expect(res.controllers)
-			.to.deep.equal({
-				'guards': [{
-					'$schema': 'bmoor-crud:controller',
-					'routes': [{
+			expect(res.controllers).to.deep.equal({
+				guards: [
+					{
+						$schema: 'bmoor-crud:controller',
+						routes: [
+							{
+								route: {
+									path: '',
+									method: 'post'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '/:id',
+									method: 'get'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '',
+									method: 'get'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '/:id',
+									method: 'put'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '/:id',
+									method: 'patch'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '',
+									method: 'patch'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '/:id',
+									method: 'delete'
+								},
+								structure: 'service-1'
+							},
+							{
+								route: {
+									path: '',
+									method: 'delete'
+								},
+								structure: 'service-1'
+							}
+						]
+					}
+				],
+				actions: [
+					{
+						$schema: 'bmoor-crud:controller',
+						routes: [
+							{
+								route: {
+									method: 'get',
+									path: '/hello/:id'
+								},
+								structure: 'service-1'
+							}
+						]
+					}
+				],
+				utilities: [
+					{
+						$schema: 'bmoor-crud:controller',
+						routes: [
+							{
+								route: {
+									method: 'get',
+									path: '/hello'
+								},
+								structure: 'service-1'
+							}
+						]
+					}
+				],
+				synthetics: [
+					{
+						$schema: 'bmoor-crud:controller',
+						routes: [
+							/*{
 						'route': {
 							'path': '',
 							'method': 'post'
 						},
-						'structure': 'service-1'
-					}, {
-						'route': {
-							'path': '/:id',
-							'method': 'get'
-						},
-						'structure': 'service-1'
-					}, {
-						'route': {
-							'path': '',
-							'method': 'get'
-						},
-						'structure': 'service-1'
-					}, {
-						'route': {
-							'path': '/:id',
-							'method': 'put'
-						},
-						'structure': 'service-1'
-					}, {
-						'route': {
-							'path': '/:id',
-							'method': 'patch'
-						},
-						'structure': 'service-1'
-					}, {
-						'route': {
-							'path': '/:id',
-							'method': 'delete'
-						},
-						'structure': 'service-1'
-					}, {
-						'route': {
-							'path': '',
-							'method': 'delete'
-						},
-						'structure': 'service-1'
-					}]
-				}],
-				'actions': [{
-					'$schema': 'bmoor-crud:controller',
-					'routes': [{
-						'route': {
-							'method': 'get',
-							'path': '/hello/:id'
-						},
-						'structure': 'service-1'
-					}]
-				}],
-				'utilities': [{
-					'$schema': 'bmoor-crud:controller',
-					'routes': [{
-						'route': {
-							'method': 'get',
-							'path': '/hello'
-						},
-						'structure': 'service-1'
-					}]
-				}],
-				'synthetics': [{
-					'$schema': 'bmoor-crud:controller',
-					'routes': [/*{
-						'route': {
-							'path': '',
-							'method': 'post'
-						},
 						'structure': 'composite-1'
-					}, */{
-						'route': {
-							'path': '/:id',
-							'method': 'get'
-						},
-						'structure': 'composite-1'
-					}, {
-						'route': {
-							'path': '',
-							'method': 'get'
-						},
-						'structure': 'composite-1'
-					}]
-				}],
+					}, */ {
+								route: {
+									path: '/:id',
+									method: 'get'
+								},
+								structure: 'composite-1'
+							},
+							{
+								route: {
+									path: '',
+									method: 'get'
+								},
+								structure: 'composite-1'
+							}
+						]
+					}
+				],
 				querier: {
-					'$schema': 'bmoor-crud:controller',
-					routes: [{
-						'route': {
-							'path': '',
-							'method': 'post'
+					$schema: 'bmoor-crud:controller',
+					routes: [
+						{
+							route: {
+								path: '',
+								method: 'post'
+							}
 						}
-					}]
+					]
 				}
 			});
 
-			expect(res.router)
-			.to.deep.equal({
-				'$schema': 'bmoor-crud:router',
-				'path': '/bmoor',
-				'routes': [
+			expect(res.router).to.deep.equal({
+				$schema: 'bmoor-crud:router',
+				path: '/bmoor',
+				routes: [
 					{
-						'$schema': 'bmoor-crud:router',
-						'path': '/action',
-						'routes': [
+						$schema: 'bmoor-crud:router',
+						path: '/action',
+						routes: [
 							{
-								'$schema': 'bmoor-crud:router',
-								'path': '/service-1',
-								'routes': [
+								$schema: 'bmoor-crud:router',
+								path: '/service-1',
+								routes: [
 									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'get',
-										'path': '/hello/:id'
+										$schema: 'bmoor-crud:route',
+										method: 'get',
+										path: '/hello/:id'
 									}
 								]
 							}
 						]
 					},
 					{
-						'$schema': 'bmoor-crud:router',
-						'path': '/crud',
-						'routes': [
+						$schema: 'bmoor-crud:router',
+						path: '/crud',
+						routes: [
 							{
-								'$schema': 'bmoor-crud:router',
-								'path': '/service-1',
-								'routes': [
+								$schema: 'bmoor-crud:router',
+								path: '/service-1',
+								routes: [
 									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'delete',
-										'path': ''
+										$schema: 'bmoor-crud:route',
+										method: 'delete',
+										path: ''
 									},
 									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'get',
-										'path': ''
+										$schema: 'bmoor-crud:route',
+										method: 'get',
+										path: ''
 									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'patch',
+										path: ''
+									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'post',
+										path: ''
+									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'delete',
+										path: '/:id'
+									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'get',
+										path: '/:id'
+									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'patch',
+										path: '/:id'
+									},
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'put',
+										path: '/:id'
+									}
+								]
+							}
+						]
+					},
+					{
+						$schema: 'bmoor-crud:router',
+						path: '/synthetic',
+						routes: [
+							{
+								$schema: 'bmoor-crud:router',
+								path: '/composite-1',
+								routes: [
+									{
+										$schema: 'bmoor-crud:route',
+										method: 'get',
+										path: ''
+									} /*
 									{
 										'$schema': 'bmoor-crud:route',
 										'method': 'post',
 										'path': ''
-									},
+									},*/,
 									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'delete',
-										'path': '/:id'
-									},
-									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'get',
-										'path': '/:id'
-									},
-									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'patch',
-										'path': '/:id'
-									},
-									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'put',
-										'path': '/:id'
+										$schema: 'bmoor-crud:route',
+										method: 'get',
+										path: '/:id'
 									}
 								]
 							}
 						]
 					},
 					{
-						'$schema': 'bmoor-crud:router',
-						'path': '/synthetic',
-						'routes': [
+						$schema: 'bmoor-crud:router',
+						path: '/utility',
+						routes: [
 							{
-								'$schema': 'bmoor-crud:router',
-								'path': '/composite-1',
-								'routes': [
+								$schema: 'bmoor-crud:router',
+								path: '/service-1',
+								routes: [
 									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'get',
-										'path': ''
-									},/*
-									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'post',
-										'path': ''
-									},*/
-									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'get',
-										'path': '/:id'
-									}
-								]
-							}
-						]
-					},
-					{
-						'$schema': 'bmoor-crud:router',
-						'path': '/utility',
-						'routes': [
-							{
-								'$schema': 'bmoor-crud:router',
-								'path': '/service-1',
-								'routes': [
-									{
-										'$schema': 'bmoor-crud:route',
-										'method': 'get',
-										'path': '/hello'
+										$schema: 'bmoor-crud:route',
+										method: 'get',
+										path: '/hello'
 									}
 								]
 							}

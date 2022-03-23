@@ -1,212 +1,137 @@
+const {Querier} = require('./querier.js');
+const {Executor} = require('./executor.js');
+const {ViewActions} = require('./view/actions.js');
 
-const {del} = require('bmoor/src/core.js');
-
-async function runMap(arr, view, ctx){
-	const mapFn = view.buildMap(ctx);
-	const inflateFn = view.structure.actions.inflate;
-
-	let rtn = null;
-
-	if (mapFn){
-		if (inflateFn){
-			rtn = await Promise.all(
-				arr.map(
-					datum => mapFn(inflateFn(datum, ctx))
-				)
-			);
-		} else {
-			rtn = await Promise.all(
-				arr.map(mapFn)
-			);
-		}
-	} else if (inflateFn){
-		rtn = arr.map(
-			datum => inflateFn(datum, ctx)
-		);
-	} else {
-		rtn = arr;
-	}
-
-	if (view.incomingSettings.inflate){
-		return rtn.map(view.incomingSettings.inflate);
-	} else {
-		return rtn;
-	}
-}
-
-async function runFilter(arr, view, ctx){
+async function runFilter(arr, view, ctx) {
 	const filterFn = await view.buildFilter(ctx);
 
-	if (filterFn){
+	if (filterFn) {
 		return arr.filter(filterFn);
 	} else {
 		return arr;
 	}
 }
 
-function buildCleaner(type, fields){
-	const cleaner = fields.reduce(
-		(old, field) => {
-			const op = field.incomingSettings[type];
-
-			if (typeof(op) === 'string'){
-				if (old){
-					return async function(datum, ctx){
-						await old(datum, ctx);
-
-						if (!ctx.hasPermission(op)){
-							del(datum, field.path);
-						}
-					};
-				} else {
-					return async function(datum, ctx){
-						if (!ctx.hasPermission(op)){
-							del(datum, field.path);
-						}
-					};
-				}
-			}
-
-			return old;
-		},
-		null
-	);
-
-	if (cleaner){
-		return async function(datum, ctx){
-			await cleaner(datum, ctx);
-
-			return datum;
-		};
-	} else {
-		return null;
-	}
-}
-
 class View {
-	constructor(structure){
-		this.structure = structure; 
+	constructor(structure) {
+		this.structure = structure;
 		this.cleaners = {};
 		this.hooks = {};
 		this.security = {};
 	}
 
-	async configure(settings={}){
+	async configure(settings = {}) {
 		this.incomingSettings = settings;
 	}
 
-	// returns a function to clean multiple datums from this instance
-	/*
-	 * I am defaulting preclean to false, as this view will already be
-	 * defining what fields are requested, so the clean will be double duty
-	 * leaving it here though incase anyone wants to be over zealous with 
-	 * security.
-	 */
-	buildCleaner(type){
-		let cleaner = this.cleaners[type];
+	async build() {
+		await this.structure.build();
 
-		if (!(type in this.cleaners)){
-			cleaner = buildCleaner(type, this.structure.getFields());
-
-			this.cleaners[type] = cleaner;
-		}
-
-		return cleaner;
+		/***
+		 * Here's how permissions / security will work.  I am going to treat
+		 * the framework like a red/green network topography.  Everything
+		 * services and schemas will be assumed sanitized, and controllers
+		 * will sanitize any incoming things.  This reduces the number of
+		 * unneccisary copies made of data. So cleanFor are used to apply permissions
+		 * to a known data shape and copyFor is to sanitize data from the outside.
+		 *
+		 * Deflate will act as a copyFor, so I don't need one for create or update
+		 ***/
+		this.actions = new ViewActions(
+			this.structure.actions,
+			this.incomingSettings
+		);
 	}
 
-	async clean(type, datum, ctx){
-		const cleaner = this.buildCleaner(type);
-
-		datum = this.structure.clean(type, datum);
-
-		if (cleaner){
-			await cleaner(datum, ctx);
-		}
-
-		return datum;
-	}
-
-	buildMap(ctx){
-		const readCleaner = this.buildCleaner('read');
-
-		if (readCleaner){
-			return async function(datum){
-				return readCleaner(datum, ctx);
-			};
-		}
-
-		return null;
-	}
-
-	async buildFilter(ctx){
-		if (this.security.filterFactory){
+	// TODO: this needs to be redone as well
+	async buildFilter(ctx) {
+		if (this.security.filterFactory) {
 			return this.security.filterFactory(ctx);
 		} else {
 			return null;
 		}
 	}
 
-	async read(stmt, ctx){
-		stmt.method = 'read';
-		
+	async run(stmt, ctx, settings) {
+		await stmt.link(this.structure.nexus);
+
+		return stmt.run(ctx, settings);
+	}
+
+	async process(stmt, ctx, settings = {}) {
+		const actions = settings.actions || this.actions;
+
 		return runFilter(
-			await runMap( // converts from internal => external
-				await this.structure.execute(stmt, ctx), 
-				this, 
-				ctx
-			), 
-			this, 
+			await Promise.all(
+				// converts from internal => external
+				(
+					await this.run(stmt, ctx, settings)
+				).map(async (datum) => actions.inflate(datum, ctx))
+			),
+			this,
 			ctx
 		);
 	}
 
-	async getChangeType(datum, id = null, ctx = null){
+	async query(query, ctx, settings = {}) {
+		return this.process(
+			new Querier('view:' + this.structure.name, query),
+			ctx,
+			settings
+		);
+	}
+
+	async execute(exe, ctx, settings = {}) {
+		return this.process(
+			new Executor('view:' + this.structure.name, exe),
+			ctx,
+			settings
+		);
+	}
+
+	async getChangeType(datum, id = null, ctx = null) {
 		let delta = datum;
 
-		if (id){
+		if (id) {
 			const target = await this.read(id, ctx);
 
-			if (target){
-				delta = this.structure.getFields()
-				.reduce(
-					(agg, field) => {
-						const incomingValue = field.externalGetter(datum);
-						const existingValue = field.externalGetter(target);
+			if (target) {
+				delta = this.structure.getFields().reduce((agg, field) => {
+					const incomingValue = field.externalGetter(datum);
+					const existingValue = field.externalGetter(target);
 
-						if (incomingValue !== existingValue && 
-							incomingValue !== undefined){
-							field.externalSetter(agg, incomingValue);
-						}
+					if (incomingValue !== existingValue && incomingValue !== undefined) {
+						field.externalSetter(agg, incomingValue);
+					}
 
-						return agg;
-					},
-					{}
-				);
+					return agg;
+				}, {});
 			}
 		}
 
 		return this.structure.getChangeType(delta);
 	}
 
-	async validate(delta, mode, ctx){
+	// TODO: revisit this...
+	async validate(delta, mode, ctx) {
 		const security = this.security;
 
 		const errors = this.structure.validate(delta, mode);
 
-		return security.validate ? 
-			errors.concat(await security.validate(delta, mode, ctx)) : errors;
+		return security.validate
+			? errors.concat(await security.validate(delta, mode, ctx))
+			: errors;
 	}
 
-	toJSON(){
+	toJSON() {
 		return {
 			$schema: 'bmoor-crud:view',
 			structure: this.structure
 		};
 	}
 }
-	
+
 module.exports = {
-	runMap,
 	runFilter,
 	View
 };

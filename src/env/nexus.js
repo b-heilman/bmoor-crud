@@ -1,18 +1,19 @@
-
 const {Config} = require('bmoor/src/lib/config.js');
 
 const {hook} = require('../services/hook.js');
 const {secure} = require('../services/secure.js');
 const {Mapper} = require('../graph/mapper.js');
 
-const {Model} = require('../schema/model.js');
 const {Crud} = require('../services/crud.js');
-const {Composite} = require('../schema/composite.js');
+const {Model} = require('../schema/model.js');
+const {Source} = require('../services/source.js');
 const {Document} = require('../services/document.js');
+const {Composite} = require('../schema/composite.js');
 
 const config = new Config({
 	timeout: 2000,
 	constructors: {
+		source: Source,
 		model: Model,
 		crud: Crud,
 		composite: Composite,
@@ -25,47 +26,53 @@ const config = new Config({
 	}
 });
 
-const waiting = [];
-async function ensure(prom, label){
-	waiting.push(label);
+const waiting = {};
+async function ensure(prom, label) {
+	if (waiting[label]) {
+		waiting[label].count++;
+	} else {
+		const promise = new Promise((resolve, reject) => {
+			const timeout = config.get('timeout');
 
-	return new Promise((resolve, reject) => {
-		const timeout = config.get('timeout');
+			const clear = setTimeout(function () {
+				console.log(
+					'timeout detected nexus stack',
+					JSON.stringify(waiting, null, 2)
+				);
 
-		const clear = setTimeout(function(){
-			console.log(
-				'timeout detected nexus stack', 
-				JSON.stringify(waiting, null, 2)
-			);
+				reject(new Error('lookup timed out: ' + label));
+			}, timeout);
 
-			reject(new Error('lookup timed out: '+label));
-		}, timeout);
+			prom.then(
+				(success) => {
+					delete waiting[label];
 
-		prom.then(
-			success => {
-				const index = waiting.indexOf(label);
-				if (index > -1) {
-					waiting.splice(index, 1);
+					clearTimeout(clear);
+					resolve(success);
+				},
+				(failure) => {
+					clearTimeout(clear);
+					reject(failure);
 				}
+			);
+		});
 
-				clearTimeout(clear);
-				resolve(success);
-			},
-			failure => {
-				clearTimeout(clear);
-				reject(failure);
-			}
-		);
-	});
+		waiting[label] = {
+			count: 1,
+			promise
+		};
+	}
+
+	return waiting[label].promise;
 }
 
-function getDefined(nexus, type, constructors, ref, args){
+function getDefined(nexus, type, constructors, ref, args) {
 	let model = nexus.getDefined(type, ref);
 
-	if (!model){
+	if (!model) {
 		const Build = constructors.get(type);
 
-		if (!Build){
+		if (!Build) {
 			throw new Error(`Unknown constructor: ${type}`);
 		}
 
@@ -77,18 +84,18 @@ function getDefined(nexus, type, constructors, ref, args){
 	return model;
 }
 
-async function setSettings(nexus, type, target, settings, ref){
+async function setSettings(nexus, type, target, settings, ref) {
 	await target.configure(settings);
-	
+
 	await nexus.setConfigured(type, ref, target);
-	
+
 	return target;
 }
 
-async function loadTarget(nexus, type, ref){
+async function loadTarget(nexus, type, ref) {
 	let entity = nexus.getConfigured(type, ref);
 
-	if (!entity){
+	if (!entity) {
 		entity = await nexus.awaitConfigured(type, ref);
 	}
 
@@ -96,7 +103,7 @@ async function loadTarget(nexus, type, ref){
 }
 
 class Nexus {
-	constructor(constructors, connectors){
+	constructor(constructors, connectors) {
 		this.constructors = constructors || config.sub('constructors');
 
 		this.ether = new Config({});
@@ -104,72 +111,119 @@ class Nexus {
 		this.connectors = connectors || config.sub('connectors');
 	}
 
-	getDefined(type, ref){
+	getDefined(type, ref) {
 		return this.ether.get(`defined.${type}.${ref}`);
 	}
 
-	setDefined(type, ref, value){
+	setDefined(type, ref, value) {
 		return this.ether.set(`defined.${type}.${ref}`, value);
 	}
 
-	getConfigured(type, ref){
+	getConfigured(type, ref) {
 		return this.ether.get(`configured.${type}.${ref}`);
 	}
 
-	setConfigured(type, ref, value){
+	setConfigured(type, ref, value) {
 		return this.ether.set(`configured.${type}.${ref}`, value);
 	}
 
-	async awaitConfigured(type, ref){
+	async awaitConfigured(type, ref) {
 		const path = `configured.${type}.${ref}`;
 
 		return ensure(
-			this.ether.promised(path, res => res),
+			this.ether.promised(path, (res) => res),
 			path
 		);
 	}
 
-	getModel(ref){
+	async setConnector(ref, factory) {
+		await this.setConfigured('connector', ref, factory);
+
+		return factory;
+	}
+
+	async loadConnector(ref) {
+		if (!ref) {
+			throw new Error('invalid connector requested: ' + ref);
+		}
+
+		return loadTarget(this, 'connector', ref);
+	}
+
+	getSource(ref) {
+		return getDefined(this, 'source', this.constructors, ref, [ref, this]);
+	}
+
+	async configureSource(ref, settings) {
+		const source = await setSettings(
+			this,
+			'source',
+			this.getSource(ref),
+			settings,
+			ref
+		);
+
+		return source;
+	}
+
+	async loadSource(ref) {
+		if (!ref) {
+			throw new Error('invalid source requested: ' + ref);
+		}
+
+		return loadTarget(this, 'source', ref);
+	}
+
+	getModel(ref) {
 		return getDefined(this, 'model', this.constructors, ref, [ref, this]);
 	}
 
-	async configureModel(ref, settings){
-		const model = await setSettings(this, 'model', this.getModel(ref), settings, ref);
+	async configureModel(ref, settings) {
+		const model = await setSettings(
+			this,
+			'model',
+			this.getModel(ref),
+			settings,
+			ref
+		);
 
 		this.mapper.addModel(model);
 
 		return model;
 	}
 
-	async loadModel(ref){
-		if (!ref){
-			throw new Error('invalid model requested: '+ref);
+	async loadModel(ref) {
+		if (!ref) {
+			throw new Error('invalid model requested: ' + ref);
 		}
 
 		return loadTarget(this, 'model', ref);
 	}
 
-	getCrud(ref){
-		return getDefined(this, 'crud', this.constructors, ref, [this.getModel(ref)]);
+	getCrud(ref) {
+		return getDefined(this, 'crud', this.constructors, ref, [
+			this.getModel(ref)
+		]);
 	}
 
-	async configureCrud(ref, settings = {}){
+	async configureCrud(ref, settings = {}) {
 		await this.loadModel(ref);
 
 		const crud = this.getCrud(ref);
 
 		await crud.configure(settings);
+		await crud.build();
 
 		await this.setConfigured('crud', ref, crud);
 
 		return crud;
 	}
 
-	async loadCrud(ref){
+	async loadCrud(ref) {
 		return loadTarget(this, 'crud', ref);
 	}
 
-	async configureDecorator(ref, decoration){
+	async configureDecorator(ref, decoration) {
 		const service = await this.loadCrud(ref);
 
 		service.decorate(decoration);
@@ -177,7 +231,7 @@ class Nexus {
 		return service;
 	}
 
-	async configureHook(ref, settings){
+	async configureHook(ref, settings) {
 		const service = await this.loadCrud(ref);
 
 		hook(service, settings);
@@ -185,7 +239,7 @@ class Nexus {
 		return service;
 	}
 
-	async configureSecurity(ref, settings){
+	async configureSecurity(ref, settings) {
 		const service = await this.loadCrud(ref);
 
 		secure(service, settings);
@@ -193,84 +247,96 @@ class Nexus {
 		return service;
 	}
 
-	getComposite(ref){
+	getComposite(ref) {
 		return getDefined(this, 'composite', this.constructors, ref, [ref, this]);
 	}
 
-	async configureComposite(ref, settings){
-		return setSettings(this, 'composite', this.getComposite(ref), settings, ref);
+	async configureComposite(ref, settings) {
+		return setSettings(
+			this,
+			'composite',
+			this.getComposite(ref),
+			settings,
+			ref
+		);
 	}
 
-	async loadComposite(ref){
-		if (!ref){
-			throw new Error('invalid composite requested: '+ref);
+	async loadComposite(ref) {
+		if (!ref) {
+			throw new Error('invalid composite requested: ' + ref);
 		}
 
 		return loadTarget(this, 'composite', ref);
 	}
 
-	getDocument(ref){
-		return getDefined(this, 'document', this.constructors, ref, [this.getComposite(ref)]);
+	getDocument(ref) {
+		return getDefined(this, 'document', this.constructors, ref, [
+			this.getComposite(ref)
+		]);
 	}
 
-	async configureDocument(ref, settings = {}){
+	async configureDocument(ref, settings = {}) {
 		await this.loadComposite(ref);
 
 		const doc = this.getDocument(ref);
-		
+
 		await doc.configure(settings);
+		await doc.build();
 
 		await this.setConfigured('document', ref, doc);
-		
+
 		return doc;
 	}
 
-	async loadDocument(ref){
+	async loadDocument(ref) {
 		return loadTarget(this, 'document', ref);
 	}
 
 	// I'm not putting loads below because nothing should be requiring these...
-	getGuard(ref){
-		return getDefined(this, 'guard', this.constructors, ref, [this.getCrud(ref)]);
+	getGuard(ref) {
+		return getDefined(this, 'guard', this.constructors, ref, [
+			this.getCrud(ref)
+		]);
 	}
 
-	async configureGuard(ref, settings){
+	async configureGuard(ref, settings) {
 		return setSettings(this, 'composite', this.getGuard(ref), settings, ref);
 	}
 
-	getAction(ref){
-		return getDefined(this, 'action', this.constructors, ref, [this.getCrud(ref)]);
+	getAction(ref) {
+		return getDefined(this, 'action', this.constructors, ref, [
+			this.getCrud(ref)
+		]);
 	}
 
-	async configureAction(ref, settings){
+	async configureAction(ref, settings) {
 		return setSettings(this, 'action', this.getAction(ref), settings, ref);
 	}
 
-	getUtility(ref){
-		return getDefined(this, 'utility', this.constructors, ref, [this.getCrud(ref)]);
+	getUtility(ref) {
+		return getDefined(this, 'utility', this.constructors, ref, [
+			this.getCrud(ref)
+		]);
 	}
 
-	async configureUtility(ref, settings){
+	async configureUtility(ref, settings) {
 		return setSettings(this, 'utility', this.getUtility(ref), settings, ref);
 	}
 
-	getSynthetic(ref){
-		return getDefined(this, 'synthetic', this.constructors, ref, [this.getDocument(ref)]);
+	getSynthetic(ref) {
+		return getDefined(this, 'synthetic', this.constructors, ref, [
+			this.getDocument(ref)
+		]);
 	}
 
-	async configureSynthetic(ref, settings){
-		return setSettings(this, 'synthetic', this.getSynthetic(ref), settings, ref);
-	}
-
-	async execute(connector, settings, stmt){
-		const factory = this.connectors.get(connector);
-		const executor = factory(settings);
-		
-		return executor.execute(stmt);
-	}
-
-	toJSON(){
-		console.trace();
+	async configureSynthetic(ref, settings) {
+		return setSettings(
+			this,
+			'synthetic',
+			this.getSynthetic(ref),
+			settings,
+			ref
+		);
 	}
 }
 

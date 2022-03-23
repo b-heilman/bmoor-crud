@@ -1,10 +1,9 @@
-
-const {expect} =  require('chai');
+const {expect} = require('chai');
 
 const sut = require('./waitlist.js');
 
-describe('src/server/waitlist.js', function(){
-	it('should work', async function(){
+describe('src/server/waitlist.js', function () {
+	it('should work', async function () {
 		const waitlist = new sut.Waitlist();
 
 		const prom = waitlist.await('hello', 'world');
@@ -12,7 +11,7 @@ describe('src/server/waitlist.js', function(){
 		const service = {
 			structure: {
 				name: 'hello',
-				getKey: function(){
+				getKey: function () {
 					return 123;
 				}
 			}
@@ -20,8 +19,7 @@ describe('src/server/waitlist.js', function(){
 
 		waitlist.resolve(service, 'world', 3);
 
-		expect(await prom)
-		.to.deep.equal({
+		expect(await prom).to.deep.equal({
 			service,
 			datum: 3,
 			key: 123

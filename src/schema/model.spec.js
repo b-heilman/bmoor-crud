@@ -1,180 +1,181 @@
-
 const sinon = require('sinon');
 const {expect} = require('chai');
 
-describe('src/schema/model.js', function(){
-	const {config} = require('./structure.js');
+const {Nexus, config: nexusConfig} = require('../env/nexus.js');
+const {config} = require('./structure.js');
+
+describe('src/schema/model.js', function () {
 	const {Model} = require('./model.js');
 
 	let now = Date.now();
+	let stubs = null;
+	let nexus = null;
 	let clock = null;
+	let connector = null;
 
-	beforeEach(function(){
+	beforeEach(async function () {
+		nexusConfig.set('timeout', 500);
+
 		clock = sinon.useFakeTimers(now);
+
+		nexus = new Nexus();
+
+		connector = {
+			// this doesn't matter here, right?
+		};
+
+		await nexus.setConnector('test', async () => connector);
+
+		await nexus.configureSource('test-1', {
+			connector: 'test'
+		});
+
+		stubs = {
+			loadSource: sinon.stub(nexus, 'loadSource')
+		};
+
+		stubs.loadSource.resolves({isFlat: false});
 	});
 
-	afterEach(function(){
+	afterEach(function () {
 		clock.restore();
 	});
 
-	it('should be defined', function(){
+	it('should be defined', function () {
 		expect(Model).to.exist;
 	});
 
-	describe('.actions', function(){
-		describe('::create', function(){
-			it('should work with a single field', async function(){
-				const model = new Model('test-1');
+	describe('.actions', function () {
+		describe('::create', function () {
+			it('should work with a single field', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onCreate: function(tgt, src){
-								tgt.foo = src.bar;
+							onCreate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
-						zwei: {
-						}
+						zwei: {}
 					}
 				});
 
 				expect(
-					model.actions.create({}, {
+					model.actions.create({
 						bar: 'eins',
 						world: 'zwei'
 					})
 				).to.deep.equal({
+					bar: 'eins',
+					world: 'zwei',
 					foo: 'eins'
 				});
 			});
 
-			it('should work with multiple fields', async function(){
-				const model = new Model('test-1');
+			it('should work with multiple fields', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onCreate: function(tgt, src){
-								tgt.foo = src.bar;
+							onCreate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
-							onCreate: function(tgt, src){
-								tgt.hello = src.world;
+							onCreate: function (datum) {
+								datum.hello = datum.world;
 							}
 						}
 					}
 				});
 
 				expect(
-					model.actions.create({}, {
+					model.actions.create({
 						bar: 'eins',
 						world: 'zwei'
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 		});
 
-		describe('::update', function(){
-			it('should work with a single field', async function(){
-				const model = new Model('test-1');
+		describe('::update', function () {
+			it('should work with a single field', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onUpdate: function(tgt, src){
-								tgt.foo = src.bar;
+							onUpdate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
-						zwei: {
-						}
+						zwei: {}
 					}
 				});
 
 				expect(
-					model.actions.update({}, {
-						bar: 'eins',
-						world: 'zwei'
-					})
-				).to.deep.equal({
-					foo: 'eins'
-				});
-			});
-
-			it('should work with multiple fields', async function(){
-				const model = new Model('test-1');
-
-				await model.configure({
-					fields: {
-						eins: {
-							onUpdate: function(tgt, src){
-								tgt.foo = src.bar;
-							}
-						},
-						zwei: {
-							onUpdate: function(tgt, src){
-								tgt.hello = src.world;
-							}
-						}
-					}
-				});
-
-				expect(
-					model.actions.update({}, {
+					model.actions.update({
 						bar: 'eins',
 						world: 'zwei'
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
-		});
 
-		describe('::inflate', function(){
-			it('should work with a single field', async function(){
-				const model = new Model('test-1');
+			it('should work with multiple fields', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onInflate: function(tgt, src){
-								tgt.foo = src.bar;
+							onUpdate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
+							onUpdate: function (datum) {
+								datum.hello = datum.world;
+							}
 						}
 					}
 				});
 
 				expect(
-					model.actions.inflate({
+					model.actions.update({
 						bar: 'eins',
 						world: 'zwei'
 					})
 				).to.deep.equal({
-					foo: 'eins'
+					foo: 'eins',
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
+		});
 
-			it('should work with multiple fields', async function(){
-				const model = new Model('test-1'); 
+		describe('::inflate', function () {
+			it('should work with a single field', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onInflate: function(tgt, src){
-								tgt.foo = src.bar;
+							onInflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
-						zwei: {
-							onInflate: function(tgt, src){
-								tgt.hello = src.world;
-							}
-						}
+						zwei: {}
 					}
 				});
 
@@ -185,27 +186,58 @@ describe('src/schema/model.js', function(){
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
-			it('should work with a mutation', async function(){
-				const model = new Model('test-1'); 
+			it('should work with multiple fields', async function () {
+				const model = new Model('test-1', nexus);
+
+				await model.configure({
+					fields: {
+						eins: {
+							onInflate: function (datum) {
+								datum.foo = datum.bar;
+							}
+						},
+						zwei: {
+							onInflate: function (datum) {
+								datum.hello = datum.world;
+							}
+						}
+					}
+				});
+
+				expect(
+					model.actions.inflate({
+						bar: 'eins',
+						world: 'zwei'
+					})
+				).to.deep.equal({
+					foo: 'eins',
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
+				});
+			});
+
+			it('should work with a mutation', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
 							reference: 'one',
-							onInflate: function(tgt, src, setter, getter){
-								let value = getter(src);
+							onInflate: function (datum, setter, getter) {
+								let value = getter(datum);
 
 								value += '-- 1';
 
-								setter(tgt, value);
+								setter(datum, value);
 							}
 						},
-						zwei: {
-						},
+						zwei: {},
 						drei: {
 							reference: 'woot'
 						}
@@ -213,14 +245,12 @@ describe('src/schema/model.js', function(){
 				});
 
 				const res = model.actions.inflate({
-					one: 'eins',
-					world: 'foo',
+					eins: 'eins',
 					zwei: 'bar',
-					woot: 'woot'
+					drei: 'woot'
 				});
 
-				expect(res)
-				.to.deep.equal({
+				expect(res).to.deep.equal({
 					eins: 'eins-- 1',
 					zwei: 'bar',
 					drei: 'woot'
@@ -228,19 +258,18 @@ describe('src/schema/model.js', function(){
 			});
 		});
 
-		describe('::deflate', function(){
-			it('should work with a single field', async function(){
-				const model = new Model('test-1'); 
+		describe('::deflate', function () {
+			it('should work with a single field', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onDeflate: function(tgt, src){
-								tgt.foo = src.bar;
+							onDeflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
-						zwei: {
-						}
+						zwei: {}
 					}
 				});
 
@@ -250,23 +279,25 @@ describe('src/schema/model.js', function(){
 						world: 'zwei'
 					})
 				).to.deep.equal({
-					foo: 'eins'
+					foo: 'eins',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
-			it('should work with multiple fields', async function(){
-				const model = new Model('test-1');
+			it('should work with multiple fields', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
-							onDeflate: function(tgt, src){
-								tgt.foo = src.bar;
+							onDeflate: function (datum) {
+								datum.foo = datum.bar;
 							}
 						},
 						zwei: {
-							onDeflate: function(tgt, src){
-								tgt.hello = src.world;
+							onDeflate: function (datum) {
+								datum.hello = datum.world;
 							}
 						}
 					}
@@ -279,27 +310,28 @@ describe('src/schema/model.js', function(){
 					})
 				).to.deep.equal({
 					foo: 'eins',
-					hello: 'zwei'
+					hello: 'zwei',
+					bar: 'eins',
+					world: 'zwei'
 				});
 			});
 
-			it('should work with a mutation', async function(){
-				const model = new Model('test-1');
+			it('should work with a mutation', async function () {
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
 						eins: {
 							storagePath: 'one',
-							onDeflate: function(tgt, src, setter, getter){
-								let value = getter(src);
+							onDeflate: function (datum, setter, getter) {
+								let value = getter(datum);
 
 								value += '-- 1';
 
-								setter(tgt, value);
+								setter(datum, value);
 							}
 						},
-						zwei: {
-						},
+						zwei: {},
 						drei: {
 							storagePath: 'woot'
 						}
@@ -314,17 +346,18 @@ describe('src/schema/model.js', function(){
 						drei: 'woot'
 					})
 				).to.deep.equal({
-					one: 'eins-- 1',
+					eins: 'eins-- 1',
+					world: 'foo',
 					zwei: 'bar',
-					woot: 'woot'
+					drei: 'woot'
 				});
 			});
 		});
 
-		describe('via type', function(){ 
-			describe('json', function(){
-				it('should properly inflate', async function(){
-					const model = new Model('test-1');
+		describe('via type', function () {
+			describe('json', function () {
+				it('should properly inflate', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -333,6 +366,8 @@ describe('src/schema/model.js', function(){
 							}
 						}
 					});
+
+					await model.build();
 
 					expect(
 						model.actions.inflate({
@@ -345,8 +380,8 @@ describe('src/schema/model.js', function(){
 					});
 				});
 
-				it('should properly deflate', async function(){
-					const model = new Model('test-1');
+				it('should properly deflate', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -355,6 +390,8 @@ describe('src/schema/model.js', function(){
 							}
 						}
 					});
+
+					await model.build();
 
 					expect(
 						model.actions.deflate({
@@ -368,9 +405,9 @@ describe('src/schema/model.js', function(){
 				});
 			});
 
-			describe('monitor', function(){
-				it('should properly on create', async function(){
-					const model = new Model('test-1');
+			describe('monitor', function () {
+				it('should properly on create', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -386,18 +423,15 @@ describe('src/schema/model.js', function(){
 						}
 					});
 
-					expect(
-						model.actions.create({junk: 'ok'}, {
-							eins: 1
-						})
-					).to.deep.equal({
+					expect(model.actions.create({junk: 'ok', eins: 1})).to.deep.equal({
 						junk: 'ok',
+						eins: 1,
 						zwei: now
 					});
 				});
 
-				it('should properly on update', async function(){
-					const model = new Model('test-1');
+				it('should properly on update', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -413,18 +447,15 @@ describe('src/schema/model.js', function(){
 						}
 					});
 
-					expect(
-						model.actions.update({junk: 'ok'}, {
-							eins: 1
-						})
-					).to.deep.equal({
+					expect(model.actions.update({junk: 'ok', eins: 1})).to.deep.equal({
 						junk: 'ok',
+						eins: 1,
 						zwei: now
 					});
 				});
 
-				it('should properly on update with 0', async function(){
-					const model = new Model('test-1');
+				it('should properly on update with 0', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -440,18 +471,15 @@ describe('src/schema/model.js', function(){
 						}
 					});
 
-					expect(
-						model.actions.update({junk: 'ok'}, {
-							eins: 0
-						})
-					).to.deep.equal({
+					expect(model.actions.update({junk: 'ok', eins: 0})).to.deep.equal({
 						junk: 'ok',
+						eins: 0,
 						zwei: now
 					});
 				});
 
-				it('should properly on update with null', async function(){
-					const model = new Model('test-1');
+				it('should properly on update with null', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -467,18 +495,15 @@ describe('src/schema/model.js', function(){
 						}
 					});
 
-					expect(
-						model.actions.update({junk: 'ok'}, {
-							eins: null
-						})
-					).to.deep.equal({
+					expect(model.actions.update({junk: 'ok', eins: null})).to.deep.equal({
 						junk: 'ok',
+						eins: null,
 						zwei: now
 					});
 				});
 
-				it('should properly on update with undefined', async function(){
-					const model = new Model('test-1');
+				it('should properly on update with undefined', async function () {
+					const model = new Model('test-1', nexus);
 
 					await model.configure({
 						fields: {
@@ -495,20 +520,19 @@ describe('src/schema/model.js', function(){
 					});
 
 					expect(
-						model.actions.update({junk: 'ok'}, {
-							eins: undefined
-						})
+						model.actions.update({junk: 'ok', eins: undefined})
 					).to.deep.equal({
-						junk: 'ok'
+						junk: 'ok',
+						eins: undefined
 					});
 				});
 			});
 		});
 	});
 
-	describe('.settings', function(){
-		it('should expand default settings correctly', async function(){
-			const model = new Model('test-1');
+	describe('.settings', function () {
+		it('should expand default settings correctly', async function () {
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -534,15 +558,9 @@ describe('src/schema/model.js', function(){
 				}
 			});
 
-			expect(model.settings.create)
-			.to.deep.equal([
-				'zwei',
-				'fier',
-				'funf'
-			]);
+			expect(model.settings.create).to.deep.equal(['zwei', 'fier', 'funf']);
 
-			expect(model.settings.read)
-			.to.deep.equal([
+			expect(model.settings.read).to.deep.equal([
 				'eins',
 				'zwei',
 				'drei',
@@ -550,24 +568,17 @@ describe('src/schema/model.js', function(){
 				'funf'
 			]);
 
-			expect(model.settings.update)
-			.to.deep.equal([
-				'zwei'
-			]);
+			expect(model.settings.update).to.deep.equal(['zwei']);
 
-			expect(model.settings.index)
-			.to.deep.equal([
-				'funf'
-			]);
+			expect(model.settings.index).to.deep.equal(['funf']);
 
-			expect(model.settings.key)
-			.to.equal('eins');
+			expect(model.settings.key).to.equal('eins');
 		});
 	});
 
-	describe('::getKey', function(){
-		it('pull in a singular value', async function(){
-			const model = new Model('test-1'); 
+	describe('::getKey', function () {
+		it('pull in a singular value', async function () {
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -590,11 +601,11 @@ describe('src/schema/model.js', function(){
 			).to.deep.equal(1);
 		});
 
-		it('fail on multiple keys', async function(){
+		it('fail on multiple keys', async function () {
 			let failure = false;
 
 			try {
-				const model = new Model('test-1');
+				const model = new Model('test-1', nexus);
 
 				await model.configure({
 					fields: {
@@ -607,7 +618,7 @@ describe('src/schema/model.js', function(){
 						drei: false
 					}
 				});
-			} catch(ex){
+			} catch (ex) {
 				failure = true;
 			}
 
@@ -615,9 +626,9 @@ describe('src/schema/model.js', function(){
 		});
 	});
 
-	describe('::getIndex', function(){
-		it('pull in a singlar value', async function(){
-			const model = new Model('test-1'); 
+	describe('::getIndex', function () {
+		it('pull in a singlar value', async function () {
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -641,8 +652,8 @@ describe('src/schema/model.js', function(){
 			).to.deep.equal({drei: 3});
 		});
 
-		it('pull in a multiple values', async function(){
-			const model = new Model('test-1');
+		it('pull in a multiple values', async function () {
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -670,9 +681,9 @@ describe('src/schema/model.js', function(){
 		});
 	});
 
-	describe('::getChanges', function(){
-		it('pull in a singlar value', async function(){
-			const model = new Model('test-1'); 
+	describe('::getChanges', function () {
+		it('pull in a singlar value', async function () {
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -692,21 +703,24 @@ describe('src/schema/model.js', function(){
 			});
 
 			expect(
-				model.getChanges({
-					drei: 1,
-					junk: 'foo-bar'
-				}, {
-					eins: 1,
-					drei: 3,
-					junk: 'asdasd'
-				})
+				model.getChanges(
+					{
+						drei: 1,
+						junk: 'foo-bar'
+					},
+					{
+						eins: 1,
+						drei: 3,
+						junk: 'asdasd'
+					}
+				)
 			).to.deep.equal({drei: 3});
 		});
 	});
 
-	describe('::getChangeType', function(){
-		it('pull in a singlar value', async function(){
-			const model = new Model('test-1');
+	describe('::getChangeType', function () {
+		it('pull in a singlar value', async function () {
+			const model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -762,14 +776,14 @@ describe('src/schema/model.js', function(){
 		});
 	});
 
-	describe('::validate', function(){
+	describe('::validate', function () {
 		let model = true;
 
 		const createMode = config.get('writeModes.create');
 		const updateMode = config.get('writeModes.update');
 
-		beforeEach(async function(){
-			model = new Model('test-1');
+		beforeEach(async function () {
+			model = new Model('test-1', nexus);
 
 			await model.configure({
 				fields: {
@@ -798,48 +812,36 @@ describe('src/schema/model.js', function(){
 			});
 		});
 
-		it('should work on create', async function(){
+		it('should work on create', async function () {
 			expect(
 				model.validate({eins: 1, drei: 3, fier: 4}, createMode)
 			).to.deep.equal([]);
 
-			expect(
-				model.validate({eins: 1, fier: 4}, createMode)
-			).to.deep.equal([
+			expect(model.validate({eins: 1, fier: 4}, createMode)).to.deep.equal([
 				{path: 'drei', message: 'can not be empty'}
 			]);
 
-			expect(
-				model.validate({eins: 1}, createMode)
-			).to.deep.equal([
+			expect(model.validate({eins: 1}, createMode)).to.deep.equal([
 				{path: 'drei', message: 'can not be empty'},
 				{path: 'fier', message: 'can not be empty'}
 			]);
 
-			expect(
-				model.validate({eins: 1, drei: null}, createMode)
-			).to.deep.equal([
+			expect(model.validate({eins: 1, drei: null}, createMode)).to.deep.equal([
 				{path: 'drei', message: 'can not be empty'},
 				{path: 'fier', message: 'can not be empty'}
 			]);
 		});
 
-		it('should work on update', async function(){
+		it('should work on update', async function () {
 			expect(
 				model.validate({eins: 1, drei: 3, fier: 4}, updateMode)
 			).to.deep.equal([]);
 
-			expect(
-				model.validate({eins: 1, fier: 4}, updateMode)
-			).to.deep.equal([]);
+			expect(model.validate({eins: 1, fier: 4}, updateMode)).to.deep.equal([]);
 
-			expect(
-				model.validate({eins: 1}, updateMode)
-			).to.deep.equal([]);
+			expect(model.validate({eins: 1}, updateMode)).to.deep.equal([]);
 
-			expect(
-				model.validate({eins: 1, drei: null}, updateMode)
-			).to.deep.equal([
+			expect(model.validate({eins: 1, drei: null}, updateMode)).to.deep.equal([
 				{path: 'drei', message: 'can not be empty'}
 			]);
 		});

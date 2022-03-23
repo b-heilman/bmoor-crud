@@ -1,86 +1,81 @@
-
 const {get, set} = require('bmoor/src/core.js');
 
 // take a master datum, and a mapper reference to all classes, and convert that
 // into a series of service calls
 
 class DatumRef {
-	constructor(hash=null){
+	constructor(hash = null) {
 		this.hash = hash;
 	}
 
-	hasHash(){
+	hasHash() {
 		return !!this.hash;
 	}
 
-	setHash(hash){
+	setHash(hash) {
 		this.hash = hash;
 	}
 
-	getHash(){
+	getHash() {
 		return this.hash;
 	}
 
-	toJson(){
+	toJson() {
 		return this.hash;
 	}
 }
 
 class Datum {
-	constructor(ref){
+	constructor(ref) {
 		this.ref = ref;
 		this.content = null;
 	}
 
-	setContent(content){
+	setContent(content) {
 		this.content = Object.assign({}, content);
 
 		return this;
 	}
 
-	getContent(){
+	getContent() {
 		return this.content;
 	}
 
-	setField(field, value){
+	setField(field, value) {
 		set(this.content, field, value);
 
 		return this;
 	}
 
-	getField(field){
+	getField(field) {
 		return get(this.content, field);
 	}
 
-	setAction(action){
+	setAction(action) {
 		this.action = action;
 
 		return this;
 	}
 
-	getAction(){
+	getAction() {
 		return this.action;
 	}
 
-	getReference(){
+	getReference() {
 		return this.ref;
 	}
 
-	writeTo(tgt = {}){
-		return Object.keys(this.content)
-		.reduce(
-			(rtn, path) => {
-				const d = this.content[path];
+	writeTo(tgt = {}) {
+		return Object.keys(this.content).reduce((rtn, path) => {
+			const d = this.content[path];
 
-				rtn[path] = d instanceof DatumRef ? d.getHash() : d;
+			rtn[path] = d instanceof DatumRef ? d.getHash() : d;
 
-				return rtn;
-			},
-			tgt
-		);
+			return rtn;
+		}, tgt);
 	}
 
-	toJSON(){
+	toJSON() {
 		return this.writeTo({
 			$ref: this.ref.getHash(),
 			$type: this.action
@@ -89,39 +84,39 @@ class Datum {
 }
 
 class Series extends Map {
-	constructor(name){
+	constructor(name) {
 		super();
 
 		this.name = name;
 	}
 
-	addDatum(datum){
+	addDatum(datum) {
 		this.set(datum.ref.getHash(), datum);
 
 		return datum;
 	}
 
-	ensureDatum(ref){
-		if (!ref.hasHash()){
-			ref.setHash(this.name+':'+(this.size+1));
+	ensureDatum(ref) {
+		if (!ref.hasHash()) {
+			ref.setHash(this.name + ':' + (this.size + 1));
 		}
 
 		const hash = ref.getHash();
-		if (this.has(hash)){
+		if (this.has(hash)) {
 			return this.get(hash);
 		} else {
 			return this.addDatum(new Datum(ref));
 		}
 	}
 
-	toArray(){
-		return Array.from(this, ([name, value]) => value);
+	toArray() {
+		return Array.from(this, (arr) => arr[1]);
 	}
 
-	toJSON(){
+	toJSON() {
 		const rtn = [];
 
-		for(let datum of this.values()){
+		for (let datum of this.values()) {
 			rtn.push(datum.toJSON());
 		}
 
@@ -130,15 +125,15 @@ class Series extends Map {
 }
 
 class Session {
-	constructor(normalized, parent = null){
+	constructor(normalized, parent = null) {
 		this.series = {};
-		
+
 		this.parent = parent;
 		this.children = [];
 		this.normalized = normalized;
 	}
 
-	getChildSession(){
+	getChildSession() {
 		const child = new Session(this.normalized, this);
 
 		this.children.push(child);
@@ -146,55 +141,55 @@ class Session {
 		return child;
 	}
 
-	_addDatum(series, datum){
+	_addDatum(series, datum) {
 		const seriesGroup = this.series[series];
 
-		if (seriesGroup){
+		if (seriesGroup) {
 			seriesGroup.push(datum);
 		} else {
 			this.series[series] = [datum];
 		}
 
-		if (this.parent){
+		if (this.parent) {
 			this.parent._addDatum(series, datum);
 		}
 
 		return datum;
 	}
 
-	defineDatum(series, ref=new DatumRef(), action='create', content={}){
-		return this._addDatum(series,
-			this.normalized.ensureSeries(series)
-			.ensureDatum(ref)
-			.setAction(action)
-			.setContent(content)
+	defineDatum(series, ref = new DatumRef(), action = 'create', content = {}) {
+		return this._addDatum(
+			series,
+			this.normalized
+				.ensureSeries(series)
+				.ensureDatum(ref)
+				.setAction(action)
+				.setContent(content)
 		);
 	}
 
-	getStub(series){
-		return this._addDatum(series,
-			this.normalized.getStub(series)
-		);
+	getStub(series) {
+		return this._addDatum(series, this.normalized.getStub(series));
 	}
 
-	getSeries(series){
+	getSeries(series) {
 		const rtn = this.series[series];
 
-		if (!rtn && this.parent){
+		if (!rtn && this.parent) {
 			return this.parent.getSeries(series);
 		}
 
 		return rtn;
 	}
 
-	findLink(series){
+	findLink(series) {
 		let rtn = this.getSeries(series);
 
-		if (!rtn){
+		if (!rtn) {
 			return null;
 		}
 
-		if (rtn.length > 1){
+		if (rtn.length > 1) {
 			throw new Error('found too many links');
 		}
 
@@ -203,15 +198,15 @@ class Session {
 }
 
 class Normalized extends Map {
-	constructor(nexus){
+	constructor(nexus) {
 		super();
 
 		this.nexus = nexus;
 		this.modelIndex = {};
 	}
 
-	ensureSeries(seriesName){
-		if (this.has(seriesName)){
+	ensureSeries(seriesName) {
+		if (this.has(seriesName)) {
 			return this.get(seriesName);
 		} else {
 			const series = new Series(seriesName);
@@ -222,33 +217,31 @@ class Normalized extends Map {
 		}
 	}
 
-	getStub(series){
+	getStub(series) {
 		return this.ensureSeries(series)
-		.ensureDatum(new DatumRef())
-		.setAction('create')
-		.setContent({});
+			.ensureDatum(new DatumRef())
+			.setAction('create')
+			.setContent({});
 	}
 
-	getSession(){
+	getSession() {
 		return new Session(this);
 	}
 
-	import(content){
-		return Object.keys(content).map(
-			(series) => content[series].map(
-				(datum) => {
-					const {$ref: ref, $type: action, ...content} = datum;
+	import(content) {
+		return Object.keys(content).map((series) =>
+			content[series].map((datum) => {
+				const {$ref: ref, $type: action, ...content} = datum;
 
-					this.ensureSeries(series)
+				this.ensureSeries(series)
 					.ensureDatum(new DatumRef(ref))
 					.setAction(action)
 					.setContent(content);
-				}
-			)
+			})
 		);
 	}
 
-	async lookupModels(fn){
+	async lookupModels(fn) {
 		const agg = {};
 
 		for (let series of this.values()) {
@@ -258,14 +251,14 @@ class Normalized extends Map {
 		this.modelIndex = agg;
 	}
 
-	toJSON(){
+	toJSON() {
 		const agg = {};
 
 		for (let series of this.values()) {
 			const model = this.modelIndex[series.name] || series.name;
 			const existing = agg[model];
 
-			if (existing){
+			if (existing) {
 				agg[model] = existing.concat(series.toJSON());
 			} else {
 				agg[model] = series.toJSON();
@@ -275,15 +268,16 @@ class Normalized extends Map {
 		return agg;
 	}
 
-	clone(){
+	clone() {
 		const schema = new Normalized(this.nexus);
 
 		for (let [index, series] of this.entries()) {
-			for (let datum of series.values()){
-				schema.ensureSeries(index)
-				.ensureDatum(datum.ref)
-				.setAction(datum.action)
-				.setContent(datum.writeTo({}));
+			for (let datum of series.values()) {
+				schema
+					.ensureSeries(index)
+					.ensureDatum(datum.ref)
+					.setAction(datum.action)
+					.setContent(datum.writeTo({}));
 			}
 		}
 

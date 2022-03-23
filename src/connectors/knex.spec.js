@@ -1,110 +1,99 @@
-
 const sinon = require('sinon');
 const {expect} = require('chai');
 
-const {Query, QueryParam, QueryField, QueryPosition, QuerySort} = require('../schema/query.js');
-
-describe('src/interfaces/knex.js', function(){
+describe('src/connectors/knex.js', function () {
 	const sut = require('./knex.js');
 
-	describe('::connector.execute', function(){
+	const {QueryStatement} = require('../schema/query/statement.js');
+	const {StatementVariable} = require('../schema/statement/variable.js');
+	const {StatementField} = require('../schema/statement/field.js');
+	const {QueryPosition} = require('../schema/query/position.js');
+	const {QuerySort} = require('../schema/query/sort.js');
+	const {QueryJoin} = require('../schema/query/join.js');
+
+	describe('::connector.execute', function () {
 		let stubs = null;
 
-		beforeEach(function(){
+		let connector = null;
+
+		beforeEach(function () {
 			stubs = {};
 
-			stubs.raw = sinon.stub()
-				.resolves('ok');
+			stubs.raw = sinon.stub().resolves('ok');
 
-			sut.config.set('knex', {
-				raw: stubs.raw
-			});
+			connector = sut.factory({knex: stubs});
 		});
 
-		it('should translate with a sort', async function(){
-			const stmt = {
-				method: 'read',
-				query: (new Query('model-1'))
+		it('should translate with a sort', async function () {
+			const stmt = new QueryStatement('model-1')
 				.addFields('model-1', [
-					new QueryField('id'),
-					new QueryField('name')
+					new StatementField('id'),
+					new StatementField('name')
 				])
-				.addParams('model-1', [
-					new QueryParam('id', 123)
-				])
-				.setSorts([
-					new QuerySort('foo', 'bar', true), 
-					new QuerySort('hello', 'world', false)
-				])
-			};
+				.addParam(new StatementVariable('model-1', 'id', 123))
+				.addSort(new QuerySort('model-1', 'bar', true))
+				.addSort(new QuerySort('model-1', 'world', false));
 
-			await sut.connector.execute(stmt);
+			await connector.execute(stmt);
 
-			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, ''))
-			.to.deep.equal(`
+			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
+				`
 				SELECT \`model-1\`.\`id\`, \`model-1\`.\`name\`
 				FROM \`model-1\` AS \`model-1\`
     			WHERE \`model-1\`.\`id\`=?
-    			ORDER BY \`foo\`.\`bar\` ASC,\`hello\`.\`world\` DESC`
-    			.replace(/\s+/g, '')
-    		);
+    			ORDER BY \`model-1\`.\`bar\` ASC,\`model-1\`.\`world\` DESC`.replace(
+					/\s+/g,
+					''
+				)
+			);
 		});
 
-		it('should translate with a limit', async function(){
-			const stmt = {
-				method: 'read',
-				query: (new Query('model-1'))
+		it('should translate with a limit', async function () {
+			const stmt = new QueryStatement('model-1')
 				.addFields('model-1', [
-					new QueryField('id'),
-					new QueryField('name')
+					new StatementField('id'),
+					new StatementField('name')
 				])
-				.addParams('model-1', [
-					new QueryParam('id', 123)
-				])
-				.setPosition(new QueryPosition(0,10))
-			};
+				.addParam(new StatementVariable('model-1', 'id', 123))
+				.setPosition(new QueryPosition(0, 10));
 
-			await sut.connector.execute(stmt);
+			await connector.execute(stmt);
 
-			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, ''))
-			.to.deep.equal(`
+			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
+				`
 				SELECT \`model-1\`.\`id\`, \`model-1\`.\`name\`
 				FROM \`model-1\` AS \`model-1\`
     			WHERE \`model-1\`.\`id\`=?
-    			LIMIT 10`
-    			.replace(/\s+/g, '')
-    		);
+    			LIMIT 10`.replace(/\s+/g, '')
+			);
 		});
 
-		it('should translate with a sort and limit', async function(){
-			const stmt = {
-				method: 'read',
-				query: (new Query('model-1'))
+		it('should translate with a sort and limit', async function () {
+			const stmt = new QueryStatement('model-1')
 				.addFields('model-1', [
-					new QueryField('id'),
-					new QueryField('name')
+					new StatementField('id'),
+					new StatementField('name')
 				])
-				.addParams('model-1', [
-					new QueryParam('id', 123)
+				.addParam(new StatementVariable('model-1', 'id', 123))
+				.addJoins('model-2', [
+					new QueryJoin('model-1', [{from: 'model1Id', to: 'id'}])
 				])
-				.setSorts([
-					new QuerySort('foo', 'bar', true), 
-					new QuerySort('hello', 'world', false)
-				])
-				.setPosition(new QueryPosition(0,10))
-			};
+				.addSort(new QuerySort('model-1', 'bar', true))
+				.addSort(new QuerySort('model-2', 'world', false))
+				.setPosition(new QueryPosition(0, 10));
 
-			await sut.connector.execute(stmt);
+			await connector.execute(stmt);
 
-			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, ''))
-			.to.deep.equal(`
+			expect(stubs.raw.getCall(0).args[0].replace(/\s+/g, '')).to.deep.equal(
+				`
 				SELECT \`model-1\`.\`id\`, \`model-1\`.\`name\`
 				FROM \`model-1\` AS \`model-1\`
+    			INNER JOIN \`model-2\` AS \`model-2\`
+						ON \`model-2\`.\`model1Id\` = \`model-1\`.\`id\`
     			WHERE \`model-1\`.\`id\`=?
-    			ORDER BY \`foo\`.\`bar\` ASC,\`hello\`.\`world\` DESC
-    			LIMIT 10`
-    			.replace(/\s+/g, '')
-    		);
+    			ORDER BY \`model-1\`.\`bar\` ASC,\`model-2\`.\`world\` DESC
+    			LIMIT 10`.replace(/\s+/g, '')
+			);
 		});
 	});
 });

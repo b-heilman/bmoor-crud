@@ -1,51 +1,51 @@
-
 const {Bootstrap, config: bootConfig} = require('../env/bootstrap.js');
 const {Context} = require('./context.js');
 const {Cache} = require('./cache.js');
 
 const config = bootConfig.extend({
 	hooks: {
-		buildContext: req => new Context(
-			req,
-			{
-				query: 'query', 
-				params: 'params',
-				method: 'method',
-				content: 'body',
-				permissions: 'permissions'
-			},
-			new Cache()
-		),
+		buildContext: (req) =>
+			new Context(
+				req,
+				{
+					query: 'query',
+					params: 'params',
+					method: 'method',
+					content: 'body',
+					permissions: 'permissions'
+				},
+				new Cache()
+			),
 		beforeLoad: async () => null,
 		beforeConfigure: async () => null,
 		beforeStart: async () => null,
 		afterStart: async () => null
 	},
 	server: {
-		buildRouter: function(){
+		buildRouter: function () {
 			throw new Error('Define a router factory');
 		}
 	}
 });
 
-function buildRouter(crudRouter, cfg){
+function buildRouter(crudRouter, cfg) {
 	const router = cfg.get('server.buildRouter')();
 
-	crudRouter.getRouters().forEach(subRouter => {
+	crudRouter.getRouters().forEach((subRouter) => {
 		router.use(subRouter.path, buildRouter(subRouter, cfg));
 	});
 
-	crudRouter.getRoutes().forEach(route => {
+	crudRouter.getRoutes().forEach((route) => {
 		router[route.method](route.path, async (req, res) => {
 			try {
 				const hooks = cfg.get('hooks');
-				
+
 				const ctx = hooks.buildContext(req);
 
 				const rtn = await route.action(ctx);
 
 				res.json(rtn);
-			} catch(ex){
+			} catch (ex) {
 				console.log('-> server failure');
 				console.log(ex);
 
@@ -62,7 +62,7 @@ function buildRouter(crudRouter, cfg){
 	return router;
 }
 
-async function configure(cfg, mockery){
+async function configure(cfg, mockery) {
 	const hooks = cfg.get('hooks');
 
 	await hooks.beforeLoad();
@@ -76,7 +76,7 @@ async function configure(cfg, mockery){
 	return bootstrap;
 }
 
-async function build(mount, cfg, mockery=null){
+async function build(mount, cfg, mockery = null) {
 	const bootstrap = await configure(cfg, mockery);
 
 	const crudRouter = bootstrap.router;

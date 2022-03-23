@@ -1,42 +1,32 @@
-
 const {create} = require('bmoor/src/lib/error.js');
 
-const {View, runMap} = require('./view.js');
+const {View} = require('./view.js');
 const {config: structureConfig} = require('../schema/structure.js');
-
-async function massAccess(service, arr, ctx){
-	const security = service.security;
-
-	if (security.canRead){
-		return (await Promise.all(
-			arr.map(
-				async (datum) => 
-				(await security.canRead(datum, ctx)) ? datum : null
-			)
-		)).filter(v => !!v);
-	} else {
-		return arr;
-	}
-}
+const {methods} = require('../schema/executable/statement.js');
 
 class Crud extends View {
-	
-	decorate(decoration){
+	async configure(settings = {}) {
+		super.configure(settings);
+
+		this.source = await this.structure.nexus.loadSource(
+			this.structure.incomingSettings.source
+		);
+	}
+
+	decorate(decoration) {
 		Object.assign(this, decoration);
 	}
 
-	async _create(datum, stmt, ctx){
-		const cleaned = await this.clean('create', datum, ctx);
-		const payload = this.structure.actions.create ?
-			this.structure.actions.create(cleaned, cleaned, ctx) : cleaned;
-
+	async _create(datum, ctx, settings={}) {
+		// this needs to be based on external representation, so if I ever start
+		// to accept custom forms, I need to remap
 		const errors = await this.validate(
-			payload,
-			structureConfig.get('writeModes.create'), 
+			datum, 
+			structureConfig.get('writeModes.create'),
 			ctx
 		);
 
-		if (errors.length){
+		if (errors.length) {
 			throw create(`create validation failed for ${this.structure.name}`, {
 				status: 400,
 				code: 'BMOOR_CRUD_SERVICE_VALIDATE_CREATE',
@@ -46,27 +36,26 @@ class Crud extends View {
 			});
 		}
 
-		stmt.method = 'create';
-		stmt.payload = this.structure.actions.deflate ?
-			this.structure.actions.deflate(payload, ctx) : payload;
-
-		if (this.incomingSettings.deflate){
-			stmt.payload = this.incomingSettings.deflate(stmt.payload);
-		}
-
-		return runMap(
-			await this.structure.execute(stmt, ctx),
-			this, 
-			ctx
+		return this.execute(
+			await this.structure.getExecutable(
+				methods.create,
+				{
+					payload: this.actions.deflateCreate(datum, ctx)
+				},
+				ctx,
+				settings
+			),
+			ctx,
+			settings
 		);
 	}
 
-	async create(proto, ctx){
+	async create(proto, ctx, settings={}) {
 		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
-		if (!ctx){
+		if (!ctx) {
 			throw create(`missing ctx in create of ${name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_CREATE_CTX',
@@ -74,12 +63,12 @@ class Crud extends View {
 			});
 		}
 
-		if (hooks.beforeCreate){
+		if (hooks.beforeCreate) {
 			await hooks.beforeCreate(proto, ctx, this);
 		}
 
-		if (security.canCreate){
-			if (!(await security.canCreate(proto, ctx))){
+		if (security.canCreate) {
+			if (!(await security.canCreate(proto, ctx))) {
 				throw create(`now allowed to create instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_CREATE',
@@ -88,89 +77,105 @@ class Crud extends View {
 			}
 		}
 
-		const datum = (
-			await this._create(
-				proto, 
-				{
-					model: name
-				}, 
-				ctx
-			)
-		)[0];
+		const datum = (await this._create(proto, ctx, settings))[0];
 
-		const key = this.structure.getKey(datum);
-		if (hooks.afterCreate){
-			await hooks.afterCreate(key, datum, ctx, this);
+		const id = this.structure.getKey(datum);
+		if (hooks.afterCreate) {
+			await hooks.afterCreate(id, datum, ctx, this);
 		}
 
-		if (ctx.cache){
-			ctx.cache.set(name, key, datum);
-		}
+		ctx.sessionCache.set('crud:' + name, id, datum);
 
-		if (ctx.addChange){
-			ctx.addChange(
-				name,
-				'create', 
-				key, 
-				null, 
-				datum
-			);
-		}
+		ctx.addChange(name, 'create', id, null, datum);
 
 		return datum;
 	}
 
-	async read(id, ctx){
+	async query(schema, ctx, settings = {}) {
 		const name = this.structure.name;
-		const hooks = this.hooks;
-		const security = this.security;
-
-		await this.structure.build();
-
-		if (hooks.beforeRead){
-			await hooks.beforeRead(null, ctx, this);
-		}
-
-		if (!ctx){
+		if (!ctx) {
 			throw create(`missing ctx in read of ${name}`, {
 				status: 500,
-				code: 'BMOOR_CRUD_SERVICE_READ_CTX',
-				context: {
-					id
-				}
+				code: 'BMOOR_CRUD_SERVICE_QUERY_CTX',
+				context: schema,
 			});
 		}
 
-		let datum = null;
+		const hooks = this.hooks;
 
-		// If the current context has a cache, check it.  I am doing it this way
-		// because the context can dictate the cache, which allows you to do per
-		// call caches and system wide caches.
-		if (ctx.cache && await ctx.cache.has(name, id)){
-			datum = await ctx.cache.get(name, id);
-		} else {
-			const res = await super.read(
-				{
-					query: await this.structure.getQuery(
-						{
-							params: {
-								[this.structure.settings.key]: id
-							}
-						},
-						ctx
-					)
-				},
-				ctx
-			);
-
-			datum = res[0];
-
-			if (ctx.cache){
-				ctx.cache.set(name, id, datum);
-			}
+		if (hooks.beforeRead) {
+			await hooks.beforeRead(null, ctx, this);
 		}
-		
-		if (!datum){
+
+		const res = await super.query(
+			await this.structure.getQuery(schema, ctx, settings),
+			ctx,
+			settings
+		);
+
+		const security = this.security;
+
+		let rtn = null;
+		if (security.canRead) {
+			const originLength = res.length;
+
+			rtn = (
+				await Promise.all(
+					res.map(async (datum) =>
+						(await security.canRead(datum, ctx)) ? datum : null
+					)
+				)
+			).filter((v) => !!v);
+
+			// if we filtered out everything via canRead, use a special failure
+			if (originLength && !rtn.length) {
+				throw create(`now allowed to read instance of ${name}`, {
+					status: 403,
+					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
+					context: {}
+				});
+			}
+		} else {
+			rtn = res;
+		}
+
+		rtn.map((datum) =>
+			ctx.sessionCache.set(
+				'crud:' + this.structure.name,
+				this.structure.getKey(datum),
+				datum
+			)
+		);
+
+		return rtn;
+	}
+
+	async read(id, ctx, settings = {}) {
+		const name = this.structure.name;
+		const hooks = this.hooks;
+		const cache = !settings.noCache;
+
+		if (cache && ctx.sessionCache.has('crud:' + name, id)) {
+			return ctx.sessionCache.get('crud:' + name, id);
+		}
+
+		if (hooks.beforeRead) {
+			await hooks.beforeRead(null, ctx, this);
+		}
+
+		const datum = (
+			await this.query(
+				{
+					params: {
+						[this.structure.settings.key]: id
+					}
+				},
+				ctx,
+				settings
+			)
+		)[0];
+
+		if (!datum) {
 			throw create(`unable to view ${id} of ${name}`, {
 				status: 404,
 				code: 'BMOOR_CRUD_SERVICE_READ_FILTER',
@@ -178,120 +183,47 @@ class Crud extends View {
 					id
 				}
 			});
-		} else if (security.canRead){
-			if (!(await security.canRead(datum, ctx))){
-				throw create(`now allowed to read instance of ${name}`, {
-					status: 403,
-					code: 'BMOOR_CRUD_SERVICE_CAN_READ',
-					context: {}
-				});
-			}
 		}
 
 		return datum;
 	}
 
-	async readAll(ctx){
+	async readAll(ctx, settings = {}) {
 		const hooks = this.hooks;
 
-		await this.structure.build();
-
-		if (hooks.beforeRead){
+		if (hooks.beforeRead) {
 			await hooks.beforeRead(null, ctx, this);
 		}
 
-		return massAccess(
-			this, 
-			await super.read(
-				{
-					query: await this.structure.getQuery(
-						{},
-						ctx
-					)
-				},
-				ctx
-			), 
-			ctx
-		);
+		return this.query({}, ctx, settings);
 	}
 
-	async readMany(ids, ctx){
+	async readMany(ids, ctx, settings = {}) {
 		const hooks = this.hooks;
 
-		await this.structure.build();
-
-		if (hooks.beforeRead){
+		if (hooks.beforeRead) {
 			await hooks.beforeRead(null, ctx, this);
 		}
 
-		return massAccess(
-			this, 
-			await super.read(
-				{
-					query: await this.structure.getQuery(
-						{
-							params: {
-								[this.structure.settings.key]: ids
-							}
-						},
-						ctx
-					)
-				},
-				ctx
-			), 
-			ctx
+		return this.query(
+			{
+				params: {
+					[this.structure.settings.key]: ids
+				}
+			},
+			ctx,
+			settings
 		);
 	}
 
-	async query(settings, ctx){
-		const hooks = this.hooks;
-
-		await this.structure.build();
-
-		if (hooks.beforeRead){
-			await hooks.beforeRead(null, ctx, this);
-		}
-
-		const rtn = await massAccess(
-			this, 
-			await super.read(
-				{
-					query: await this.structure.getQuery(
-						settings,
-						ctx
-					)
-				},
-				ctx
-			), 
-			ctx
-		);
-
-		if (ctx.cache){
-			rtn.map(
-				datum => ctx.cache.set(
-					this.structure.name,
-					this.structure.getKey(datum), 
-					datum
-				)
-			);
-		}
-
-		return rtn;
-	}
-
-	async _update(delta, tgt, stmt, ctx){
-		const cleaned = await this.clean('update', delta, ctx);
-
-		const payload = this.structure.actions.update ?
-			this.structure.actions.update(cleaned, tgt, ctx) : cleaned;
-
+	async _update(delta, tgt, params, ctx, settings={}) {
 		const errors = await this.validate(
-			payload,
+			delta, // this will be in external structure
 			structureConfig.get('writeModes.update'),
 			ctx
 		);
 
-		if (errors.length){
+		if (errors.length) {
 			throw create(`update validation failed for ${this.structure.name}`, {
 				status: 400,
 				code: 'BMOOR_CRUD_SERVICE_VALIDATE_UPDATE',
@@ -301,28 +233,30 @@ class Crud extends View {
 			});
 		}
 
-		stmt.method = 'update';
-		stmt.payload = this.structure.actions.deflate ?
-			this.structure.actions.deflate(payload, ctx) : payload;
-
-		return runMap(
-			await this.structure.execute(stmt, ctx), 
-			this,
-			ctx
+		return this.execute(
+			await this.structure.getExecutable(
+				methods.update,
+				{
+					params,
+					payload: this.actions.deflateUpdate(delta, ctx)
+				},
+				ctx,
+				settings
+			),
+			ctx,
+			settings
 		);
 	}
 
-	async update(id, delta, ctx){
+	async update(id, delta, ctx, settings = {}) {
 		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
-		await this.structure.build();
+		const tgt = await this.read(id, ctx/*, settings*/); // no settings, no custom fields
 
-		const tgt = await this.read(id, ctx);
-
-		if (security.canUpdate){
-			if (!(await security.canUpdate(tgt, ctx))){
+		if (security.canUpdate) {
+			if (!(await security.canUpdate(tgt, ctx))) {
 				throw create(`now allowed to update instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_UPDATE',
@@ -333,48 +267,49 @@ class Crud extends View {
 			}
 		}
 
-		if (hooks.beforeUpdate){
+		// if I want to allow custom structures for update, and I'm not sure
+		// I want to, I need to allow for remapping the delta here
+
+		if (hooks.beforeUpdate) {
 			await hooks.beforeUpdate(tgt, ctx, this, delta);
 		}
 
 		const datum = (
-			await this._update(delta, tgt, {
-				query: await this.structure.getQuery(
-					{
-						params: {
-							[this.structure.settings.key]: id
-						}
-					},
-					ctx
-				)
-			}, ctx)
+			await this._update(
+				delta,
+				tgt,
+				{
+					[this.structure.settings.key]: id
+				},
+				ctx,
+				settings
+			)
 		)[0];
 
-		if (hooks.afterUpdate){
+		if (hooks.afterUpdate) {
 			await hooks.afterUpdate(id, datum, ctx, this);
 		}
 
-		if (ctx.cache){
-			ctx.cache.set(name, id, datum);
-		}
+		ctx.sessionCache.set('crud:' + name, id, datum);
 
-		if (ctx.addChange){
-			ctx.addChange(
-				name, 
-				'update', 
-				id, 
-				tgt, 
-				datum
-			);
-		}
+		ctx.addChange(name, 'update', id, tgt, datum);
 
 		return datum;
 	}
 
-	async _delete(stmt, ctx){
-		stmt.method = 'delete';
-
-		return this.structure.execute(stmt, ctx);
+	async _delete(params, ctx, settings={}) {
+		return this.execute(
+			await this.structure.getExecutable(
+				methods.delete,
+				{
+					params
+				},
+				ctx,
+				settings
+			),
+			ctx,
+			settings
+		);
 	}
 
 	/**
@@ -382,17 +317,15 @@ class Crud extends View {
 	 * and then interate over that.  It simplifies the logic, but does make mass deletion an
 	 * issue.  I'm ok with that for now.
 	 **/
-	async delete(id, ctx){
+	async delete(id, ctx, settings = {}) {
 		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
 
-		await this.structure.build();
+		const datum = await this.read(id, ctx, settings); // settings is allowed here
 
-		const datum = await this.read(id, ctx);
-
-		if (security.canDelete){
-			if (!(await security.canDelete(datum, ctx))){
+		if (security.canDelete) {
+			if (!(await security.canDelete(datum, ctx))) {
 				throw create(`now allowed to update instance of ${name}`, {
 					status: 403,
 					code: 'BMOOR_CRUD_SERVICE_CAN_DELETE',
@@ -403,50 +336,39 @@ class Crud extends View {
 			}
 		}
 
-		if (hooks.beforeDelete){
+		if (hooks.beforeDelete) {
 			await hooks.beforeDelete(id, datum, ctx, this);
 		}
-		
-		await this._delete({
-			query: await this.structure.getQuery(
-				{
-					params: {
-						[this.structure.settings.key]: id
-					}
-				},
-				ctx
-			)
-		}, ctx);
 
-		if (hooks.afterDelete){
+		await this._delete(
+			{
+				[this.structure.settings.key]: id
+			},
+			ctx,
+			settings
+		);
+
+		if (hooks.afterDelete) {
 			await hooks.afterDelete(datum, ctx, this);
 		}
 
-		if (ctx){
-			ctx.addChange(
-				name, 
-				'delete', 
-				id, 
-				datum, 
-				null
-			);
-		}
+		ctx.sessionCache.set('crud:' + name, id, datum);
+
+		ctx.addChange(name, 'delete', id, datum, null);
 
 		return datum; // datum will have had onRead run against it
 	}
 
-	async discoverDatum(query, ctx){
+	// TODO: I can't use a clean here, I need to write a copy only
+	async discoverDatum(query, ctx) {
 		let key = this.structure.getKey(query);
-		
-		if (key){
+
+		if (key) {
 			// if you make key === 0, you're a horrible person
 			return await this.read(key, ctx);
 		} else {
-			if (this.structure.hasIndex()){
-				const res = await this.query(
-					this.structure.clean('index', query), 
-					ctx
-				);
+			if (this.structure.hasIndex()) {
+				const res = await this.query(this.actions.cleanForIndex(query), ctx);
 
 				return res[0];
 			} else {

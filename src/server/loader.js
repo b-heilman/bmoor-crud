@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 
 const {Config} = require('bmoor/src/lib/config.js');
@@ -8,45 +7,40 @@ const config = new Config({
 	stubs: {}
 });
 
-async function gatherFiles(dir, namespace, regEx){
+async function gatherFiles(dir, namespace, regEx) {
 	if (fs.existsSync(dir)) {
 		const files = fs.readdirSync(dir, {withFileTypes: true});
 
-		return files.reduce(
-			async (prom, fdata) => {
-				const agg = await prom;
+		return files.reduce(async (prom, fdata) => {
+			const agg = await prom;
 
-				const path = dir+'/'+fdata.name;
-				const name = fdata.name.split('.')[0];
-				const full = namespace ? (namespace+'-'+name) : name;
+			const path = dir + '/' + fdata.name;
+			const name = fdata.name.split('.')[0];
+			const full = namespace ? namespace + '-' + name : name;
 
-				if (fdata.isDirectory()){
-					return agg.concat(
-						await gatherFiles(path, full, regEx)
-					);
-				} else {
-					if (regEx.test(fdata.name)){
-						agg.push({
-							name: full,
-							path
-						});
-					}
-
-					return agg;
+			if (fdata.isDirectory()) {
+				return agg.concat(await gatherFiles(path, full, regEx));
+			} else {
+				if (regEx.test(fdata.name)) {
+					agg.push({
+						name: full,
+						path
+					});
 				}
-			},
-			[]
-		);
+
+				return agg;
+			}
+		}, []);
 	} else {
 		return [];
 	}
 }
 
-async function getFiles(dir){
+async function getFiles(dir) {
 	return gatherFiles(dir, null, config.get('match'));
 }
 
-function getSettings(file){
+function getSettings(file) {
 	return require(file);
 }
 
@@ -55,17 +49,15 @@ const loader = {
 	getSettings
 };
 
-async function loadFiles(dir){
+async function loadFiles(dir) {
 	const files = await loader.getFiles(dir);
 
 	return Promise.all(
-		files.map(
-			async (file) => {
-				file.settings = await loader.getSettings(file.path);
+		files.map(async (file) => {
+			file.settings = await loader.getSettings(file.path);
 
-				return file;
-			}
-		)
+			return file;
+		})
 	);
 }
 
