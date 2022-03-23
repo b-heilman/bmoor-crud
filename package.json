@@ -10,7 +10,7 @@
 	},
 	"main": "src/index.js",
 	"dependencies": {
-		"bmoor": "^0.9.8",
+		"bmoor": "^0.10.1",
 		"bmoor-data": "^0.10.3",
 		"bmoor-schema": "^0.8.1",
 		"knex": "^0.95.2",
