@@ -1,6 +1,6 @@
 const {expect} = require('chai');
 const sinon = require('sinon');
-const {Config} = require('bmoor/src/lib/config.js');
+const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
 
 const sut = require('./bootstrap.js');
 
@@ -25,39 +25,35 @@ describe('src/env/bootstrap.js', function () {
 		beforeEach('should load everything correctly', async function () {
 			stubs.execute = sinon.stub();
 
-			/*
-			ctx = new Context({
-				method: '',
-				permissions
-			});
-			*/
-
-			const cfg = sut.config.extend({
-				connectors: {
-					http: () => ({
-						execute: stubs.execute
+			const cfg = sut.config.override(
+				{},
+				{
+					connectors: new Config({
+						http: () => ({
+							execute: stubs.execute
+						})
+					}),
+					sources: new Config({
+						's-1': new ConfigObject({
+							connector: 'http'
+						}),
+						's-2': new ConfigObject({
+							connector: 'http'
+						})
+					}),
+					directories: new Config({
+						model: '/models',
+						decorator: '/decorators',
+						hook: '/hooks',
+						effect: '/effects',
+						composite: '/composites',
+						guard: '/guards',
+						action: '/actions',
+						utility: '/utilities',
+						document: '/documents'
 					})
-				},
-				sources: {
-					's-1': {
-						connector: 'http'
-					},
-					's-2': {
-						connector: 'http'
-					}
-				},
-				directories: {
-					model: '/models',
-					decorator: '/decorators',
-					hook: '/hooks',
-					effect: '/effects',
-					composite: '/composites',
-					guard: '/guards',
-					action: '/actions',
-					utility: '/utilities',
-					document: '/documents'
 				}
-			});
+			);
 
 			bootstrap = new sut.Bootstrap(cfg);
 
@@ -65,7 +61,7 @@ describe('src/env/bootstrap.js', function () {
 
 			const trace = [];
 
-			const mockery = new Config({
+			const mockery = {
 				cruds: [
 					{
 						name: 'service-1',
@@ -196,7 +192,7 @@ describe('src/env/bootstrap.js', function () {
 						}
 					}
 				]
-			});
+			};
 
 			await bootstrap.install(mockery);
 		});
@@ -548,47 +544,3 @@ describe('src/env/bootstrap.js', function () {
 		});
 	});
 });
-
-/**
-// models
-stubs.getFile.onCall(0)
-.resolves([{
-	name: 'service-1',
-	path: 'model-path-1'
-},{
-	name: 'service-2',
-	path: 'model-path-2'
-}]);
-
-// composites
-stubs.getFile.onCall(1)
-.resolves([]);
-
-// decorators
-stubs.getFile.onCall(2)
-.resolves([{
-	name: 'service-1',
-	path: 'decorator-path-1'
-}]);
-
-// hooks
-stubs.getFile.onCall(3)
-.resolves([{
-	name: 'service-1',
-	path: 'hook-path-1'
-}]);
-
-// security
-stubs.getFile.onCall(4)
-.resolves([{
-	name: 'service-1',
-	path: 'security-path-1'
-}]);
-
-// effects
-stubs.getFile.onCall(5)
-.resolves([{
-	name: 'service-1',
-	path: 'effect-path-1'
-}]);
-**/

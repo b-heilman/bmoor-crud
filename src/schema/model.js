@@ -160,7 +160,7 @@ class Model extends Structure {
 		return exe;
 	}
 
-	async getExecutable(method, request, ctx, settings={}) {
+	async getExecutable(method, request, ctx, settings = {}) {
 		const exe = this.preparedExecutable.clone();
 
 		exe.setMethod(method);

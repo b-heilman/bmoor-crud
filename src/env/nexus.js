@@ -1,4 +1,5 @@
 const {Config} = require('bmoor/src/lib/config.js');
+const {Registry} = require('bmoor/src/lib/registry.js');
 
 const {hook} = require('../services/hook.js');
 const {secure} = require('../services/secure.js');
@@ -9,36 +10,57 @@ const {Model} = require('../schema/model.js');
 const {Source} = require('../services/source.js');
 const {Document} = require('../services/document.js');
 const {Composite} = require('../schema/composite.js');
+const {Guard} = require('../controllers/guard.js');
+const {Action} = require('../controllers/action.js');
+const {Utility} = require('../controllers/utility.js');
+const {Synthetic} = require('../controllers/synthetic.js');
 
-const config = new Config({
-	timeout: 2000,
-	constructors: {
-		source: Source,
-		model: Model,
-		crud: Crud,
-		composite: Composite,
-		document: Document
-	},
-	connectors: {
-		knex: require('../connectors/knex.js').factory,
-		mysql: require('../connectors/knex.js').factory,
-		http: require('../connectors/http.js').factory
-	}
+const schemas = new Config({
+	source: Source,
+	model: Model,
+	composite: Composite
 });
 
+const services = new Config({
+	crud: Crud,
+	document: Document
+});
+
+const controllers = new Config({
+	guard: Guard,
+	action: Action,
+	utility: Utility,
+	synthetic: Synthetic
+});
+
+const connectors = new Config({
+	knex: require('../connectors/knex.js').factory,
+	mysql: require('../connectors/knex.js').factory,
+	http: require('../connectors/http.js').factory
+});
+
+const config = new Config(
+	{
+		timeout: 2000
+	},
+	{
+		schemas,
+		services,
+		controllers,
+		connectors
+	}
+);
+
 const waiting = {};
-async function ensure(prom, label) {
+async function ensure(settings, prom, label) {
 	if (waiting[label]) {
 		waiting[label].count++;
 	} else {
 		const promise = new Promise((resolve, reject) => {
-			const timeout = config.get('timeout');
+			const timeout = settings.get('timeout');
 
 			const clear = setTimeout(function () {
-				console.log(
-					'timeout detected nexus stack',
-					JSON.stringify(waiting, null, 2)
-				);
+				console.log('timed out: ' + label, JSON.stringify(waiting, null, 2));
 
 				reject(new Error('lookup timed out: ' + label));
 			}, timeout);
@@ -103,12 +125,11 @@ async function loadTarget(nexus, type, ref) {
 }
 
 class Nexus {
-	constructor(constructors, connectors) {
-		this.constructors = constructors || config.sub('constructors');
+	constructor(cfg = config) {
+		this.config = cfg;
 
-		this.ether = new Config({});
+		this.ether = new Registry();
 		this.mapper = new Mapper();
-		this.connectors = connectors || config.sub('connectors');
 	}
 
 	getDefined(type, ref) {
@@ -131,6 +152,7 @@ class Nexus {
 		const path = `configured.${type}.${ref}`;
 
 		return ensure(
+			this.config,
 			this.ether.promised(path, (res) => res),
 			path
 		);
@@ -151,7 +173,10 @@ class Nexus {
 	}
 
 	getSource(ref) {
-		return getDefined(this, 'source', this.constructors, ref, [ref, this]);
+		return getDefined(this, 'source', this.config.getSub('schemas'), ref, [
+			ref,
+			this
+		]);
 	}
 
 	async configureSource(ref, settings) {
@@ -175,7 +200,10 @@ class Nexus {
 	}
 
 	getModel(ref) {
-		return getDefined(this, 'model', this.constructors, ref, [ref, this]);
+		return getDefined(this, 'model', this.config.getSub('schemas'), ref, [
+			ref,
+			this
+		]);
 	}
 
 	async configureModel(ref, settings) {
@@ -201,7 +229,7 @@ class Nexus {
 	}
 
 	getCrud(ref) {
-		return getDefined(this, 'crud', this.constructors, ref, [
+		return getDefined(this, 'crud', this.config.getSub('services'), ref, [
 			this.getModel(ref)
 		]);
 	}
@@ -248,7 +276,10 @@ class Nexus {
 	}
 
 	getComposite(ref) {
-		return getDefined(this, 'composite', this.constructors, ref, [ref, this]);
+		return getDefined(this, 'composite', this.config.getSub('schemas'), ref, [
+			ref,
+			this
+		]);
 	}
 
 	async configureComposite(ref, settings) {
@@ -270,7 +301,7 @@ class Nexus {
 	}
 
 	getDocument(ref) {
-		return getDefined(this, 'document', this.constructors, ref, [
+		return getDefined(this, 'document', this.config.getSub('services'), ref, [
 			this.getComposite(ref)
 		]);
 	}
@@ -294,7 +325,7 @@ class Nexus {
 
 	// I'm not putting loads below because nothing should be requiring these...
 	getGuard(ref) {
-		return getDefined(this, 'guard', this.constructors, ref, [
+		return getDefined(this, 'guard', this.config.getSub('controllers'), ref, [
 			this.getCrud(ref)
 		]);
 	}
@@ -304,7 +335,7 @@ class Nexus {
 	}
 
 	getAction(ref) {
-		return getDefined(this, 'action', this.constructors, ref, [
+		return getDefined(this, 'action', this.config.getSub('controllers'), ref, [
 			this.getCrud(ref)
 		]);
 	}
@@ -314,7 +345,7 @@ class Nexus {
 	}
 
 	getUtility(ref) {
-		return getDefined(this, 'utility', this.constructors, ref, [
+		return getDefined(this, 'utility', this.config.getSub('controllers'), ref, [
 			this.getCrud(ref)
 		]);
 	}
@@ -324,9 +355,13 @@ class Nexus {
 	}
 
 	getSynthetic(ref) {
-		return getDefined(this, 'synthetic', this.constructors, ref, [
-			this.getDocument(ref)
-		]);
+		return getDefined(
+			this,
+			'synthetic',
+			this.config.getSub('controllers'),
+			ref,
+			[this.getDocument(ref)]
+		);
 	}
 
 	async configureSynthetic(ref, settings) {

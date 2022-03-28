@@ -1,5 +1,5 @@
 //---------Tokenizer--------
-const {Config} = require('bmoor/src/lib/config.js');
+const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
 
 const {Token} = require('bmoor-data/src/expression/Token.js');
 const {Compound} = require('bmoor-data/src/expression/Compound.js');
@@ -10,7 +10,7 @@ const isSpace = /[\W]/;
 
 const parsings = new Config({
 	// $foo, $bar,
-	reference: {
+	reference: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '$') {
 				return {
@@ -46,10 +46,10 @@ const parsings = new Config({
 
 			return new Token('reference', model, {series});
 		}
-	},
+	}),
 
 	// .path
-	accessor: {
+	accessor: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '.') {
 				return {
@@ -73,10 +73,10 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('accessor', content);
 		}
-	},
+	}),
 
 	// #dupe
-	child: {
+	child: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '#') {
 				return {
@@ -112,10 +112,10 @@ const parsings = new Config({
 
 			return new Token('child', model, {series});
 		}
-	},
+	}),
 
 	// @variable
-	variable: {
+	variable: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '@') {
 				return {
@@ -139,9 +139,9 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('variable', content);
 		}
-	},
+	}),
 
-	join: {
+	join: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '>') {
 				return {
@@ -169,44 +169,44 @@ const parsings = new Config({
 		toToken: function (content, metadata) {
 			return new Token('join', content, metadata);
 		}
-	}
+	})
 });
 
 const composites = new Config({
 	// $foo.bar
-	path: {
+	path: new ConfigObject({
 		tokens: ['reference', 'accessor'],
 		factory: function (tokens) {
 			return new Compound('path', tokens, {series: tokens[0].metadata.series});
 		}
-	},
+	}),
 
-	incomingPath: {
+	incomingPath: new ConfigObject({
 		tokens: ['accessor', 'reference', 'accessor'],
 		factory: function (tokens) {
 			return new Compound('incoming-path', tokens, {
 				series: tokens[1].metadata.series
 			});
 		}
-	},
+	}),
 
-	incomingReference: {
+	incomingReference: new ConfigObject({
 		tokens: ['accessor', 'reference'],
 		factory: function (tokens) {
 			return new Compound('incoming-reference', tokens, {
 				series: tokens[1].metadata.series
 			});
 		}
-	},
+	}),
 
-	incomingChild: {
+	incomingChild: new ConfigObject({
 		tokens: ['accessor', 'child'],
 		factory: function (tokens) {
 			return new Compound('incoming-child', tokens, {
 				series: tokens[1].metadata.series
 			});
 		}
-	}
+	})
 });
 
 const expressions = null;

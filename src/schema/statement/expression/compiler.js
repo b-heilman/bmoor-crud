@@ -1,4 +1,4 @@
-const {Config} = require('bmoor/src/lib/config.js');
+const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
 
 const {Token} = require('bmoor-data/src/expression/Token.js');
 const {Compound} = require('bmoor-data/src/expression/Compound.js');
@@ -17,7 +17,7 @@ const escapeChar = '\\';
 
 const parsings = new Config({
 	// $foo, $bar,
-	reference: {
+	reference: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '$') {
 				return {
@@ -53,10 +53,10 @@ const parsings = new Config({
 
 			return new Token('reference', model, {series});
 		}
-	},
+	}),
 
 	// .path
-	accessor: {
+	accessor: new ConfigObject({
 		open: function (master, pos) {
 			if (master[pos] === '.') {
 				return {
@@ -80,9 +80,9 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('accessor', content);
 		}
-	},
+	}),
 
-	block: {
+	block: new ConfigObject({
 		open: function (master, pos, state) {
 			const ch = master[pos];
 
@@ -116,9 +116,9 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('block', content);
 		}
-	},
+	}),
 
-	number: {
+	number: new ConfigObject({
 		open: function (master, pos) {
 			const ch = master[pos];
 
@@ -151,9 +151,9 @@ const parsings = new Config({
 
 			return new Token('constant', content, {subtype: 'number'});
 		}
-	},
+	}),
 
-	string: {
+	string: new ConfigObject({
 		open: function (master, pos, state) {
 			const ch = master[pos];
 
@@ -186,9 +186,9 @@ const parsings = new Config({
 
 			return new Token('constant', content, {subtype: 'string'});
 		}
-	},
+	}),
 
-	array: {
+	array: new ConfigObject({
 		open: function (master, pos) {
 			const ch = master[pos];
 
@@ -212,9 +212,9 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('constant', JSON.parse(content), {subtype: 'array'});
 		}
-	},
+	}),
 
-	operation: {
+	operation: new ConfigObject({
 		// +
 		open: function (master, pos) {
 			const ch = master[pos];
@@ -239,9 +239,9 @@ const parsings = new Config({
 		toToken: function (content) {
 			return new Token('operation', content);
 		}
-	},
+	}),
 
-	variable: {
+	variable: new ConfigObject({
 		open: function (master, pos) {
 			if (isVariable.test(master[pos])) {
 				return {
@@ -273,11 +273,11 @@ const parsings = new Config({
 				return new Token('constant', undefined, {subtype: 'undefined'});
 			}
 		}
-	}
+	})
 });
 
 const composites = new Config({
-	compareRight: {
+	compareRight: new ConfigObject({
 		tokens: ['reference', 'accessor', 'operation', 'constant'],
 		factory: function (tokens) {
 			return new Compound(
@@ -290,8 +290,8 @@ const composites = new Config({
 				)
 			);
 		}
-	},
-	compareLeft: {
+	}),
+	compareLeft: new ConfigObject({
 		tokens: ['constant', 'operation', 'reference', 'accessor'],
 		factory: function (tokens) {
 			return new Compound(
@@ -304,7 +304,7 @@ const composites = new Config({
 				)
 			);
 		}
-	}
+	})
 });
 
 const expressions = null;

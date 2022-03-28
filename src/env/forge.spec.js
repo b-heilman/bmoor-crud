@@ -1042,8 +1042,6 @@ describe('src/env/forge.js', function () {
 	});
 
 	describe('::install', function () {
-		const {Config} = require('bmoor/src/lib/config.js');
-
 		let ctx = null;
 		let trace = null;
 		let service = null;
@@ -1061,7 +1059,7 @@ describe('src/env/forge.js', function () {
 				permissions
 			});
 
-			const cfg = new Config({
+			const settings = {
 				cruds: [
 					{
 						name: 'service-1',
@@ -1238,9 +1236,9 @@ describe('src/env/forge.js', function () {
 						]
 					}
 				]
-			});
+			};
 
-			await forge.install(cfg);
+			await forge.install(settings);
 
 			// this method is not real
 			service = await nexus.loadCrud('service-1');
@@ -1559,8 +1557,6 @@ describe('src/env/forge.js', function () {
 	});
 
 	describe('::install via preload', function () {
-		const {Config} = require('bmoor/src/lib/config.js');
-
 		let ctx = null;
 		let trace = null;
 		let service = null;
@@ -1579,7 +1575,7 @@ describe('src/env/forge.js', function () {
 
 			stubs.effect = sinon.stub();
 
-			const cfg = new Config({
+			const settings = {
 				cruds: [
 					{
 						name: 'service-1',
@@ -1756,9 +1752,9 @@ describe('src/env/forge.js', function () {
 						]
 					}
 				]
-			});
+			};
 
-			await forge.install(cfg);
+			await forge.install(settings);
 
 			// this method is not real
 			service = await nexus.loadCrud('service-1');

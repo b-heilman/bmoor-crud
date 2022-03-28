@@ -1,35 +1,46 @@
+const {Config} = require('bmoor/src/lib/config.js');
+
 const {Bootstrap, config: bootConfig} = require('../env/bootstrap.js');
 const {Context} = require('./context.js');
 const {Cache} = require('./cache.js');
 
-const config = bootConfig.extend({
-	hooks: {
-		buildContext: (req) =>
-			new Context(
-				req,
-				{
-					query: 'query',
-					params: 'params',
-					method: 'method',
-					content: 'body',
-					permissions: 'permissions'
-				},
-				new Cache()
-			),
-		beforeLoad: async () => null,
-		beforeConfigure: async () => null,
-		beforeStart: async () => null,
-		afterStart: async () => null
-	},
-	server: {
-		buildRouter: function () {
-			throw new Error('Define a router factory');
-		}
+const hooks = new Config({
+	buildContext: (req) =>
+		new Context(
+			req,
+			{
+				query: 'query',
+				params: 'params',
+				method: 'method',
+				content: 'body',
+				permissions: 'permissions'
+			},
+			new Cache()
+		),
+	beforeLoad: async () => null,
+	beforeConfigure: async () => null,
+	beforeStart: async () => null,
+	afterStart: async () => null
+});
+
+const server = new Config({
+	buildRouter: function () {
+		throw new Error('Define a router factory');
 	}
 });
 
+const config = new Config(
+	{},
+	{
+		bootstrap: bootConfig,
+		hooks,
+		server
+	}
+);
+
 function buildRouter(crudRouter, cfg) {
-	const router = cfg.get('server.buildRouter')();
+	const hooks = cfg.getSub('hooks');
+	const router = cfg.getSub('server').get('buildRouter')();
 
 	crudRouter.getRouters().forEach((subRouter) => {
 		router.use(subRouter.path, buildRouter(subRouter, cfg));
@@ -38,9 +49,7 @@ function buildRouter(crudRouter, cfg) {
 	crudRouter.getRoutes().forEach((route) => {
 		router[route.method](route.path, async (req, res) => {
 			try {
-				const hooks = cfg.get('hooks');
-
-				const ctx = hooks.buildContext(req);
+				const ctx = hooks.get('buildContext')(req);
 
 				const rtn = await route.action(ctx);
 
@@ -62,21 +71,21 @@ function buildRouter(crudRouter, cfg) {
 	return router;
 }
 
-async function configure(cfg, mockery) {
-	const hooks = cfg.get('hooks');
+async function configure(cfg, mockery = {}) {
+	const hooks = cfg.getSub('hooks');
 
-	await hooks.beforeLoad();
+	await hooks.get('beforeLoad')();
 
-	const bootstrap = new Bootstrap(cfg);
+	const bootstrap = new Bootstrap(cfg.getSub('bootstrap'));
 
-	await hooks.beforeConfigure();
+	await hooks.get('beforeConfigure')();
 
 	await bootstrap.install(mockery);
 
 	return bootstrap;
 }
 
-async function build(mount, cfg, mockery = null) {
+async function build(mount, cfg = config, mockery = {}) {
 	const bootstrap = await configure(cfg, mockery);
 
 	const crudRouter = bootstrap.router;

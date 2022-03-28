@@ -233,14 +233,14 @@ class Forge {
 		);
 	}
 
-	async install(cfg) {
+	async install(settings) {
 		const [services, docs] = await Promise.all([
-			this.installCruds(cfg.get('cruds') || []),
-			this.installDocuments(cfg.get('documents') || []),
-			this.installDecorators(cfg.get('decorators') || []),
-			this.installHooks(cfg.get('hooks') || []),
-			this.installSecurity(cfg.get('security') || []),
-			this.installEffects(cfg.get('effects') || [])
+			this.installCruds(settings.cruds || []),
+			this.installDocuments(settings.documents || []),
+			this.installDecorators(settings.decorators || []),
+			this.installHooks(settings.hooks || []),
+			this.installSecurity(settings.security || []),
+			this.installEffects(settings.effects || [])
 		]);
 
 		// install the services, they should be fully hydrated at this point

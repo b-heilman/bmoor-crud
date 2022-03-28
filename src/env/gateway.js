@@ -54,13 +54,13 @@ class Gateway {
 		return new Querier(this.nexus);
 	}
 
-	async install(cfg) {
+	async install(settings) {
 		const [guards, actions, utilities, synthetics, querier] = await Promise.all(
 			[
-				this.installGuards(cfg.get('guards') || []),
-				this.installActions(cfg.get('actions') || []),
-				this.installUtilities(cfg.get('utilities') || []),
-				this.installSynthetics(cfg.get('synthetics') || []),
+				this.installGuards(settings.guards || []),
+				this.installActions(settings.actions || []),
+				this.installUtilities(settings.utilities || []),
+				this.installSynthetics(settings.synthetics || []),
 				this.installQuerier()
 			]
 		);

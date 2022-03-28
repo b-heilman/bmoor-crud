@@ -509,12 +509,14 @@ describe('src/controller/guard.js', function () {
 					expect(args[0]).to.deep.equal({weAre: 'Penn State'});
 				});
 
-				it('should allow override of fields via query during create', async function(){
+				it('should allow override of fields via query during create', async function () {
 					// the create statement
-					stubs.execute.onCall(0).resolves([{
-						other: 10,
-						mother: 20
-					}]);
+					stubs.execute.onCall(0).resolves([
+						{
+							other: 10,
+							mother: 20
+						}
+					]);
 
 					const res = await controller.write(
 						new Context(
@@ -540,12 +542,14 @@ describe('src/controller/guard.js', function () {
 					});
 				});
 
-				it('should allow override of fields via body during create', async function(){
+				it('should allow override of fields via body during create', async function () {
 					// the create statement
-					stubs.execute.onCall(0).resolves([{
-						other: 10,
-						mother: 20
-					}]);
+					stubs.execute.onCall(0).resolves([
+						{
+							other: 10,
+							mother: 20
+						}
+					]);
 
 					const res = await controller.write(
 						new Context(
@@ -559,9 +563,7 @@ describe('src/controller/guard.js', function () {
 										other: 'eins'
 									}
 								},
-								query: {
-									
-								}
+								query: {}
 							},
 							{content: 'body'}
 						)
@@ -602,18 +604,22 @@ describe('src/controller/guard.js', function () {
 					expect(args[1]).to.deep.equal({weAre: 'Penn State'});
 				});
 
-				it('should allow override of fields via query during update', async function(){
+				it('should allow override of fields via query during update', async function () {
 					// the read for update
-					stubs.execute.onCall(0).resolves([{
-						eins: 1,
-						zwei: 2
-					}]);
+					stubs.execute.onCall(0).resolves([
+						{
+							eins: 1,
+							zwei: 2
+						}
+					]);
 
 					// the read for update
-					stubs.execute.onCall(1).resolves([{
-						other: 10,
-						mother: 20
-					}]);
+					stubs.execute.onCall(1).resolves([
+						{
+							other: 10,
+							mother: 20
+						}
+					]);
 
 					const res = await controller.write(
 						new Context(
@@ -642,18 +648,22 @@ describe('src/controller/guard.js', function () {
 					});
 				});
 
-				it('should allow override of fields via body during update', async function(){
+				it('should allow override of fields via body during update', async function () {
 					// the read for update
-					stubs.execute.onCall(0).resolves([{
-						eins: 1,
-						zwei: 2
-					}]);
+					stubs.execute.onCall(0).resolves([
+						{
+							eins: 1,
+							zwei: 2
+						}
+					]);
 
 					// the read for update
-					stubs.execute.onCall(1).resolves([{
-						other: 10,
-						mother: 20
-					}]);
+					stubs.execute.onCall(1).resolves([
+						{
+							other: 10,
+							mother: 20
+						}
+					]);
 
 					const res = await controller.write(
 						new Context(

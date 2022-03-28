@@ -6,46 +6,40 @@ const {Forge} = require('./forge.js');
 const {Nexus, config: nexusConfig} = require('./nexus.js');
 const {Gateway} = require('./gateway.js');
 
-const {Guard} = require('../controllers/guard.js');
-const {Action} = require('../controllers/action.js');
-const {Utility} = require('../controllers/utility.js');
-const {Synthetic} = require('../controllers/synthetic.js');
 const {Router} = require('../server/router.js');
 
 const loader = require('../server/loader.js');
 
-const constructors = nexusConfig.sub('constructors');
-constructors.set('guard', Guard);
-constructors.set('action', Action);
-constructors.set('utility', Utility);
-constructors.set('synthetic', Synthetic);
-
-const config = nexusConfig.extend({
-	constructors: {
-		guard: Guard,
-		action: Action,
-		utility: Utility,
-		synthetic: Synthetic
-	},
-	directories: {
-		model: '/models',
-		decorator: '/decorators',
-		hook: '/hooks',
-		effect: '/effects',
-		composite: '/composites',
-		guard: '/guards',
-		action: '/actions',
-		utility: '/utilities',
-		document: '/documents'
-	},
-	routes: {
-		root: '/bmoor',
-		guard: '/crud',
-		action: '/action',
-		utility: '/utility',
-		synthetic: '/synthetic'
-	}
+const directories = new Config({
+	model: '/models',
+	decorator: '/decorators',
+	hook: '/hooks',
+	effect: '/effects',
+	composite: '/composites',
+	guard: '/guards',
+	action: '/actions',
+	utility: '/utilities',
+	document: '/documents'
 });
+
+const routes = new Config({
+	root: '/bmoor',
+	guard: '/crud',
+	action: '/action',
+	utility: '/utility',
+	synthetic: '/synthetic'
+});
+
+const config = new Config(
+	{},
+	{
+		nexus: nexusConfig,
+		connectors: new Config({}),
+		sources: new Config({}),
+		directories,
+		routes
+	}
+);
 
 function assignControllers(guard, controllers) {
 	guard.addRouters(controllers.map((controller) => controller.getRouter()));
@@ -80,7 +74,7 @@ class Bootstrap {
 	constructor(cfg = config) {
 		this.bus = new Bus();
 		this.config = cfg;
-		this.nexus = new Nexus(cfg.sub('constructors'));
+		this.nexus = new Nexus(cfg.getSub('nexus'));
 		this.forge = new Forge(this.nexus, this.bus);
 		this.gateway = new Gateway(this.nexus);
 	}
@@ -95,23 +89,19 @@ class Bootstrap {
 		}
 	}
 
-	async loadCrud(directories, preload) {
-		const connectors = this.config.sub('connectors');
+	async loadCrud(directories, settings) {
+		const connectors = this.config.getSub('connectors');
 		await Promise.all(
-			connectors
-				.keys()
-				.map(async (name) =>
-					this.nexus.setConnector(name, connectors.get(name))
-				)
+			connectors.keys().map(async (name) => {
+				return this.nexus.setConnector(name, connectors.get(name));
+			})
 		);
 
-		const sources = this.config.sub('sources');
+		const sources = this.config.getSub('sources');
 		await Promise.all(
-			sources
-				.keys()
-				.map(async (name) =>
-					this.nexus.configureSource(name, sources.get(name))
-				)
+			sources.keys().map(async (name) => {
+				return this.nexus.configureSource(name, sources.get(name));
+			})
 		);
 
 		const [models, composites, decorators, hooks, security, effects] =
@@ -124,38 +114,23 @@ class Bootstrap {
 				this.load('effects', directories)
 			]);
 
-		if (!preload) {
-			preload = new Config();
-		}
-
-		preload.set('cruds', (preload.get('cruds') || []).concat(models));
-
-		preload.set(
-			'documents',
-			(preload.get('documents') || []).concat(composites)
-		);
-
-		preload.set(
-			'decorators',
-			(preload.get('decorators') || []).concat(decorators)
-		);
-
-		preload.set('hooks', (preload.get('hooks') || []).concat(hooks));
-
-		preload.set('security', (preload.get('security') || []).concat(security));
-
-		preload.set('effects', (preload.get('effects') || []).concat(effects));
-
-		return preload;
+		return {
+			cruds: (settings.cruds || []).concat(models),
+			documents: (settings.documents || []).concat(composites),
+			decorators: (settings.decorators || []).concat(decorators),
+			hooks: (settings.hooks || []).concat(hooks),
+			security: (settings.security || []).concat(security),
+			effects: (settings.effects || []).concat(effects)
+		};
 	}
 
-	async installCrud(preload) {
+	async installCrud(settings) {
 		return this.forge.install(
-			await this.loadCrud(this.config.sub('directories'), preload)
+			await this.loadCrud(this.config.getSub('directories'), settings)
 		);
 	}
 
-	async loadControllers(directories, preload) {
+	async loadControllers(directories, settings) {
 		const [guards, synthetics, actions, utilities] = await Promise.all([
 			this.load('guards', directories),
 			this.load('synthetics', directories),
@@ -163,40 +138,27 @@ class Bootstrap {
 			this.load('utilities', directories)
 		]);
 
-		if (!preload) {
-			preload = new Config();
-		}
-
-		preload.set('guards', (preload.get('guards') || []).concat(guards));
-
-		preload.set(
-			'synthetics',
-			(preload.get('synthetics') || []).concat(synthetics)
-		);
-
-		preload.set('actions', (preload.get('actions') || []).concat(actions));
-
-		preload.set(
-			'utilities',
-			(preload.get('utilities') || []).concat(utilities)
-		);
-
-		return preload;
+		return {
+			guards: (settings.guards || []).concat(guards),
+			synthetics: (settings.synthetics || []).concat(synthetics),
+			actions: (settings.actions || []).concat(actions),
+			utilities: (settings.utilities || []).concat(utilities)
+		};
 	}
 
-	async installControllers(preload) {
+	async installControllers(settings) {
 		return this.gateway.install(
-			await this.loadControllers(this.config.sub('directories'), preload)
+			await this.loadControllers(this.config.getSub('directories'), settings)
 		);
 	}
 
-	async install(preload) {
-		this.crud = await this.installCrud(preload);
-		this.controllers = await this.installControllers(preload);
+	async install(settings = {}) {
+		this.crud = await this.installCrud(settings);
+		this.controllers = await this.installControllers(settings);
 
 		const {guards, actions, utilities, synthetics} = this.controllers;
 
-		const routes = this.config.sub('routes');
+		const routes = this.config.getSub('routes');
 		const root = new Router(routes.get('root'));
 
 		const guard = assignControllers(new Router(routes.get('guard')), guards);

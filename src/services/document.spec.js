@@ -4,6 +4,7 @@ const sinon = require('sinon');
 const {Nexus, config} = require('../env/nexus.js');
 const {Context} = require('../server/context.js');
 const normalization = require('./normalization.js');
+const {config: structureConfig} = require('../schema/structure.js');
 
 describe('src/services/document.js', function () {
 	const sut = require('./document.js');
@@ -14,10 +15,6 @@ describe('src/services/document.js', function () {
 
 	let permissions = null;
 	let connectorResult = null;
-
-	const changeTypes = require('../schema/structure.js').config.get(
-		'changeTypes'
-	);
 
 	beforeEach(async function () {
 		stubs = {};
@@ -80,18 +77,18 @@ describe('src/services/document.js', function () {
 					create: true,
 					read: true,
 					update: true,
-					updateType: changeTypes.major
+					updateType: structureConfig.get('changeTypes.major')
 				},
 				title: {
 					create: true,
 					read: true,
 					update: true,
-					updateType: changeTypes.minor
+					updateType: structureConfig.get('changeTypes.minor')
 				},
 				json: {
 					read: true,
 					usage: 'json',
-					updateType: changeTypes.none
+					updateType: structureConfig.get('changeTypes.none')
 				},
 				creatorId: {
 					read: true,
@@ -122,13 +119,13 @@ describe('src/services/document.js', function () {
 					create: true,
 					read: true,
 					update: true,
-					updateType: changeTypes.major
+					updateType: structureConfig.get('changeTypes.major')
 				},
 				title: {
 					create: true,
 					read: true,
 					update: true,
-					updateType: changeTypes.minor
+					updateType: structureConfig.get('changeTypes.minor')
 				},
 				creatorId: {
 					read: true,
@@ -168,19 +165,19 @@ describe('src/services/document.js', function () {
 					read: true,
 					write: true,
 					update: true,
-					updateType: changeTypes.major
+					updateType: structureConfig.get('changeTypes.major')
 				},
 				mask: {
 					read: true,
 					write: true,
 					update: true,
-					updateType: changeTypes.minor
+					updateType: structureConfig.get('changeTypes.minor')
 				},
 				note: {
 					read: true,
 					write: true,
 					update: true,
-					updateType: changeTypes.none
+					updateType: structureConfig.get('changeTypes.none')
 				},
 				creatorId: {
 					read: true,
@@ -3709,7 +3706,7 @@ describe('src/services/document.js', function () {
 
 			it('should work with a major type change', async function () {
 				changeCb = function (type) {
-					expect(type).to.equal(changeTypes.major);
+					expect(type).to.equal(structureConfig.get('changeTypes.major'));
 				};
 
 				await doc.push(
@@ -3730,7 +3727,7 @@ describe('src/services/document.js', function () {
 
 			it('should work with a minor type change', async function () {
 				changeCb = function (type) {
-					expect(type).to.equal(changeTypes.minor);
+					expect(type).to.equal(structureConfig.get('changeTypes.minor'));
 				};
 
 				await doc.push(
@@ -3751,7 +3748,7 @@ describe('src/services/document.js', function () {
 
 			it('should work with a none type change', async function () {
 				changeCb = function (type) {
-					expect(type).to.equal(changeTypes.none);
+					expect(type).to.equal(structureConfig.get('changeTypes.none'));
 				};
 
 				await doc.push(
@@ -3772,7 +3769,7 @@ describe('src/services/document.js', function () {
 
 			it('should allow major to override with minor first', async function () {
 				changeCb = function (type) {
-					expect(type).to.equal(changeTypes.major);
+					expect(type).to.equal(structureConfig.get('changeTypes.major'));
 				};
 
 				await doc.push(
@@ -3798,7 +3795,7 @@ describe('src/services/document.js', function () {
 
 			it('should allow major to override with major first', async function () {
 				changeCb = function (type) {
-					expect(type).to.equal(changeTypes.major);
+					expect(type).to.equal(structureConfig.get('changeTypes.major'));
 				};
 
 				await doc.push(
@@ -3824,7 +3821,7 @@ describe('src/services/document.js', function () {
 
 			it('should allow major to override with major in the middle', async function () {
 				changeCb = function (type) {
-					expect(type).to.equal(changeTypes.major);
+					expect(type).to.equal(structureConfig.get('changeTypes.major'));
 				};
 
 				await doc.push(
@@ -3918,10 +3915,6 @@ describe('src/services/document.js', function () {
 	describe('multi tiered', function () {
 		let doc = null;
 
-		const changeTypes = require('../schema/structure.js').config.get(
-			'changeTypes'
-		);
-
 		beforeEach(async function () {
 			await nexus.configureComposite('test-material', {
 				base: 'test-material',
@@ -3966,7 +3959,7 @@ describe('src/services/document.js', function () {
 			stubs.onChange = sinon.stub().callsFake(function (type, series) {
 				const datum = series.getSeries('test-item')[0];
 
-				if (type === changeTypes.major) {
+				if (type === structureConfig.get('changeTypes.major')) {
 					datum.setField('name', datum.getField('name') + '.1');
 				} else {
 					datum.setField('name', datum.getField('name') + '.2');
@@ -4036,7 +4029,7 @@ describe('src/services/document.js', function () {
 
 			stubs.itemChange = sinon
 				.stub(items, 'getChangeType')
-				.resolves(changeTypes.minor);
+				.resolves(structureConfig.get('changeTypes.minor'));
 
 			stubs.itemCreate = sinon.stub(items, 'update').resolves({
 				id: 'item-1',
@@ -4050,7 +4043,7 @@ describe('src/services/document.js', function () {
 
 			stubs.materialChange = sinon
 				.stub(materials, 'getChangeType')
-				.resolves(changeTypes.minor);
+				.resolves(structureConfig.get('changeTypes.minor'));
 
 			stubs.materialCreate = sinon.stub(materials, 'update').resolves({
 				id: 'material-1',
@@ -4065,7 +4058,7 @@ describe('src/services/document.js', function () {
 
 			stubs.imChange = sinon
 				.stub(itemMaterials, 'getChangeType')
-				.resolves(changeTypes.major);
+				.resolves(structureConfig.get('changeTypes.major'));
 
 			stubs.imCreate = sinon.stub(itemMaterials, 'update').resolves({
 				id: 'im-1',
@@ -4197,21 +4190,27 @@ describe('src/services/document.js', function () {
 			let session = null;
 
 			//-------------
-			expect(stubs.onChange.getCall(0).args[0]).to.equal(changeTypes.major);
+			expect(stubs.onChange.getCall(0).args[0]).to.equal(
+				structureConfig.get('changeTypes.major')
+			);
 
 			session = stubs.onChange.getCall(0).args[1];
 
 			expect(session.getSeries('test-item').length).to.equal(1);
 
 			//-------------
-			expect(stubs.onChange.getCall(1).args[0]).to.equal(changeTypes.major);
+			expect(stubs.onChange.getCall(1).args[0]).to.equal(
+				structureConfig.get('changeTypes.major')
+			);
 
 			session = stubs.onChange.getCall(1).args[1];
 
 			expect(session.getSeries('test-item').length).to.equal(1);
 
 			//-------------
-			expect(stubs.onChange.getCall(2).args[0]).to.equal(changeTypes.major);
+			expect(stubs.onChange.getCall(2).args[0]).to.equal(
+				structureConfig.get('changeTypes.major')
+			);
 
 			session = stubs.onChange.getCall(2).args[1];
 			expect(session.getSeries('test-item').length).to.equal(1);
@@ -4435,13 +4434,13 @@ describe('src/services/document.js', function () {
 						create: true,
 						read: true,
 						update: true,
-						updateType: changeTypes.major
+						updateType: structureConfig.get('changeTypes.major')
 					},
 					title: {
 						create: true,
 						read: true,
 						update: true,
-						updateType: changeTypes.minor
+						updateType: structureConfig.get('changeTypes.minor')
 					},
 					ownerId: {
 						read: true,

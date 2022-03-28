@@ -1,4 +1,4 @@
-const {Config} = require('bmoor/src/lib/config.js');
+const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
 const {create} = require('bmoor/src/lib/error.js');
 
 const {Field} = require('./field.js');
@@ -24,19 +24,19 @@ const config = new Config({
 		minor,
 		none
 	},
-	changeRankings: {
-		[major]: 2,
-		[minor]: 1,
-		[none]: 0
-	},
 	writeModes: {
 		create: createMode,
 		update: updateMode
-	}
+	},
+	changeRankings: new ConfigObject({
+		[major]: 2,
+		[minor]: 1,
+		[none]: 0
+	})
 });
 
 const usages = new Config({
-	json: {
+	json: new ConfigObject({
 		onInflate: function (datum, setter, getter) {
 			const value = getter(datum);
 
@@ -51,8 +51,8 @@ const usages = new Config({
 				setter(datum, JSON.stringify(value));
 			}
 		}
-	},
-	monitor: {
+	}),
+	monitor: new ConfigObject({
 		onCreate: function (datum, setter, getter, cfg) {
 			const target = cfg.getTarget(datum);
 
@@ -67,7 +67,7 @@ const usages = new Config({
 				setter(datum, Date.now());
 			}
 		}
-	}
+	})
 });
 
 /**

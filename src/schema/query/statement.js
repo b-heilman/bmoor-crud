@@ -196,21 +196,13 @@ class QueryStatement extends Statement {
 				base: base.schema,
 				alias: base.series,
 				...super.toRequest(),
-				fields: Object.values(this.models).reduce(
-					(agg, model) => {
-						model.fields.forEach((field) => {
-							set(
-								agg,
-								field.as || field.path,
-								`$${model.series}.${field.path}`
-							);
-						});
+				fields: Object.values(this.models).reduce((agg, model) => {
+					model.fields.forEach((field) => {
+						set(agg, field.as || field.path, `$${model.series}.${field.path}`);
+					});
 
-						return agg;
-					},
-					{
-					}
-				),
+					return agg;
+				}, {}),
 				joins: []
 			}
 		);

@@ -178,7 +178,7 @@ class Statement {
 
 		const query = queryStmts.length ? queryStmts.join(' & ') : undefined;
 
-		return { query };
+		return {query};
 	}
 
 	toJSON() {

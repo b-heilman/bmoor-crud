@@ -163,7 +163,7 @@ describe('src/services/crud.js', function () {
 		});
 
 		//for now, submitted data needs to match original target
-		it('should allow fields to be remapped', async function(){
+		it('should allow fields to be remapped', async function () {
 			connector.execute = async function (request, myCtx) {
 				expect(myCtx).to.equal(context);
 
@@ -1545,7 +1545,7 @@ describe('src/services/crud.js', function () {
 				});
 		});
 
-		it('should allow fields to be remapped', async function(){
+		it('should allow fields to be remapped', async function () {
 			const model = new Model('model-1', nexus);
 
 			connector.execute = async function (request, myCtx) {

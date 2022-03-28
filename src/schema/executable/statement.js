@@ -41,20 +41,13 @@ class ExecutableStatement extends Statement {
 			// note the absence of joins here
 			payload: base.payload,
 			...super.toRequest(),
-			remap: Object.values(this.models).reduce(
-				(agg, model) => {
-					model.fields.forEach((field) => {
-						set(
-							agg,
-							field.as || field.path,
-							field.path
-						);
-					});
+			remap: Object.values(this.models).reduce((agg, model) => {
+				model.fields.forEach((field) => {
+					set(agg, field.as || field.path, field.path);
+				});
 
-					return agg;
-				},
-				{}
-			)
+				return agg;
+			}, {})
 		};
 	}
 

@@ -1,5 +1,6 @@
-const {expect} = require('chai');
 const sinon = require('sinon');
+const {expect} = require('chai');
+const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
 
 const sut = require('./scafolding.js');
 
@@ -19,43 +20,52 @@ describe('src/server/scafolding.js', function () {
 		stubs.routerPatch = sinon.stub();
 		stubs.routerDelete = sinon.stub();
 
-		cfg = sut.config.extend({
-			connectors: {
-				http: () => ({
-					execute: stubs.execute
-				})
-			},
-			sources: {
-				'test-1': {
-					connector: 'http'
-				}
-			},
-			directories: {
-				models: '/models',
-				decorators: '/decorators',
-				hooks: '/hooks',
-				effects: '/effects',
-				composites: '/composites',
-				guards: '/guards',
-				actions: '/actions',
-				utilities: '/utilities',
-				synthetics: '/documents'
-			},
-			server: {
-				buildRouter: () => ({
-					use: stubs.routerUse,
-					get: stubs.routerGet,
-					put: stubs.routerPut,
-					post: stubs.routerPost,
-					patch: stubs.routerPatch,
-					delete: stubs.routerDelete
+		const bootstrap = sut.config.getSub('bootstrap').override(
+			{},
+			{
+				connectors: new Config({
+					http: () => ({
+						execute: stubs.execute
+					})
+				}),
+				sources: new Config({
+					'test-1': new ConfigObject({
+						connector: 'http'
+					})
+				}),
+				directories: new Config({
+					models: '/models',
+					decorators: '/decorators',
+					hooks: '/hooks',
+					effects: '/effects',
+					composites: '/composites',
+					guards: '/guards',
+					actions: '/actions',
+					utilities: '/utilities',
+					synthetics: '/documents'
 				})
 			}
-		});
+		);
 
-		mockery = cfg.sub('stubs');
+		cfg = sut.config.override(
+			{},
+			{
+				bootstrap,
+				server: new Config({
+					buildRouter: () => ({
+						use: stubs.routerUse,
+						get: stubs.routerGet,
+						put: stubs.routerPut,
+						post: stubs.routerPost,
+						patch: stubs.routerPatch,
+						delete: stubs.routerDelete
+					})
+				})
+			}
+		);
 
-		mockery.set('cruds', [
+		mockery = {};
+		mockery.cruds = [
 			{
 				name: 'service-1',
 				path: 'model-path-1',
@@ -99,10 +109,10 @@ describe('src/server/scafolding.js', function () {
 					}
 				}
 			}
-		]);
+		];
 
 		// composites
-		mockery.set('documents', [
+		mockery.documents = [
 			{
 				name: 'composite-1',
 				settings: {
@@ -116,10 +126,10 @@ describe('src/server/scafolding.js', function () {
 					}
 				}
 			}
-		]);
+		];
 
 		// decorators
-		mockery.set('decorators', [
+		mockery.decorators = [
 			{
 				name: 'service-1',
 				path: 'decorator-path-1',
@@ -131,11 +141,11 @@ describe('src/server/scafolding.js', function () {
 					}
 				}
 			}
-		]);
+		];
 
 		const trace = [];
 		// hooks
-		mockery.set('hooks', [
+		mockery.hooks = [
 			{
 				name: 'service-1',
 				path: 'hook-path-1',
@@ -145,11 +155,11 @@ describe('src/server/scafolding.js', function () {
 					}
 				}
 			}
-		]);
+		];
 
 		// actions
 		stubs.action = sinon.stub();
-		mockery.set('effects', [
+		mockery.effects = [
 			{
 				name: 'service-1',
 				path: 'action-path-1',
@@ -161,9 +171,9 @@ describe('src/server/scafolding.js', function () {
 					}
 				]
 			}
-		]);
+		];
 
-		mockery.set('guards', [
+		mockery.guards = [
 			{
 				name: 'service-1',
 				settings: {
@@ -174,9 +184,9 @@ describe('src/server/scafolding.js', function () {
 					delete: true
 				}
 			}
-		]);
+		];
 
-		mockery.set('actions', [
+		mockery.actions = [
 			{
 				name: 'service-1',
 				settings: {
@@ -185,9 +195,9 @@ describe('src/server/scafolding.js', function () {
 					}
 				}
 			}
-		]);
+		];
 
-		mockery.set('utilities', [
+		mockery.utilities = [
 			{
 				name: 'service-1',
 				settings: {
@@ -196,9 +206,9 @@ describe('src/server/scafolding.js', function () {
 					}
 				}
 			}
-		]);
+		];
 
-		mockery.set('synthetics', [
+		mockery.synthetics = [
 			{
 				name: 'composite-1',
 				settings: {
@@ -206,7 +216,7 @@ describe('src/server/scafolding.js', function () {
 					// read: 'can-read'
 				}
 			}
-		]);
+		];
 	});
 
 	it('should build correctly', async function () {
@@ -234,11 +244,11 @@ describe('src/server/scafolding.js', function () {
 	});
 
 	it('should fail to build if unable to connect models', async function () {
-		mockery.settings.cruds.push({
+		mockery.cruds.push({
 			name: 'service-3',
 			path: 'model-path-3',
 			settings: {
-				connector: 'http',
+				source: 'test-1',
 				fields: {
 					id: {
 						create: false,
@@ -252,7 +262,7 @@ describe('src/server/scafolding.js', function () {
 			}
 		});
 
-		mockery.settings.documents.push({
+		mockery.documents.push({
 			name: 'composite-2',
 			settings: {
 				base: 'service-1',
@@ -266,7 +276,7 @@ describe('src/server/scafolding.js', function () {
 			}
 		});
 
-		mockery.settings.synthetics.push({
+		mockery.synthetics.push({
 			name: 'composite-2',
 			settings: {
 				readable: true
@@ -286,6 +296,10 @@ describe('src/server/scafolding.js', function () {
 			await sut.build(app, cfg, mockery);
 		} catch (ex) {
 			failed = true;
+
+			expect(ex.message).to.equal(
+				'composite composite-2: can not connect service-1 to service-3'
+			);
 		}
 
 		expect(failed).to.equal(true);

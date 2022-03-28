@@ -17,11 +17,11 @@ class Crud extends View {
 		Object.assign(this, decoration);
 	}
 
-	async _create(datum, ctx, settings={}) {
+	async _create(datum, ctx, settings = {}) {
 		// this needs to be based on external representation, so if I ever start
 		// to accept custom forms, I need to remap
 		const errors = await this.validate(
-			datum, 
+			datum,
 			structureConfig.get('writeModes.create'),
 			ctx
 		);
@@ -50,7 +50,7 @@ class Crud extends View {
 		);
 	}
 
-	async create(proto, ctx, settings={}) {
+	async create(proto, ctx, settings = {}) {
 		const name = this.structure.name;
 		const hooks = this.hooks;
 		const security = this.security;
@@ -97,7 +97,7 @@ class Crud extends View {
 			throw create(`missing ctx in read of ${name}`, {
 				status: 500,
 				code: 'BMOOR_CRUD_SERVICE_QUERY_CTX',
-				context: schema,
+				context: schema
 			});
 		}
 
@@ -216,7 +216,7 @@ class Crud extends View {
 		);
 	}
 
-	async _update(delta, tgt, params, ctx, settings={}) {
+	async _update(delta, tgt, params, ctx, settings = {}) {
 		const errors = await this.validate(
 			delta, // this will be in external structure
 			structureConfig.get('writeModes.update'),
@@ -253,7 +253,7 @@ class Crud extends View {
 		const hooks = this.hooks;
 		const security = this.security;
 
-		const tgt = await this.read(id, ctx/*, settings*/); // no settings, no custom fields
+		const tgt = await this.read(id, ctx /*, settings*/); // no settings, no custom fields
 
 		if (security.canUpdate) {
 			if (!(await security.canUpdate(tgt, ctx))) {
@@ -297,7 +297,7 @@ class Crud extends View {
 		return datum;
 	}
 
-	async _delete(params, ctx, settings={}) {
+	async _delete(params, ctx, settings = {}) {
 		return this.execute(
 			await this.structure.getExecutable(
 				methods.delete,
