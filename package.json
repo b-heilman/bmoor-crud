@@ -9,6 +9,10 @@
 		"url": "git://github.com/b-heilman/bmoor-crud.git"
 	},
 	"main": "src/index.js",
+	"files": [
+		"src/*[!.spec].js",
+		"src/**/*[!.spec].js"
+	],
 	"dependencies": {
 		"bmoor": "^0.11.1",
 		"bmoor-data": "^0.11.1",

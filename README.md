@@ -135,6 +135,7 @@ module.exports = {
     title: '.title', // short hand references the base
     org: {
       title: '$organization.name'
+    }
   }
 };
 ```
@@ -169,7 +170,7 @@ We will be defining the file `index.js`
 - [x] HTTP Connector
 - [x] Create / Update / Deleta via connectors
 - [x] Update crud routes to allow custom field responses
-- [ ] Redo configure structures / flow
+- [x] Redo configure structures / flow
 - [ ] Set up integration test using http example
 - [ ] Copy integration test to ReadMe Example
 - Other features I'm kicking around

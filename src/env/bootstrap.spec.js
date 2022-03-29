@@ -42,15 +42,7 @@ describe('src/env/bootstrap.js', function () {
 						})
 					}),
 					directories: new Config({
-						model: '/models',
-						decorator: '/decorators',
-						hook: '/hooks',
-						effect: '/effects',
-						composite: '/composites',
-						guard: '/guards',
-						action: '/actions',
-						utility: '/utilities',
-						document: '/documents'
+						// do not load any directories
 					})
 				}
 			);
