@@ -1,2 +1,1 @@
-
-module.exports = require('./env/bootstrap.js');
+module.exports = require('./server/scafolding.js');

@@ -9,7 +9,29 @@ const opTranslation = new Config({
 	like: '~'
 });
 
-function convertParams(params, view) {
+async function parseSettings(view, ctx) {
+	let remap = null;
+
+	const content = await ctx.getContent();
+
+	if (content) {
+		remap = content.remap;
+	}
+
+	if (!remap) {
+		remap = ctx.getQuery('remap');
+	}
+
+	const actions = remap ? view.actions.remap(remap) : null;
+
+	return {
+		actions
+	};
+}
+
+function convertParams(view, ctx) {
+	const params = ctx.getQuery('param') || null;
+
 	if (params) {
 		return Object.keys(params)
 			.map((field) => {
@@ -50,12 +72,11 @@ function convertParams(params, view) {
 	}
 }
 
-async function parseQuery(ctx, view = null) {
+async function parseQuery(view, ctx) {
 	const sort = ctx.getQuery('sort') || null;
 	const joins = ctx.getQuery('join') || [];
 	const limit = ctx.getQuery('limit') || null;
 	const query = ctx.getQuery('query') || null;
-	const params = ctx.getQuery('param') || null;
 
 	// ? param[name]=hello & param[foo.bar][gt]=123
 	// ? join[]=$foo.id > $world] & join[]=$hello.name > @worldId$world
@@ -63,7 +84,7 @@ async function parseQuery(ctx, view = null) {
 	// ? limit=100
 	// TODO: pagination?
 
-	let runQuery = query || convertParams(params, view);
+	let runQuery = query || convertParams(view, ctx);
 
 	return {
 		query: runQuery,
@@ -135,6 +156,7 @@ const config = new Config({
 	handleRollback
 });
 
+// TODO: ViewableController
 class Controller {
 	constructor(view) {
 		this.view = view;

@@ -5,7 +5,7 @@ const config = new Config({
 	putIsPatch: true
 });
 
-const {Controller, parseQuery} = require('../server/controller.js');
+const {Controller, parseQuery, parseSettings} = require('../server/controller.js');
 
 // -- post
 // create => POST: ''
@@ -54,7 +54,7 @@ async function runUpdate(ids, guard, delta, ctx) {
 
 		ctx.setInfo({key});
 
-		return guard.view.update(key, delta, ctx, await guard.parseSettings(ctx));
+		return guard.view.update(key, delta, ctx, await parseSettings(guard.view, ctx));
 	} else {
 		throw error.create('called update without id', {
 			code: 'CRUD_CONTROLLER_WRITE_ID',
@@ -65,26 +65,6 @@ async function runUpdate(ids, guard, delta, ctx) {
 }
 
 class Guard extends Controller {
-	async parseSettings(ctx) {
-		let remap = null;
-
-		const content = await ctx.getContent();
-
-		if (content) {
-			remap = content.remap;
-		}
-
-		if (!remap) {
-			remap = ctx.getQuery('remap');
-		}
-
-		const actions = remap ? this.view.actions.remap(remap) : null;
-
-		return {
-			actions
-		};
-	}
-
 	async read(ctx) {
 		if (ctx.getMethod() === 'get') {
 			if (!this.incomingSettings.read) {
@@ -105,10 +85,10 @@ class Guard extends Controller {
 						status: 400
 					});
 				} else if (ids.length > 1) {
-					return this.view.readMany(ids, ctx, await this.parseSettings(ctx));
+					return this.view.readMany(ids, ctx, await parseSettings(this.view, ctx));
 				} else {
 					return this.view
-						.read(ids[0], ctx, await this.parseSettings(ctx))
+						.read(ids[0], ctx, await parseSettings(this.view, ctx))
 						.then((res) => {
 							if (!res) {
 								throw error.create('called read without result', {
@@ -127,12 +107,12 @@ class Guard extends Controller {
 				}
 
 				return this.view.query(
-					await parseQuery(ctx, this.view),
+					await parseQuery(this.view, ctx),
 					ctx,
-					await this.parseSettings(ctx)
+					await parseSettings(this.view, ctx)
 				);
 			} else {
-				return this.view.readAll(ctx, await this.parseSettings(ctx));
+				return this.view.readAll(ctx, await parseSettings(this.view, ctx));
 			}
 		} else {
 			throw error.create('called read with method ' + ctx.method, {
@@ -160,7 +140,7 @@ class Guard extends Controller {
 				action: 'create'
 			});
 
-			return this.view.create(payload, ctx, await this.parseSettings(ctx));
+			return this.view.create(payload, ctx, await parseSettings(this.view, ctx));
 		} else if (ctx.getMethod() === 'put') {
 			const ids = (ctx.getParam('id') || '').trim();
 
@@ -202,7 +182,7 @@ class Guard extends Controller {
 				}
 
 				const queriedIds = (
-					await this.view.query(await parseQuery(ctx, this.view), ctx)
+					await this.view.query(await parseQuery(this.view, ctx), ctx)
 				).map((datum) => this.view.structure.getKey(datum));
 
 				return runUpdate(queriedIds, this, payload, ctx);
@@ -245,7 +225,7 @@ class Guard extends Controller {
 				}
 
 				const queriedIds = (
-					await this.view.query(await parseQuery(ctx, this.view), ctx)
+					await this.view.query(await parseQuery(this.view, ctx), ctx)
 				).map((datum) => this.view.structure.getKey(datum));
 
 				return Promise.all(queriedIds.map((id) => this.view.delete(id, ctx)));

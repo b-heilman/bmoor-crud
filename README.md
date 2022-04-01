@@ -129,14 +129,14 @@ We will be defining the file `src/documents/combined.js`
 
 ```javascript
 module.exports = {
-  base: 'user', // no $ needed
-  joins: ['> $organization'], // if you don't note it, assume base is always the first
-  fields: {
-    title: '.title', // short hand references the base
-    org: {
-      title: '$organization.name'
-    }
-  }
+	base: 'user', // no $ needed
+	joins: ['> $organization'], // if you don't note it, assume base is always the first
+	fields: {
+		title: '.title', // short hand references the base
+		org: {
+			title: '$organization.name'
+		}
+	}
 };
 ```
 
@@ -171,6 +171,8 @@ We will be defining the file `index.js`
 - [x] Create / Update / Deleta via connectors
 - [x] Update crud routes to allow custom field responses
 - [x] Redo configure structures / flow
+- [ ] Map remote synthetic as a local model
+- [ ] Convert security to async
 - [ ] Set up integration test using http example
 - [ ] Copy integration test to ReadMe Example
 - Other features I'm kicking around
