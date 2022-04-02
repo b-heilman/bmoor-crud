@@ -92,7 +92,11 @@ function absorbIndexMerge(target, source, namespace = '') {
 
 // used to parse appart the paths that can be fed into a composite schema
 class Instructions {
-	constructor(settings) {
+	constructor(nexus){
+		this.nexus = nexus;
+	}
+
+	async configure(settings) {
 		if (!settings.base) {
 			throw create(`no base defined`, {
 				code: 'BMOOR_CRUD_COMPOSITE_INSTRUCTIONS_BASE',
@@ -120,8 +124,13 @@ class Instructions {
 		const fieldSchema = settings.fields;
 		const params = settings.params || {};
 
-		this.model = baseModel;
-		this.alias = alias;
+		if (baseModel.chatAt(0) === '#'){
+
+		} else {
+			this.model = baseModel.chatAt(0) === '$' ? baseModel.subString(1) : baseModel;
+			this.alias = alias;
+		}
+		
 		this.index = joinSchema.reduce(
 			(agg, path) => {
 				path = path.replace(/\s/g, '');

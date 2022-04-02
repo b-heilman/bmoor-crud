@@ -170,6 +170,75 @@ describe('src/graph/path.js', function () {
 				]);
 			});
 
+			it('should correctly handle an inline statement', function(){
+				expect(
+					new sut.Path('$foo-bar.field>?#child.field2').access
+				).to.deep.equal([
+					{
+						loader: 'access',
+						model: 'foo-bar',
+						series: 'foo-bar',
+						field: 'field',
+						target: null,
+						optional: false
+					},
+					{
+						loader: 'include',
+						model: 'child',
+						series: 'child',
+						field: 'field2',
+						target: null,
+						optional: true
+					}
+				]);
+			});
+
+			it('should correctly handle an incoming inline statement', function(){
+				expect(
+					new sut.Path('$foo-bar.field>?.incoming#child.field2').access
+				).to.deep.equal([
+					{
+						loader: 'access',
+						model: 'foo-bar',
+						series: 'foo-bar',
+						field: 'field',
+						target: null,
+						optional: false
+					},
+					{
+						loader: 'include',
+						model: 'child',
+						series: 'child',
+						field: 'field2',
+						target: 'incoming',
+						optional: true
+					}
+				]);
+			});
+
+			it('should correctly handle an incoming inline statement with an alias', function(){
+				expect(
+					new sut.Path('$foo-bar.field>?.incoming#me:child.field2').access
+				).to.deep.equal([
+					{
+						loader: 'access',
+						model: 'foo-bar',
+						series: 'foo-bar',
+						field: 'field',
+						target: null,
+						optional: false
+					},
+					{
+						loader: 'include',
+						model: 'child',
+						series: 'me',
+						field: 'field2',
+						target: 'incoming',
+						optional: true
+					}
+				]);
+			});
+
 			it('should properly parse a multipart string with optional and carry it', function () {
 				expect(
 					new sut.Path('$foo-bar.field > ?$hello-world.id > $eins-zwei').access
@@ -228,6 +297,7 @@ describe('src/graph/path.js', function () {
 				).to.deep.equal([
 					{
 						loader: 'method',
+						optional: false,
 						arguments: [
 							[
 								{

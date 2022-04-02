@@ -183,6 +183,7 @@ const composites = new Config({
 		}
 	}),
 
+	// .incoming$foo.bar
 	incomingPath: new ConfigObject({
 		tokens: ['accessor', 'reference', 'accessor'],
 		factory: function (tokens) {
@@ -192,6 +193,7 @@ const composites = new Config({
 		}
 	}),
 
+	// .incoming$foo
 	incomingReference: new ConfigObject({
 		tokens: ['accessor', 'reference'],
 		factory: function (tokens) {
@@ -201,6 +203,27 @@ const composites = new Config({
 		}
 	}),
 
+	// #child.path
+	inlineChild: new ConfigObject({
+		tokens: ['child', 'accessor'],
+		factory: function (tokens) {
+			return new Compound('inline-child', tokens, {
+				series: tokens[0].metadata.series
+			});
+		}
+	}),
+
+	// .incoming#child.path
+	incomingInlineChild: new ConfigObject({
+		tokens: [ 'accessor', 'child', 'accessor'],
+		factory: function (tokens) {
+			return new Compound('incoming-inline-child', tokens, {
+				series: tokens[1].metadata.series
+			});
+		}
+	}),
+
+	// .incoming#child
 	incomingChild: new ConfigObject({
 		tokens: ['accessor', 'child'],
 		factory: function (tokens) {
@@ -215,6 +238,114 @@ const expressions = null;
 
 const compiler = new Compiler(parsings, expressions, composites);
 
+const tokenConverter = {
+	'path': function(token, optional){
+		return {
+			parsed: {
+				loader: 'access',
+				model: token.value[0].value,
+				field: token.value[1].value,
+				target: null,
+				optional
+			}
+		};
+	},
+	'reference': function(token, optional){
+		return {
+			parsed: {
+				loader: 'access',
+				model: token.value,
+				field: null,
+				target: null,
+				optional
+			}
+		};
+	},
+	'incoming-path': function(token, optional){
+		return {
+			parsed: {
+				loader: 'access',
+				model: token.value[1].value,
+				field: token.value[2].value,
+				target: token.value[0].value,
+				optional
+			}
+		};
+	},
+	'incoming-reference': function(token, optional){
+		return {
+			parsed: {
+				loader: 'access',
+				model: token.value[1].value,
+				field: null,
+				target: token.value[0].value,
+				optional
+			}
+		};
+	},
+	'child': function(token, optional){
+		return {
+			parsed: {
+				loader: 'include',
+				model: token.value,
+				field: null,
+				target: null,
+				optional
+			}
+		};
+	},
+	'inline-child': function(token, optional){
+		return {
+			parsed: {
+				loader: 'include',
+				model: token.value[0].value,
+				field: token.value[1].value,
+				target: null,
+				optional
+			}
+		};
+	},
+	'incoming-inline-child': function(token, optional){
+		return {
+			parsed: {
+				loader: 'include',
+				model: token.value[1].value,
+				field: token.value[2].value,
+				target: token.value[0].value,
+				optional
+			}
+		};
+	},
+	'incoming-child': function(token, optional){
+		return {
+			parsed: {
+				loader: 'include',
+				model: token.value[1].value,
+				field: null,
+				target: token.value[0].value,
+				optional
+			}
+		};
+	},
+	'join': function(token){
+		if (token.metadata.optional) {
+			return {
+				optional: true
+			};
+		} else {
+			return {};
+		}
+	},
+	'method': function(token, optional){
+		return {
+			parsed: {
+				loader: 'method',
+				arguments: token.value
+			}
+		};
+	}
+};
+
 //--------------------------
 function pathToAccessors(field) {
 	field = field.replace(/[\s]/g, ''); // remove all white space
@@ -225,75 +356,26 @@ function pathToAccessors(field) {
 	let optional = false;
 
 	for (const token of tokens) {
-		let parsed = null;
+		const convertor = tokenConverter[token.type];
 
-		if (token.type === 'path') {
-			parsed = {
-				loader: 'access',
-				model: token.value[0].value,
-				field: token.value[1].value,
-				target: null,
-				optional
-			};
-		} else if (token.type === 'reference') {
-			parsed = {
-				loader: 'access',
-				model: token.value,
-				field: null,
-				target: null,
-				optional
-			};
-		} else if (token.type === 'incoming-path') {
-			parsed = {
-				loader: 'access',
-				model: token.value[1].value,
-				field: token.value[2].value,
-				target: token.value[0].value,
-				optional
-			};
-		} else if (token.type === 'incoming-reference') {
-			parsed = {
-				loader: 'access',
-				model: token.value[1].value,
-				field: null,
-				target: token.value[0].value,
-				optional
-			};
-		} else if (token.type === 'child') {
-			parsed = {
-				loader: 'include',
-				model: token.value,
-				field: null,
-				target: null,
-				optional
-			};
-		} else if (token.type === 'incoming-child') {
-			parsed = {
-				loader: 'include',
-				model: token.value[1].value,
-				field: null,
-				target: token.value[0].value,
-				optional
-			};
-		} else if (token.type === 'join') {
-			if (token.metadata.optional) {
-				optional = true;
-			}
-		} else if (token.type === 'method') {
-			accessors.push({
-				loader: 'method',
-				arguments: token.value
-			});
-		} else {
+		if (!convertor){
 			throw new Error(
 				`unknown token type: ${token.type}(${token.value}) of ${field}`
 			);
 		}
 
+		const {parsed, optional: isOptionalNow} = convertor(token);
+
+		if (isOptionalNow){
+			optional = true;
+		}
+
 		if (parsed) {
+			parsed.optional = optional;
+
 			if (token.metadata && token.metadata.series) {
 				parsed.series = token.metadata.series;
-			} else {
+			} else if (parsed.model){
 				parsed.series = parsed.model;
 			}
 

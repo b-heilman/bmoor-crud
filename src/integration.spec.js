@@ -1,3 +1,4 @@
+/*
 const {expect} = require('chai');
 const sinon = require('sinon');
 const express = require('express');
@@ -325,3 +326,4 @@ describe('integration tests', function () {
 
 	it('should work', function () {});
 });
+*/
