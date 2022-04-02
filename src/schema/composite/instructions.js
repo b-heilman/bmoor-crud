@@ -92,13 +92,35 @@ function absorbIndexMerge(target, source, namespace = '') {
 
 // used to parse appart the paths that can be fed into a composite schema
 class Instructions {
-	constructor(baseModel, alias, joinSchema, fieldSchema, params = {}) {
-		this.model = baseModel;
-
-		if (!alias) {
-			alias = baseModel;
+	constructor(settings) {
+		if (!settings.base) {
+			throw create(`no base defined`, {
+				code: 'BMOOR_CRUD_COMPOSITE_INSTRUCTIONS_BASE',
+				context: settings
+			});
 		}
 
+		if (!settings.joins) {
+			throw create(`no joins defined`, {
+				code: 'BMOOR_CRUD_COMPOSITE_INSTRUCTIONS_JOINS',
+				context: settings
+			});
+		}
+
+		if (!settings.fields) {
+			throw create(`no fields defined`, {
+				code: 'BMOOR_CRUD_COMPOSITE_INSTRUCTIONS_FIELDS',
+				context: settings
+			});
+		}
+
+		const baseModel = settings.base;
+		const alias = settings.alias || baseModel;
+		const joinSchema = settings.joins;
+		const fieldSchema = settings.fields;
+		const params = settings.params || {};
+
+		this.model = baseModel;
 		this.alias = alias;
 		this.index = joinSchema.reduce(
 			(agg, path) => {

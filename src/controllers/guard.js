@@ -5,7 +5,11 @@ const config = new Config({
 	putIsPatch: true
 });
 
-const {Controller, parseQuery, parseSettings} = require('../server/controller.js');
+const {
+	Controller,
+	parseQuery,
+	parseSettings
+} = require('../server/controller.js');
 
 // -- post
 // create => POST: ''
@@ -54,7 +58,12 @@ async function runUpdate(ids, guard, delta, ctx) {
 
 		ctx.setInfo({key});
 
-		return guard.view.update(key, delta, ctx, await parseSettings(guard.view, ctx));
+		return guard.view.update(
+			key,
+			delta,
+			ctx,
+			await parseSettings(guard.view, ctx)
+		);
 	} else {
 		throw error.create('called update without id', {
 			code: 'CRUD_CONTROLLER_WRITE_ID',
@@ -85,7 +94,11 @@ class Guard extends Controller {
 						status: 400
 					});
 				} else if (ids.length > 1) {
-					return this.view.readMany(ids, ctx, await parseSettings(this.view, ctx));
+					return this.view.readMany(
+						ids,
+						ctx,
+						await parseSettings(this.view, ctx)
+					);
 				} else {
 					return this.view
 						.read(ids[0], ctx, await parseSettings(this.view, ctx))
@@ -140,7 +153,11 @@ class Guard extends Controller {
 				action: 'create'
 			});
 
-			return this.view.create(payload, ctx, await parseSettings(this.view, ctx));
+			return this.view.create(
+				payload,
+				ctx,
+				await parseSettings(this.view, ctx)
+			);
 		} else if (ctx.getMethod() === 'put') {
 			const ids = (ctx.getParam('id') || '').trim();
 

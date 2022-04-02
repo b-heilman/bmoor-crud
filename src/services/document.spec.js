@@ -2044,9 +2044,7 @@ describe('src/services/document.js', function () {
 
 				expect(true).to.equal(false);
 			} catch (ex) {
-				expect(ex.message).to.equal(
-					'composite test-composite-ut: no fields defined'
-				);
+				expect(ex.message).to.equal('no fields defined');
 			}
 		});
 

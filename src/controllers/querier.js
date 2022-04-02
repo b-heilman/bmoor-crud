@@ -3,7 +3,11 @@ const error = require('bmoor/src/lib/error.js');
 
 const config = new Config({});
 
-const {Controller, parseQuery, parseSettings} = require('../server/controller.js');
+const {
+	Controller,
+	parseQuery,
+	parseSettings
+} = require('../server/controller.js');
 const {Composite} = require('../schema/composite.js');
 const {Document} = require('../services/document.js');
 
@@ -19,13 +23,13 @@ class Querier extends Controller {
 		const name = ctx.getParam('name');
 
 		let view = null;
-		if (type === 'document'){
+		if (type === 'document') {
 			view = await this.nexus.getDocument(name);
 		} else {
 			view = await this.nexus.getCrud(name);
 		}
 
-		if (ctx.hasQuery()){
+		if (ctx.hasQuery()) {
 			return view.query(
 				await parseQuery(view, ctx),
 				ctx,

@@ -409,6 +409,12 @@ describe('src/env/bootstrap.js', function () {
 								path: '',
 								method: 'post'
 							}
+						},
+						{
+							route: {
+								path: '/:type/:name',
+								method: 'get'
+							}
 						}
 					]
 				}

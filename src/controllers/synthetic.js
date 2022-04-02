@@ -46,7 +46,7 @@ class Synthetic extends Controller {
 			if (ctx.hasParam('id')) {
 				return this.view.read(ctx.getParam('id'), ctx);
 			} else {
-				return this.view.query(await parseQuery(ctx, this.view), ctx);
+				return this.view.query(await parseQuery(this.view, ctx), ctx);
 			}
 		} else {
 			throw error.create('called read with method ' + ctx.method, {

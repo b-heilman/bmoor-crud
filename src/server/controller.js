@@ -244,6 +244,7 @@ module.exports = {
 	opTranslation,
 	handleRollback,
 	formatResponse,
+	parseSettings,
 	parseQuery,
 	Controller
 };

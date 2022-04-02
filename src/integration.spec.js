@@ -323,7 +323,5 @@ describe('integration tests', function () {
 		]);
 	});
 
-	it('should work', function(){
-
-	});
+	it('should work', function () {});
 });

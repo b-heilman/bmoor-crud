@@ -4,10 +4,15 @@ const {Instructions} = require('./instructions.js');
 
 describe('src/schema/composite/instructions.js', function () {
 	it('should work for a single join', function () {
-		const ci = new Instructions('m-1', null, ['$m-1 > $m-2 > .myId$m-3'], {
-			field1: '$m-1.field',
-			field2: '$m-2.field',
-			field3: '$m-3.field'
+		const ci = new Instructions({
+			base: 'm-1',
+			alias: null,
+			joins: ['$m-1 > $m-2 > .myId$m-3'],
+			fields: {
+				field1: '$m-1.field',
+				field2: '$m-2.field',
+				field3: '$m-3.field'
+			}
 		});
 
 		expect(ci.index).to.deep.equal({
@@ -96,11 +101,13 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with an alias', function () {
-		const ci = new Instructions(
-			'm-1',
-			null,
-			['$m-1 > $alias-2:m-2 > #alias:sub-1', '$alias-2:m-2 > #alias-3:sub-1'],
-			{
+		const ci = new Instructions({
+			base: 'm-1',
+			joins: [
+				'$m-1 > $alias-2:m-2 > #alias:sub-1',
+				'$alias-2:m-2 > #alias-3:sub-1'
+			],
+			fields: {
 				field1: '$m-1.field',
 				field2: '$alias-2.field',
 				field3: {
@@ -108,7 +115,7 @@ describe('src/schema/composite/instructions.js', function () {
 				},
 				alias: '#alias-3'
 			}
-		);
+		});
 
 		expect(ci.index).to.deep.equal({
 			'm-1': {
@@ -221,10 +228,14 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with optional fields', function () {
-		const ci = new Instructions('m-1', null, ['$m-1 >? $m-2 > $alias:m-3'], {
-			field1: '$m-1.field',
-			field2: '$m-2.field',
-			field3: '$alias.field'
+		const ci = new Instructions({
+			base: 'm-1',
+			joins: ['$m-1 >? $m-2 > $alias:m-3'],
+			fields: {
+				field1: '$m-1.field',
+				field2: '$m-2.field',
+				field3: '$alias.field'
+			}
 		});
 
 		expect(ci.index).to.deep.equal({
@@ -311,10 +322,14 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with a sub', function () {
-		const ci = new Instructions('m-1', null, ['$m-1 > $m-2 > #doc'], {
-			field1: '$m-1.field',
-			field2: '$m-2.field',
-			field3: ['#doc']
+		const ci = new Instructions({
+			base: 'm-1',
+			joins: ['$m-1 > $m-2 > #doc'],
+			fields: {
+				field1: '$m-1.field',
+				field2: '$m-2.field',
+				field3: ['#doc']
+			}
 		});
 
 		expect(ci.index).to.deep.equal({
@@ -415,17 +430,16 @@ describe('src/schema/composite/instructions.js', function () {
 
 	it('should work with optional fields', function () {
 		// Note white space testing as well
-		const ci = new Instructions(
-			'm-1',
-			null,
-			['$m-1 >? $m-2 > $alias:m-3', ' > $m-4 > $m-5', '> $m-6 > $m-5'],
-			{
+		const ci = new Instructions({
+			base: 'm-1',
+			joins: ['$m-1 >? $m-2 > $alias:m-3', ' > $m-4 > $m-5', '> $m-6 > $m-5'],
+			fields: {
 				field1: ' .field',
 				field2: '$m-2.field',
 				field3: '$alias.field',
 				field4: '$m-5.field'
 			}
-		);
+		});
 
 		expect(ci.index).to.deep.equal({
 			'm-1': {
@@ -508,14 +522,13 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should correctly trace a path', function () {
-		const ci = new Instructions(
-			'm-1',
-			null,
-			['> $m-2 > $m-3', '> $m-20 > $m-21 > $m-3'],
-			{
+		const ci = new Instructions({
+			base: 'm-1',
+			joins: ['> $m-2 > $m-3', '> $m-20 > $m-21 > $m-3'],
+			fields: {
 				field3: '$m-3.field'
 			}
-		);
+		});
 
 		expect(ci.getTrace('m-3').map((r) => r.series)).to.deep.equal([
 			'm-1',
@@ -533,16 +546,19 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should correctly find the mount path', function () {
-		const ci = new Instructions(
-			'm-1',
-			null,
-			['> $m-2 > $m-3', '> $m-20 > $m-21 > $m-3', '> $m-20 > $m-10 > $m-11'],
-			{
+		const ci = new Instructions({
+			base: 'm-1',
+			joins: [
+				'> $m-2 > $m-3',
+				'> $m-20 > $m-21 > $m-3',
+				'> $m-20 > $m-10 > $m-11'
+			],
+			fields: {
 				field2: '$m-2.field',
 				field3: '$m-3.field',
 				field20: '$m-20.field'
 			}
-		);
+		});
 
 		expect(ci.getMount('m-3').map((r) => r.series)).to.deep.equal(['m-3']);
 
@@ -561,18 +577,21 @@ describe('src/schema/composite/instructions.js', function () {
 
 	describe('::extend', function () {
 		it('should correctly extend another', function () {
-			const ci1 = new Instructions(
-				'm-1',
-				null,
-				['$m-1 >? $m-2 > $m-3', '> $m-4 > $m-5', '> $m-6 > $m-5'],
-				{
+			const ci1 = new Instructions({
+				base: 'm-1',
+				joins: ['$m-1 >? $m-2 > $m-3', '> $m-4 > $m-5', '> $m-6 > $m-5'],
+				fields: {
 					field3: '$m-3.field'
 				}
-			);
+			});
 
-			const ci2 = new Instructions('m-10', null, ['$m-10 > $m-6'], {
-				field10: '$m-10.field',
-				field6: '$m-6.field'
+			const ci2 = new Instructions({
+				base: 'm-10',
+				joins: ['$m-10 > $m-6'],
+				fields: {
+					field10: '$m-10.field',
+					field6: '$m-6.field'
+				}
 			});
 
 			ci2.extend(ci1);
@@ -722,19 +741,22 @@ describe('src/schema/composite/instructions.js', function () {
 
 	describe('::inline', function () {
 		it('should correctly line another', function () {
-			const ci1 = new Instructions(
-				'm-1',
-				null,
-				['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
-				{
+			const ci1 = new Instructions({
+				base: 'm-1',
+				joins: ['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
+				fields: {
 					field3: '$m-3.field',
 					sub1: '#sub-1'
 				}
-			);
+			});
 
-			const ci2 = new Instructions('m-10', null, ['$m-10 > $m-6'], {
-				field10: '$m-10.field',
-				field6: '$m-6.field'
+			const ci2 = new Instructions({
+				base: 'm-10',
+				joins: ['$m-10 > $m-6'],
+				fields: {
+					field10: '$m-10.field',
+					field6: '$m-6.field'
+				}
 			});
 
 			ci1.inline('sub-1', ci2);
@@ -848,30 +870,32 @@ describe('src/schema/composite/instructions.js', function () {
 		});
 
 		it('should correctly inline multiple levels', function () {
-			const ci1 = new Instructions(
-				'm-1',
-				null,
-				['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
-				{
+			const ci1 = new Instructions({
+				base: 'm-1',
+				joins: ['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
+				fields: {
 					field3: '$m-3.field',
 					field4: '$m-4.field'
 				}
-			);
+			});
 
-			const ci2 = new Instructions(
-				'm-10',
-				null,
-				['$m-10 > $m-16', '$m-10 > #sub-1'],
-				{
+			const ci2 = new Instructions({
+				base: 'm-10',
+				joins: ['$m-10 > $m-16', '$m-10 > #sub-1'],
+				fields: {
 					field10: '$m-10.field',
 					field16: '$m-16.field',
 					sub1: '#sub-1'
 				}
-			);
+			});
 
-			const ci3 = new Instructions('m-20', null, ['> #sub-2'], {
-				field20: '$m-20.field',
-				sub2: '#sub-2'
+			const ci3 = new Instructions({
+				base: 'm-20',
+				joins: ['> #sub-2'],
+				fields: {
+					field20: '$m-20.field',
+					sub2: '#sub-2'
+				}
 			});
 
 			ci3.inline('sub-2', ci2);

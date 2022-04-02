@@ -383,34 +383,18 @@ class Composite extends Structure {
 	async configure(settings) {
 		await super.configure(settings);
 
-		if (!settings.base) {
-			throw create(`composite ${this.name}: no base defined`, {
-				code: 'BMOOR_CRUD_COMPOSITE_CONFIGURE_BASE',
-				context: settings
+		try {
+			this.instructions = new Instructions(settings);
+		} catch (ex) {
+			addTrace(ex, {
+				code: 'BMOOR_CRUD_COMPOSITE_CONFIGURE',
+				context: {
+					name: this.name
+				}
 			});
-		}
 
-		if (!settings.joins) {
-			throw create(`composite ${this.name}: no joins defined`, {
-				code: 'BMOOR_CRUD_COMPOSITE_CONFIGURE_JOINS',
-				context: settings
-			});
+			throw ex;
 		}
-
-		if (!settings.fields) {
-			throw create(`composite ${this.name}: no fields defined`, {
-				code: 'BMOOR_CRUD_COMPOSITE_CONFIGURE_FIELDS',
-				context: settings
-			});
-		}
-
-		this.instructions = new Instructions(
-			settings.base,
-			settings.alias,
-			settings.joins,
-			settings.fields,
-			settings.params
-		);
 
 		const rtn = await this.build();
 

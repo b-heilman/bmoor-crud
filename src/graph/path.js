@@ -177,7 +177,9 @@ const composites = new Config({
 	path: new ConfigObject({
 		tokens: ['reference', 'accessor'],
 		factory: function (tokens) {
-			return new Compound('path', tokens, {series: tokens[0].metadata.series});
+			return new Compound('path', tokens, {
+				series: tokens[0].metadata.series
+			});
 		}
 	}),
 
