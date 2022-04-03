@@ -215,7 +215,7 @@ const composites = new Config({
 
 	// .incoming#child.path
 	incomingInlineChild: new ConfigObject({
-		tokens: [ 'accessor', 'child', 'accessor'],
+		tokens: ['accessor', 'child', 'accessor'],
 		factory: function (tokens) {
 			return new Compound('incoming-inline-child', tokens, {
 				series: tokens[1].metadata.series
@@ -239,95 +239,87 @@ const expressions = null;
 const compiler = new Compiler(parsings, expressions, composites);
 
 const tokenConverter = {
-	'path': function(token, optional){
+	path: function (token) {
 		return {
 			parsed: {
 				loader: 'access',
 				model: token.value[0].value,
 				field: token.value[1].value,
-				target: null,
-				optional
+				target: null
 			}
 		};
 	},
-	'reference': function(token, optional){
+	reference: function (token) {
 		return {
 			parsed: {
 				loader: 'access',
 				model: token.value,
 				field: null,
-				target: null,
-				optional
+				target: null
 			}
 		};
 	},
-	'incoming-path': function(token, optional){
+	'incoming-path': function (token) {
 		return {
 			parsed: {
 				loader: 'access',
 				model: token.value[1].value,
 				field: token.value[2].value,
-				target: token.value[0].value,
-				optional
+				target: token.value[0].value
 			}
 		};
 	},
-	'incoming-reference': function(token, optional){
+	'incoming-reference': function (token) {
 		return {
 			parsed: {
 				loader: 'access',
 				model: token.value[1].value,
 				field: null,
-				target: token.value[0].value,
-				optional
+				target: token.value[0].value
 			}
 		};
 	},
-	'child': function(token, optional){
+	child: function (token) {
 		return {
 			parsed: {
 				loader: 'include',
 				model: token.value,
 				field: null,
-				target: null,
-				optional
+				target: null
 			}
 		};
 	},
-	'inline-child': function(token, optional){
+	'inline-child': function (token) {
 		return {
 			parsed: {
 				loader: 'include',
 				model: token.value[0].value,
 				field: token.value[1].value,
-				target: null,
-				optional
+				target: null
 			}
 		};
 	},
-	'incoming-inline-child': function(token, optional){
+	'incoming-inline-child': function (token) {
 		return {
 			parsed: {
 				loader: 'include',
 				model: token.value[1].value,
 				field: token.value[2].value,
-				target: token.value[0].value,
-				optional
+				target: token.value[0].value
 			}
 		};
 	},
-	'incoming-child': function(token, optional){
+	'incoming-child': function (token) {
 		return {
 			parsed: {
 				loader: 'include',
 				model: token.value[1].value,
 				field: null,
-				target: token.value[0].value,
-				optional
+				target: token.value[0].value
 			}
 		};
 	},
-	'join': function(token){
+	join: function (token) {
 		if (token.metadata.optional) {
 			return {
 				optional: true
@@ -336,7 +328,7 @@ const tokenConverter = {
 			return {};
 		}
 	},
-	'method': function(token, optional){
+	method: function (token) {
 		return {
 			parsed: {
 				loader: 'method',
@@ -358,7 +350,7 @@ function pathToAccessors(field) {
 	for (const token of tokens) {
 		const convertor = tokenConverter[token.type];
 
-		if (!convertor){
+		if (!convertor) {
 			throw new Error(
 				`unknown token type: ${token.type}(${token.value}) of ${field}`
 			);
@@ -366,7 +358,7 @@ function pathToAccessors(field) {
 
 		const {parsed, optional: isOptionalNow} = convertor(token);
 
-		if (isOptionalNow){
+		if (isOptionalNow) {
 			optional = true;
 		}
 
@@ -375,7 +367,7 @@ function pathToAccessors(field) {
 
 			if (token.metadata && token.metadata.series) {
 				parsed.series = token.metadata.series;
-			} else if (parsed.model){
+			} else if (parsed.model) {
 				parsed.series = parsed.model;
 			}
 

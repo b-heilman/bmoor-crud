@@ -38,17 +38,17 @@ function instructionIndexMerge(target, source) {
 	return target;
 }
 
-function absorbIndexMerge(target, source, namespace = '') {
-	Object.keys(source).forEach((series) => {
+function mergeIndexInline(targetIndex, sourceIndex, namespace) {
+	Object.keys(sourceIndex).forEach((series) => {
 		const namespacedSeries = namespace + series;
-		const existing = target[namespacedSeries];
-		const additional = source[series];
+		const existing = targetIndex[namespacedSeries];
+		const additional = sourceIndex[series];
 		const incoming = additional.incoming.map(
 			(inSeries) => namespace + inSeries
 		);
 
 		if (additional.composite) {
-			target[namespacedSeries] = {
+			targetIndex[namespacedSeries] = {
 				series: namespace + additional.series,
 				composite: additional.composite,
 				isNeeded: additional.isNeeded,
@@ -75,7 +75,7 @@ function absorbIndexMerge(target, source, namespace = '') {
 					);
 				}
 			} else {
-				target[namespacedSeries] = {
+				targetIndex[namespacedSeries] = {
 					series: namespace + additional.series,
 					model: additional.model,
 					isNeeded: additional.isNeeded,
@@ -87,12 +87,71 @@ function absorbIndexMerge(target, source, namespace = '') {
 		}
 	});
 
-	return target;
+	return targetIndex;
 }
 
-// used to parse appart the paths that can be fed into a composite schema
+function addStatement(instructions, mountPath, statement) {
+	statement = statement.replace(/\s/g, '');
+
+	if (statement[0] === '.') {
+		statement = '$' + instructions.alias + statement;
+	}
+
+	const info = translateField(mountPath, statement);
+
+	const join = instructions.index[info.action.series];
+	if (!join) {
+		throw create(
+			`requesting field not joined ${info.action.series}`,
+			{
+				code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
+				context: {
+					statement
+				}
+			}
+		);
+	}
+
+	info.action.model = join.model;
+
+	if (info.type === 'access') {
+		let toProcess = [info.action.series];
+
+		while (toProcess.length) {
+			const curSeries = toProcess.shift();
+			const cur = instructions.getSeries(curSeries);
+
+			// I only need to go up the chain until I find
+			// another isNeeded
+			if (!cur.isNeeded) {
+				cur.isNeeded = true;
+
+				if (cur.incoming) {
+					toProcess = toProcess.concat(cur.incoming);
+				}
+			}
+		}
+
+		instructions.fields.push(info);
+	} else if (info.type === 'include') {
+		// TODO: is it a sub, or an inline?
+		instructions.subs.push(info);
+	} else {
+		throw create(`unknown type ${info.type}`, {
+			code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN',
+			context: {
+				info
+			}
+		});
+	}
+}
+
+/***
+ * This class is the abstraction of converting the external data schema into an internal
+ * 
+ ***/
 class Instructions {
-	constructor(nexus){
+	constructor(nexus) {
 		this.nexus = nexus;
 	}
 
@@ -123,14 +182,47 @@ class Instructions {
 		const joinSchema = settings.joins;
 		const fieldSchema = settings.fields;
 		const params = settings.params || {};
+		const inlineRef = {};
 
-		if (baseModel.chatAt(0) === '#'){
+		if (baseModel.charAt(0) === '#') {
+			const baseName = baseModel.substring(1);
+			const {instructions: parentInstructions} = await this.nexus.loadComposite(baseName);
 
+			this.model = parentInstructions.model;
+			this.alias = baseName+parentInstructions.model;
+
+			inlineRef[alias || baseName] = {
+				namespace: baseName
+			};
+
+			this.index = {
+				[this.alias]: {
+					series: this.alias,
+					model: this.model,
+					isNeeded: true,
+					optional: false,
+					incoming: [],
+					join: {}
+				}
+			};
+
+			mergeIndexInline(this.index, parentInstructions.index, baseName);
 		} else {
-			this.model = baseModel.chatAt(0) === '$' ? baseModel.subString(1) : baseModel;
+			this.model = baseModel.charAt(0) === '$' ? baseModel.subString(1) : baseModel;
 			this.alias = alias;
+
+			this.index = {
+				[alias]: {
+					series: alias,
+					model: baseModel,
+					isNeeded: true,
+					optional: false,
+					incoming: [],
+					join: {}
+				}
+			};
 		}
-		
+
 		this.index = joinSchema.reduce(
 			(agg, path) => {
 				path = path.replace(/\s/g, '');
@@ -191,16 +283,7 @@ class Instructions {
 
 				return agg;
 			},
-			{
-				[alias]: {
-					series: alias,
-					model: baseModel,
-					isNeeded: true,
-					optional: false,
-					incoming: [],
-					join: {}
-				}
-			}
+			this.index
 		);
 
 		this.subs = [];
@@ -211,8 +294,8 @@ class Instructions {
 		// break this into
 		// [path]: [accessor]
 		const imploded = implode(fieldSchema);
-		Object.keys(imploded).map((mount) =>
-			this.addStatement(mount, imploded[mount])
+		Object.keys(imploded).map((mountPath) =>
+			addStatement(this, mountPath, imploded[mountPath])
 		);
 
 		Object.keys(params).map((key) => {
@@ -223,64 +306,13 @@ class Instructions {
 				this.getSeries(series).isNeeded = true;
 			}
 		});
+
+		return this;
 	}
 
-	addStatement(mount, statement, namespace = '') {
-		statement = statement.replace(/\s/g, '');
 
-		if (statement[0] === '.') {
-			statement = '$' + this.alias + statement;
-		}
-
-		const info = translateField(mount, statement);
-
-		const join = this.index[namespace + info.action.series];
-		if (!join) {
-			throw create(
-				`requesting field not joined ${namespace ? namespace + ':' : ''}${
-					info.action.series
-				}`,
-				{
-					code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
-					context: {
-						statement
-					}
-				}
-			);
-		}
-
-		info.action.model = join.model;
-
-		if (info.type === 'access') {
-			let toProcess = [namespace + info.action.series];
-
-			while (toProcess.length) {
-				const curSeries = toProcess.shift();
-				const cur = this.getSeries(curSeries);
-
-				// I only need to go up the chain until I find
-				// another isNeeded
-				if (!cur.isNeeded) {
-					cur.isNeeded = true;
-
-					if (cur.incoming) {
-						toProcess = toProcess.concat(cur.incoming);
-					}
-				}
-			}
-
-			this.fields.push(info);
-		} else if (info.type === 'include') {
-			this.subs.push(info);
-		} else {
-			throw create(`unknown type ${info.type}`, {
-				code: 'BMOOR_CRUD_COMPOSITE_UNKNOWN',
-				context: {
-					info
-				}
-			});
-		}
-	}
+	// USE: just internal
+	
 
 	// this will map another set of instructions directly onto the model
 	extend(parent) {
@@ -347,7 +379,7 @@ class Instructions {
 			throw new Error('how did we get here?');
 		}
 
-		this.index = absorbIndexMerge(this.index, instructions.index, namespace);
+		this.index = mergeIndexInline(this.index, instructions.index, namespace);
 
 		// first we remove the sub that is at the root position, then we
 		// add any additional subs

@@ -384,7 +384,9 @@ class Composite extends Structure {
 		await super.configure(settings);
 
 		try {
-			this.instructions = new Instructions(settings, this.nexus);
+			this.instructions = await new Instructions(this.nexus).configure(
+				settings
+			);
 		} catch (ex) {
 			addTrace(ex, {
 				code: 'BMOOR_CRUD_COMPOSITE_CONFIGURE',

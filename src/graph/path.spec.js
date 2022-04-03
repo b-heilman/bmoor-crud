@@ -170,7 +170,7 @@ describe('src/graph/path.js', function () {
 				]);
 			});
 
-			it('should correctly handle an inline statement', function(){
+			it('should correctly handle an inline statement', function () {
 				expect(
 					new sut.Path('$foo-bar.field>?#child.field2').access
 				).to.deep.equal([
@@ -193,7 +193,7 @@ describe('src/graph/path.js', function () {
 				]);
 			});
 
-			it('should correctly handle an incoming inline statement', function(){
+			it('should correctly handle an incoming inline statement', function () {
 				expect(
 					new sut.Path('$foo-bar.field>?.incoming#child.field2').access
 				).to.deep.equal([
@@ -216,7 +216,7 @@ describe('src/graph/path.js', function () {
 				]);
 			});
 
-			it('should correctly handle an incoming inline statement with an alias', function(){
+			it('should correctly handle an incoming inline statement with an alias', function () {
 				expect(
 					new sut.Path('$foo-bar.field>?.incoming#me:child.field2').access
 				).to.deep.equal([
