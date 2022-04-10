@@ -249,7 +249,11 @@ class Instructions {
 						});
 					}
 
-					// this is a two way linked list, this if forward
+					/**
+					 * If a composite is to be includede, it needs to have
+					 * ID's attached and linked that way.  I am not supporting 
+					 * hidden id's coming from included models right now
+					 **/
 					base.join[cur.series] = {
 						from: field,
 						to: cur.target

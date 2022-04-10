@@ -176,4 +176,4 @@ We will be defining the file `index.js`
 - [ ] Set up integration test using http example
 - [ ] Copy integration test to ReadMe Example
 - Other features I'm kicking around
-- [ ] hmmm...
+- [ ] HTTP connector for regular crud / web routes
