@@ -70,7 +70,7 @@ function buildConnector(connectorSettings) {
 }
 
 module.exports = {
-	factory(settings) {
+	factory(settings, /*nexus*/) {
 		return buildConnector(settings);
 	}
 };

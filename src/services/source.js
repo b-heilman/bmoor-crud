@@ -11,7 +11,7 @@ class Source {
 
 		const factory = await this.nexus.loadConnector(settings.connector);
 
-		this.connector = await factory(settings.connectorSettings);
+		this.connector = await factory(settings.connectorSettings, this.nexus);
 	}
 
 	async execute(stmt, ctx) {

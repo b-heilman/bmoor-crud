@@ -158,6 +158,7 @@ class Nexus {
 		);
 	}
 
+	// factory is run in the source constructor, passing in settings and nexus
 	async setConnector(ref, factory) {
 		await this.setConfigured('connector', ref, factory);
 
@@ -199,6 +200,14 @@ class Nexus {
 		return loadTarget(this, 'source', ref);
 	}
 
+	async loadStructure(ref){
+		if (!ref) {
+			throw new Error('invalid structure requested: ' + ref);
+		}
+
+		return loadTarget(this, 'structure', ref);
+	}
+
 	getModel(ref) {
 		return getDefined(this, 'model', this.config.getSub('schemas'), ref, [
 			ref,
@@ -216,6 +225,8 @@ class Nexus {
 		);
 
 		this.mapper.addModel(model);
+
+		this.setConfigured('structure', ref, model);
 
 		return model;
 	}
@@ -283,13 +294,17 @@ class Nexus {
 	}
 
 	async configureComposite(ref, settings) {
-		return setSettings(
+		const composite = await setSettings(
 			this,
 			'composite',
 			this.getComposite(ref),
 			settings,
 			ref
 		);
+
+		this.setConfigured('structure', ref, composite);
+
+		return composite;
 	}
 
 	async loadComposite(ref) {
