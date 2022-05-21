@@ -101,15 +101,12 @@ function addStatement(instructions, mountPath, statement) {
 
 	const join = instructions.index[info.action.series];
 	if (!join) {
-		throw create(
-			`requesting field not joined ${info.action.series}`,
-			{
-				code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
-				context: {
-					statement
-				}
+		throw create(`requesting field not joined ${info.action.series}`, {
+			code: 'BMOOR_CRUD_COMPOSITE_MISSING_JOIN',
+			context: {
+				statement
 			}
-		);
+		});
 	}
 
 	info.action.model = join.model;
@@ -148,7 +145,7 @@ function addStatement(instructions, mountPath, statement) {
 
 /***
  * This class is the abstraction of converting the external data schema into an internal
- * 
+ *
  ***/
 class Instructions {
 	constructor(nexus) {
@@ -186,10 +183,12 @@ class Instructions {
 
 		if (baseModel.charAt(0) === '#') {
 			const baseName = baseModel.substring(1);
-			const {instructions: parentInstructions} = await this.nexus.loadComposite(baseName);
+			const {instructions: parentInstructions} = await this.nexus.loadComposite(
+				baseName
+			);
 
 			this.model = parentInstructions.model;
-			this.alias = baseName+parentInstructions.model;
+			this.alias = baseName + parentInstructions.model;
 
 			inlineRef[alias || baseName] = {
 				namespace: baseName
@@ -208,7 +207,8 @@ class Instructions {
 
 			mergeIndexInline(this.index, parentInstructions.index, baseName);
 		} else {
-			this.model = baseModel.charAt(0) === '$' ? baseModel.subString(1) : baseModel;
+			this.model =
+				baseModel.charAt(0) === '$' ? baseModel.subString(1) : baseModel;
 			this.alias = alias;
 
 			this.index = {
@@ -223,72 +223,69 @@ class Instructions {
 			};
 		}
 
-		this.index = joinSchema.reduce(
-			(agg, path) => {
-				path = path.replace(/\s/g, '');
+		this.index = joinSchema.reduce((agg, path) => {
+			path = path.replace(/\s/g, '');
 
-				if (path[0] !== '$') {
-					path = '$' + baseModel + path;
-				}
+			if (path[0] !== '$') {
+				path = '$' + baseModel + path;
+			}
 
-				const accessors = pathToAccessors(path);
-				let last = accessors.shift();
+			const accessors = pathToAccessors(path);
+			let last = accessors.shift();
 
-				while (accessors.length) {
-					let cur = accessors.shift();
+			while (accessors.length) {
+				let cur = accessors.shift();
 
-					const {series, field} = last;
+				const {series, field} = last;
 
-					const base = agg[series];
-					if (!base) {
-						throw create(`can not connect to ${series}`, {
-							code: 'BMOOR_CRUD_COMPOSITE_MISSING_SERIES',
-							context: {
-								path
-							}
-						});
-					}
-
-					/**
-					 * If a composite is to be includede, it needs to have
-					 * ID's attached and linked that way.  I am not supporting 
-					 * hidden id's coming from included models right now
-					 **/
-					base.join[cur.series] = {
-						from: field,
-						to: cur.target
-					};
-
-					if (agg[cur.series]) {
-						agg[cur.series].incoming.push(series);
-					} else {
-						if (cur.loader === 'include') {
-							agg[cur.series] = {
-								series: cur.series,
-								composite: cur.model,
-								isNeeded: false,
-								optional: cur.optional,
-								incoming: [series]
-							};
-						} else {
-							agg[cur.series] = {
-								series: cur.series,
-								model: cur.model,
-								isNeeded: false,
-								optional: cur.optional,
-								incoming: [series], // this is backwards
-								join: {}
-							};
+				const base = agg[series];
+				if (!base) {
+					throw create(`can not connect to ${series}`, {
+						code: 'BMOOR_CRUD_COMPOSITE_MISSING_SERIES',
+						context: {
+							path
 						}
-					}
-
-					last = cur;
+					});
 				}
 
-				return agg;
-			},
-			this.index
-		);
+				/**
+				 * If a composite is to be includede, it needs to have
+				 * ID's attached and linked that way.  I am not supporting
+				 * hidden id's coming from included models right now
+				 **/
+				base.join[cur.series] = {
+					from: field,
+					to: cur.target
+				};
+
+				if (agg[cur.series]) {
+					agg[cur.series].incoming.push(series);
+				} else {
+					if (cur.loader === 'include') {
+						agg[cur.series] = {
+							series: cur.series,
+							composite: cur.model,
+							isNeeded: false,
+							optional: cur.optional,
+							incoming: [series]
+						};
+					} else {
+						agg[cur.series] = {
+							series: cur.series,
+							model: cur.model,
+							isNeeded: false,
+							optional: cur.optional,
+							incoming: [series], // this is backwards
+							join: {}
+						};
+					}
+				}
+
+				last = cur;
+			}
+
+			return agg;
+		}, this.index);
 
 		this.subs = [];
 		this.fields = [];
@@ -314,9 +311,7 @@ class Instructions {
 		return this;
 	}
 
-
 	// USE: just internal
-	
 
 	// this will map another set of instructions directly onto the model
 	extend(parent) {

@@ -177,4 +177,4 @@ We will be defining the file `index.js`
 - [ ] Copy integration test to ReadMe Example
 - Other features I'm kicking around
 - [ ] HTTP connector for regular crud / web routes
-- [ ] SQLite connector for in memory development 
+- [ ] SQLite connector for in memory development

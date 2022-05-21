@@ -200,7 +200,7 @@ class Nexus {
 		return loadTarget(this, 'source', ref);
 	}
 
-	async loadStructure(ref){
+	async loadStructure(ref) {
 		if (!ref) {
 			throw new Error('invalid structure requested: ' + ref);
 		}

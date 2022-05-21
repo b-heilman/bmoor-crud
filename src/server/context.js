@@ -47,20 +47,20 @@ class Context {
 		return !!this.permissions[permission];
 	}
 
-	checkClaim(claim){
+	checkClaim(claim) {
 		this.claims[claim] = false;
 	}
 
 	// override this in other places
-	async verifyClaims(){
-		return Promise.all(Object.keys(this.claims).map(
-			async (key) => {
+	async verifyClaims() {
+		return Promise.all(
+			Object.keys(this.claims).map(async (key) => {
 				this.claims[key] = true;
-			}
-		));
+			})
+		);
 	}
 
-	canClaim(claim){
+	canClaim(claim) {
 		return this.claims[claim];
 	}
 

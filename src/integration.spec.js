@@ -37,7 +37,7 @@ async function buildBootstrap(app, settings) {
 		}
 	);
 
-	cfg = config.override(
+	const cfg = config.override(
 		{},
 		{
 			bootstrap: bootstrapCfg,
@@ -55,10 +55,8 @@ async function buildBootstrap(app, settings) {
 }
 
 describe('integration tests', function () {
-	this.timeout(5000); 
+	this.timeout(5000);
 
-	let app1 = null;
-	let app2 = null;
 	let server1 = null;
 	let server2 = null;
 	let instance1 = null;
@@ -167,12 +165,12 @@ describe('integration tests', function () {
 				}
 			]
 		});
-		
+
 		const app2 = express();
 
 		app2.use(bodyParser.urlencoded({extended: false}));
 		app2.use(bodyParser.json());
-		
+
 		instance2 = await buildBootstrap(app2, {
 			cruds: [
 				{
@@ -309,7 +307,7 @@ describe('integration tests', function () {
 				}
 			]
 		});
-		
+
 		return Promise.all([
 			new Promise((resolve) => {
 				server1 = app1.listen(9091, resolve);
@@ -331,33 +329,33 @@ describe('integration tests', function () {
 		]);
 	});
 
-	describe('instance-1 validation', function(){
+	describe('instance-1 validation', function () {
 		it('should work on the base service by id', async function () {
-			instance1.localStub.resolves([{
-				id: 'id-1',
-				name: 'name-1',
-				owner: {
-					name: 'owner-1',
-					content: '{"foo":"bar"}'
+			instance1.localStub.resolves([
+				{
+					id: 'id-1',
+					name: 'name-1',
+					owner: {
+						name: 'owner-1',
+						content: '{"foo":"bar"}'
+					}
+				},
+				{
+					id: 'id-2',
+					name: 'name-2',
+					owner: {
+						name: 'owner-2',
+						content: '{"foo":"bar"}'
+					}
 				}
-			}, {
-				id: 'id-2',
-				name: 'name-2',
-				owner: {
-					name: 'owner-2',
-					content: '{"foo":"bar"}'
-				}
-			}]);
+			]);
 
 			try {
 				const res = await (
 					await fetch('http://localhost:9091/bmoor/synthetic/team-info/3')
 				).json();
-			
-				const args = instance1.localStub.getCall(0).args;
 
-				expect(res)
-				.to.deep.equal({
+				expect(res).to.deep.equal({
 					result: {
 						id: 'id-1',
 						name: 'name-1',
@@ -370,7 +368,7 @@ describe('integration tests', function () {
 					}
 				});
 				// console.log('args =>', args);
-			} catch(ex){
+			} catch (ex) {
 				console.log('ex', ex);
 
 				throw ex;
@@ -378,57 +376,64 @@ describe('integration tests', function () {
 		});
 
 		it('should work on the base service with many', async function () {
-			instance1.localStub.resolves([{
-				id: 'id-1',
-				name: 'name-1',
-				owner: {
-					name: 'owner-1',
-					content: '{"foo":"bar"}'
+			instance1.localStub.resolves([
+				{
+					id: 'id-1',
+					name: 'name-1',
+					owner: {
+						name: 'owner-1',
+						content: '{"foo":"bar"}'
+					}
+				},
+				{
+					id: 'id-2',
+					name: 'name-2',
+					owner: {
+						name: 'owner-2',
+						content: '{"foo":"bar"}'
+					}
 				}
-			}, {
-				id: 'id-2',
-				name: 'name-2',
-				owner: {
-					name: 'owner-2',
-					content: '{"foo":"bar"}'
-				}
-			}]);
+			]);
 
 			try {
 				const res = await (
 					await fetch('http://localhost:9091/bmoor/synthetic/team-info')
 				).json();
-			
-				const args = instance1.localStub.getCall(0).args;
 
-				expect(res)
-				.to.deep.equal({
-					result: [{
-						id: 'id-1',
-						name: 'name-1',
-						owner: {
-							name: 'owner-1',
-							content: {
-								foo: 'bar'
+				expect(res).to.deep.equal({
+					result: [
+						{
+							id: 'id-1',
+							name: 'name-1',
+							owner: {
+								name: 'owner-1',
+								content: {
+									foo: 'bar'
+								}
+							}
+						},
+						{
+							id: 'id-2',
+							name: 'name-2',
+							owner: {
+								name: 'owner-2',
+								content: {
+									foo: 'bar'
+								}
 							}
 						}
-					}, {
-						id: 'id-2',
-						name: 'name-2',
-						owner: {
-							name: 'owner-2',
-							content: {
-								foo: 'bar'
-							}
-						}
-					}]
+					]
 				});
 				// console.log('args =>', args);
-			} catch(ex){
+			} catch (ex) {
 				console.log('ex', ex);
 
 				throw ex;
 			}
 		});
+	});
+
+	xdescribe('instance-2 validation', function () {
+		console.log(instance2);
 	});
 });

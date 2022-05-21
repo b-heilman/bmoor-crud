@@ -161,14 +161,8 @@ class Bootstrap {
 		const routes = this.config.getSub('routes');
 		const root = new Router(routes.get('root'));
 
-		const guard = assignControllers(
-			new Router(routes.get('guard')), 
-			guards
-		);
-		const action = assignControllers(
-			new Router(routes.get('action')), 
-			actions
-		);
+		const guard = assignControllers(new Router(routes.get('guard')), guards);
+		const action = assignControllers(new Router(routes.get('action')), actions);
 		const utility = assignControllers(
 			new Router(routes.get('utility')),
 			utilities

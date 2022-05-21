@@ -4,7 +4,7 @@ const {Instructions} = require('./instructions.js');
 
 describe('src/schema/composite/instructions.js', function () {
 	it('should work for a single join', async function () {
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			alias: null,
 			joins: ['$m-1 > $m-2 > .myId$m-3'],
@@ -101,7 +101,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with an alias', async function () {
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			joins: [
 				'$m-1 > $alias-2:m-2 > #alias:sub-1',
@@ -228,7 +228,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with optional fields', async function () {
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			joins: ['$m-1 >? $m-2 > $alias:m-3'],
 			fields: {
@@ -322,7 +322,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should work with a sub', async function () {
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			joins: ['$m-1 > $m-2 > #doc'],
 			fields: {
@@ -430,7 +430,7 @@ describe('src/schema/composite/instructions.js', function () {
 
 	it('should work with optional fields', async function () {
 		// Note white space testing as well
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			joins: ['$m-1 >? $m-2 > $alias:m-3', ' > $m-4 > $m-5', '> $m-6 > $m-5'],
 			fields: {
@@ -522,7 +522,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should correctly trace a path', async function () {
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			joins: ['> $m-2 > $m-3', '> $m-20 > $m-21 > $m-3'],
 			fields: {
@@ -546,7 +546,7 @@ describe('src/schema/composite/instructions.js', function () {
 	});
 
 	it('should correctly find the mount path', async function () {
-		const ci = await (new Instructions({})).configure({
+		const ci = await new Instructions({}).configure({
 			base: 'm-1',
 			joins: [
 				'> $m-2 > $m-3',
@@ -577,7 +577,7 @@ describe('src/schema/composite/instructions.js', function () {
 
 	describe('::extend', function () {
 		it('should correctly extend another', async function () {
-			const ci1 = await (new Instructions({})).configure({
+			const ci1 = await new Instructions({}).configure({
 				base: 'm-1',
 				joins: ['$m-1 >? $m-2 > $m-3', '> $m-4 > $m-5', '> $m-6 > $m-5'],
 				fields: {
@@ -585,7 +585,7 @@ describe('src/schema/composite/instructions.js', function () {
 				}
 			});
 
-			const ci2 = await (new Instructions({})).configure({
+			const ci2 = await new Instructions({}).configure({
 				base: 'm-10',
 				joins: ['$m-10 > $m-6'],
 				fields: {
@@ -741,7 +741,7 @@ describe('src/schema/composite/instructions.js', function () {
 
 	describe('::inline', function () {
 		it('should correctly line another', async function () {
-			const ci1 = await (new Instructions({})).configure({
+			const ci1 = await new Instructions({}).configure({
 				base: 'm-1',
 				joins: ['$m-1 > $m-2 > $m-3', '$m-1 > #sub-1'],
 				fields: {
@@ -750,7 +750,7 @@ describe('src/schema/composite/instructions.js', function () {
 				}
 			});
 
-			const ci2 = await (new Instructions({})).configure({
+			const ci2 = await new Instructions({}).configure({
 				base: 'm-10',
 				joins: ['$m-10 > $m-6'],
 				fields: {
@@ -870,7 +870,7 @@ describe('src/schema/composite/instructions.js', function () {
 		});
 
 		it('should correctly inline multiple levels', async function () {
-			const ci1 = await (new Instructions({})).configure({
+			const ci1 = await new Instructions({}).configure({
 				base: 'm-1',
 				joins: ['$m-1 > $m-2 > $m-3', '$m-1 > $m-4'],
 				fields: {
@@ -879,7 +879,7 @@ describe('src/schema/composite/instructions.js', function () {
 				}
 			});
 
-			const ci2 = await (new Instructions({})).configure({
+			const ci2 = await new Instructions({}).configure({
 				base: 'm-10',
 				joins: ['$m-10 > $m-16', '$m-10 > #sub-1'],
 				fields: {
@@ -889,7 +889,7 @@ describe('src/schema/composite/instructions.js', function () {
 				}
 			});
 
-			const ci3 = await (new Instructions({})).configure({
+			const ci3 = await new Instructions({}).configure({
 				base: 'm-20',
 				joins: ['> #sub-2'],
 				fields: {
