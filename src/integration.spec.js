@@ -1,8 +1,10 @@
-/*
-const {expect} = require('chai');
 const sinon = require('sinon');
+const fetch = require('node-fetch');
 const express = require('express');
+const {expect} = require('chai');
 const bodyParser = require('body-parser');
+
+const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
 
 const {build, config} = require('./index.js');
 
@@ -25,7 +27,7 @@ async function buildBootstrap(app, settings) {
 				local: new ConfigObject({
 					connector: 'local'
 				}),
-				other: new ConfigObject({
+				http: new ConfigObject({
 					connector: 'http'
 				})
 			}),
@@ -53,12 +55,14 @@ async function buildBootstrap(app, settings) {
 }
 
 describe('integration tests', function () {
+	this.timeout(5000); 
+
 	let app1 = null;
 	let app2 = null;
 	let server1 = null;
 	let server2 = null;
-	let bootstrap1 = null;
-	let bootstrap2 = null;
+	let instance1 = null;
+	let instance2 = null;
 
 	beforeEach(async function () {
 		const app1 = express();
@@ -66,7 +70,7 @@ describe('integration tests', function () {
 		app1.use(bodyParser.urlencoded({extended: false}));
 		app1.use(bodyParser.json());
 
-		const bootstrap1 = buildBootstrap(app1, {
+		instance1 = await buildBootstrap(app1, {
 			cruds: [
 				{
 					name: 'user',
@@ -116,7 +120,7 @@ describe('integration tests', function () {
 								read: true,
 								update: true,
 								link: {
-									name: 'service-1',
+									name: 'user',
 									field: 'id'
 								}
 							}
@@ -157,17 +161,19 @@ describe('integration tests', function () {
 				{
 					name: 'team-info',
 					settings: {
-						read: 'can-read'
+						readable: true,
+						read: false // no access controls
 					}
 				}
 			]
 		});
-
+		
 		const app2 = express();
 
 		app2.use(bodyParser.urlencoded({extended: false}));
 		app2.use(bodyParser.json());
-		const bootstrap2 = buildBootstrap(app2, {
+		
+		instance2 = await buildBootstrap(app2, {
 			cruds: [
 				{
 					name: 'company',
@@ -297,18 +303,19 @@ describe('integration tests', function () {
 				{
 					name: 'team-info',
 					settings: {
-						read: 'can-read'
+						readable: true,
+						read: false
 					}
 				}
 			]
 		});
-
+		
 		return Promise.all([
 			new Promise((resolve) => {
-				server1 = app1.listen(9001, resolve);
+				server1 = app1.listen(9091, resolve);
 			}),
 			new Promise((resolve) => {
-				server2 = app1.listen(9002, resolve);
+				server2 = app1.listen(9092, resolve);
 			})
 		]);
 	});
@@ -324,6 +331,104 @@ describe('integration tests', function () {
 		]);
 	});
 
-	it('should work', function () {});
+	describe('instance-1 validation', function(){
+		it('should work on the base service by id', async function () {
+			instance1.localStub.resolves([{
+				id: 'id-1',
+				name: 'name-1',
+				owner: {
+					name: 'owner-1',
+					content: '{"foo":"bar"}'
+				}
+			}, {
+				id: 'id-2',
+				name: 'name-2',
+				owner: {
+					name: 'owner-2',
+					content: '{"foo":"bar"}'
+				}
+			}]);
+
+			try {
+				const res = await (
+					await fetch('http://localhost:9091/bmoor/synthetic/team-info/3')
+				).json();
+			
+				const args = instance1.localStub.getCall(0).args;
+
+				expect(res)
+				.to.deep.equal({
+					result: {
+						id: 'id-1',
+						name: 'name-1',
+						owner: {
+							name: 'owner-1',
+							content: {
+								foo: 'bar'
+							}
+						}
+					}
+				});
+				// console.log('args =>', args);
+			} catch(ex){
+				console.log('ex', ex);
+
+				throw ex;
+			}
+		});
+
+		it('should work on the base service with many', async function () {
+			instance1.localStub.resolves([{
+				id: 'id-1',
+				name: 'name-1',
+				owner: {
+					name: 'owner-1',
+					content: '{"foo":"bar"}'
+				}
+			}, {
+				id: 'id-2',
+				name: 'name-2',
+				owner: {
+					name: 'owner-2',
+					content: '{"foo":"bar"}'
+				}
+			}]);
+
+			try {
+				const res = await (
+					await fetch('http://localhost:9091/bmoor/synthetic/team-info')
+				).json();
+			
+				const args = instance1.localStub.getCall(0).args;
+
+				expect(res)
+				.to.deep.equal({
+					result: [{
+						id: 'id-1',
+						name: 'name-1',
+						owner: {
+							name: 'owner-1',
+							content: {
+								foo: 'bar'
+							}
+						}
+					}, {
+						id: 'id-2',
+						name: 'name-2',
+						owner: {
+							name: 'owner-2',
+							content: {
+								foo: 'bar'
+							}
+						}
+					}]
+				});
+				// console.log('args =>', args);
+			} catch(ex){
+				console.log('ex', ex);
+
+				throw ex;
+			}
+		});
+	});
 });
-*/

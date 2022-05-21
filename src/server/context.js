@@ -30,6 +30,7 @@ class Context {
 		this.info = {};
 		this.cache = settings.cache;
 		this.sessionCache = new Cache({default: {ttl: 60}});
+		this.claims = {};
 	}
 
 	setInfo(info) {
@@ -41,8 +42,26 @@ class Context {
 		return true;
 	}
 
+	// TODO: make async
 	hasPermission(permission) {
 		return !!this.permissions[permission];
+	}
+
+	checkClaim(claim){
+		this.claims[claim] = false;
+	}
+
+	// override this in other places
+	async verifyClaims(){
+		return Promise.all(Object.keys(this.claims).map(
+			async (key) => {
+				this.claims[key] = true;
+			}
+		));
+	}
+
+	canClaim(claim){
+		return this.claims[claim];
 	}
 
 	hasCache(series, key) {
