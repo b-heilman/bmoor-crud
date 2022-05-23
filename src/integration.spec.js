@@ -5,6 +5,7 @@ const {expect} = require('chai');
 const bodyParser = require('body-parser');
 
 const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
+const {factory: httpConnector} = require('./connectors/http.js');
 
 const {build, config} = require('./index.js');
 
@@ -19,16 +20,19 @@ async function buildBootstrap(app, settings) {
 				local: () => ({
 					execute: localStub
 				}),
-				http: () => ({
-					execute: httpStub
-				})
+				http: httpConnector
 			}),
 			sources: new Config({
 				local: new ConfigObject({
 					connector: 'local'
 				}),
 				http: new ConfigObject({
-					connector: 'http'
+					connector: 'http',
+					connectorSettings: {
+						// TODO: do I want different bases based on query structure?
+						// TODO: rename this variable, it's not the crud base
+						crudBase: 'http://localhost:9091/bmoor'
+					}
 				})
 			}),
 			directories: new Config({
@@ -105,7 +109,8 @@ describe('integration tests', function () {
 								read: true,
 								update: false,
 								delete: true,
-								key: true
+								key: true,
+								query: true
 							},
 							name: {
 								create: true,
@@ -431,9 +436,145 @@ describe('integration tests', function () {
 				throw ex;
 			}
 		});
+
+		it('should allow for a model to be queried via GET', async function () {
+			instance1.localStub.resolves([
+				{
+					id: 'id-1',
+					name: 'name-1',
+					owner: {
+						name: 'owner-1',
+						content: '{"foo":"bar"}'
+					}
+				},
+				{
+					id: 'id-2',
+					name: 'name-2',
+					owner: {
+						name: 'owner-2',
+						content: '{"foo":"bar"}'
+					}
+				}
+			]);
+
+			try {
+				const res = await (
+					await fetch(
+						'http://localhost:9091/bmoor/querier/document/team-info?query=' +
+							encodeURIComponent('$team.id=123')
+					)
+				).json();
+
+				expect(res).to.deep.equal({
+					result: [
+						{
+							id: 'id-1',
+							name: 'name-1',
+							owner: {
+								name: 'owner-1',
+								content: {
+									foo: 'bar'
+								}
+							}
+						},
+						{
+							id: 'id-2',
+							name: 'name-2',
+							owner: {
+								name: 'owner-2',
+								content: {
+									foo: 'bar'
+								}
+							}
+						}
+					]
+				});
+				// console.log('args =>', args);
+			} catch (ex) {
+				console.log('ex', ex);
+
+				throw ex;
+			}
+		});
+
+		it('should allow for a model to be queried via POST', async function () {
+			instance1.localStub.resolves([
+				{
+					id: 'id-1',
+					name: 'name-1',
+					owner: {
+						name: 'owner-1',
+						content: '{"foo":"bar"}'
+					}
+				},
+				{
+					id: 'id-2',
+					name: 'name-2',
+					owner: {
+						name: 'owner-2',
+						content: '{"foo":"bar"}'
+					}
+				}
+			]);
+
+			try {
+				const res = await (
+					await fetch(
+						'http://localhost:9091/bmoor/querier?' +
+							`query=${encodeURIComponent('$team.id=123')}`,
+						{
+							method: 'POST',
+							headers: {'Content-Type': 'application/json'},
+							body: JSON.stringify({
+								base: 'team',
+								joins: ['.userId > $user'],
+								fields: {
+									id: '.id',
+									name: '.name',
+									owner: {
+										name: '$user.name',
+										content: '$user.content'
+									}
+								}
+							})
+						}
+					)
+				).json();
+
+				expect(res).to.deep.equal({
+					result: [
+						{
+							id: 'id-1',
+							name: 'name-1',
+							owner: {
+								name: 'owner-1',
+								content: {
+									foo: 'bar'
+								}
+							}
+						},
+						{
+							id: 'id-2',
+							name: 'name-2',
+							owner: {
+								name: 'owner-2',
+								content: {
+									foo: 'bar'
+								}
+							}
+						}
+					]
+				});
+				// console.log('args =>', args);
+			} catch (ex) {
+				console.log('ex', ex);
+
+				throw ex;
+			}
+		});
 	});
 
 	xdescribe('instance-2 validation', function () {
-		console.log(instance2);
+		console.log('TODO', instance2);
 	});
 });

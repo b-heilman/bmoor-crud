@@ -218,8 +218,9 @@ class Controller {
 		return this._buildRoutes().map((routeInfo) => this.prepareRoute(routeInfo));
 	}
 
-	getRouter() {
-		const router = new Router('/' + this.view.structure.name);
+	// TODO: this should get passed in...
+	getRouter(path = null) {
+		const router = new Router(path || '/' + this.view.structure.name);
 
 		router.addRoutes(this.getRoutes());
 

@@ -1,9 +1,9 @@
 class Router {
-	constructor(path) {
+	constructor(path, routes = [], subs = []) {
 		this.path = path;
 
-		this.subs = [];
-		this.routes = [];
+		this.subs = subs;
+		this.routes = routes;
 	}
 
 	addRoutes(routes) {

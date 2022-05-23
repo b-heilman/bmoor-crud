@@ -27,7 +27,8 @@ const routes = new Config({
 	guard: '/crud',
 	action: '/action',
 	utility: '/utility',
-	synthetic: '/synthetic'
+	synthetic: '/synthetic',
+	querier: '/querier'
 });
 
 const config = new Config(
@@ -41,10 +42,14 @@ const config = new Config(
 	}
 );
 
-function assignControllers(guard, controllers) {
-	guard.addRouters(controllers.map((controller) => controller.getRouter()));
+function assignControllers(router, controllers) {
+	router.addRouters(
+		controllers.map((controller) =>
+			controller.getRouter('/' + controller.view.structure.name)
+		)
+	);
 
-	return guard;
+	return router;
 }
 
 function toRoutes(crudRouter) {
@@ -156,7 +161,7 @@ class Bootstrap {
 		this.crud = await this.installCrud(settings);
 		this.controllers = await this.installControllers(settings);
 
-		const {guards, actions, utilities, synthetics} = this.controllers;
+		const {guards, actions, utilities, synthetics, querier} = this.controllers;
 
 		const routes = this.config.getSub('routes');
 		const root = new Router(routes.get('root'));
@@ -171,8 +176,9 @@ class Bootstrap {
 			new Router(routes.get('synthetic')),
 			synthetics
 		);
+		const queryRouter = querier.getRouter(routes.get('querier'));
 
-		root.addRouters([guard, action, utility, synthetic]);
+		root.addRouters([guard, action, utility, synthetic, queryRouter]);
 
 		this.router = root;
 	}

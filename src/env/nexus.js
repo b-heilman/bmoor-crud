@@ -33,12 +33,6 @@ const controllers = new Config({
 	synthetic: Synthetic
 });
 
-const connectors = new Config({
-	knex: require('../connectors/knex.js').factory,
-	mysql: require('../connectors/knex.js').factory,
-	http: require('../connectors/http.js').factory
-});
-
 const config = new Config(
 	{
 		timeout: 2000
@@ -46,8 +40,7 @@ const config = new Config(
 	{
 		schemas,
 		services,
-		controllers,
-		connectors
+		controllers
 	}
 );
 

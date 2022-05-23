@@ -495,6 +495,22 @@ describe('src/env/bootstrap.js', function () {
 					},
 					{
 						$schema: 'bmoor-crud:router',
+						path: '/querier',
+						routes: [
+							{
+								$schema: 'bmoor-crud:route',
+								method: 'post',
+								path: ''
+							},
+							{
+								$schema: 'bmoor-crud:route',
+								method: 'get',
+								path: '/:type/:name'
+							}
+						]
+					},
+					{
+						$schema: 'bmoor-crud:router',
 						path: '/synthetic',
 						routes: [
 							{

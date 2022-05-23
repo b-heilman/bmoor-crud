@@ -230,13 +230,13 @@ describe('src/server/scafolding.js', function () {
 
 		expect(stubs.appUse.callCount).to.equal(1);
 
-		expect(stubs.routerUse.callCount).to.equal(8);
+		expect(stubs.routerUse.callCount).to.equal(9);
 
-		expect(stubs.routerGet.callCount).to.equal(6);
+		expect(stubs.routerGet.callCount).to.equal(7);
 
 		expect(stubs.routerPut.callCount).to.equal(1);
 
-		expect(stubs.routerPost.callCount).to.equal(1);
+		expect(stubs.routerPost.callCount).to.equal(2);
 
 		expect(stubs.routerPatch.callCount).to.equal(2);
 

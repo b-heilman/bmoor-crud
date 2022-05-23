@@ -8,6 +8,7 @@ const {
 	parseQuery,
 	parseSettings
 } = require('../server/controller.js');
+
 const {Composite} = require('../schema/composite.js');
 const {Document} = require('../services/document.js');
 
