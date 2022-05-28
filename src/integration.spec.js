@@ -31,7 +31,7 @@ async function buildBootstrap(app, settings) {
 					connectorSettings: {
 						// TODO: do I want different bases based on query structure?
 						// TODO: rename this variable, it's not the crud base
-						crudBase: 'http://localhost:9091/bmoor'
+						crudBase: 'http://localhost:9091/bmoor/querier'
 					}
 				})
 			}),
@@ -188,7 +188,8 @@ describe('integration tests', function () {
 								read: true,
 								update: false,
 								delete: true,
-								key: true
+								key: true,
+								query: true
 							},
 							name: {
 								create: true,
@@ -318,7 +319,7 @@ describe('integration tests', function () {
 				server1 = app1.listen(9091, resolve);
 			}),
 			new Promise((resolve) => {
-				server2 = app1.listen(9092, resolve);
+				server2 = app2.listen(9092, resolve);
 			})
 		]);
 	});
@@ -574,7 +575,101 @@ describe('integration tests', function () {
 		});
 	});
 
-	xdescribe('instance-2 validation', function () {
-		console.log('TODO', instance2);
+	describe('instance-2 validation', function () {
+		it('should allow direct query without a call through', async function () {
+			instance2.localStub.resolves([
+				{
+					id: 'id-1',
+					name: 'name-1'
+				},
+				{
+					id: 'id-2',
+					name: 'name-2'
+				}
+			]);
+
+			try {
+				const res = await (
+					await fetch(
+						'http://localhost:9092/bmoor/querier?' +
+							`query=${encodeURIComponent('$company.id<123')}`,
+						{
+							method: 'POST',
+							headers: {'Content-Type': 'application/json'},
+							body: JSON.stringify({
+								base: 'company',
+								joins: [],
+								fields: {
+									id: '.id',
+									name: '.name'
+								}
+							})
+						}
+					)
+				).json();
+
+				expect(res).to.deep.equal({
+					result: [
+						{
+							id: 'id-1',
+							name: 'name-1'
+						},
+						{
+							id: 'id-2',
+							name: 'name-2'
+						}
+					]
+				});
+				// console.log('args =>', args);
+			} catch (ex) {
+				console.log('ex', ex);
+
+				throw ex;
+			}
+		});
+
+		xit('should allow direct query with a call through', async function () {
+			instance2.localStub.resolves([
+				{
+					id: 'id-1',
+					name: 'name-1',
+					exe_0: 'team-1'
+				},
+				{
+					id: 'id-2',
+					name: 'name-2',
+					exe_0: 'team-1'
+				}
+			]);
+
+			try {
+				const res = await (
+					await fetch(
+						'http://localhost:9092/bmoor/querier/document/company-info' +
+							`?query=${encodeURIComponent('$company.id=123')}`
+					)
+				).json();
+
+				expect(res).to.deep.equal({
+					result: [
+						{
+							id: 'id-1',
+							name: 'name-1',
+							exe_0: 'team-1'
+						},
+						{
+							id: 'id-2',
+							name: 'name-2',
+							exe_0: 'team-1'
+						}
+					]
+				});
+				// console.log('args =>', args);
+			} catch (ex) {
+				console.log('ex', ex);
+
+				throw ex;
+			}
+		});
 	});
 });

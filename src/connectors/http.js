@@ -1,4 +1,4 @@
-const error = require('bmoor/src/lib/error.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {QueryStatement} = require('../schema/query/statement.js');
 const {
@@ -20,7 +20,7 @@ function buildConnector(connectorSettings) {
 	return {
 		execute: async function (stmt, ctx) {
 			if (!ctx.fetch) {
-				throw error('context has no defined fetch', {
+				throw create('context has no defined fetch', {
 					code: 'BMOOR_CRUD_CONNECTOR_HTTP'
 				});
 			}
@@ -48,7 +48,7 @@ function buildConnector(connectorSettings) {
 
 				url = new URL(connectorSettings.crudBase + '/' + request.base);
 			} else {
-				throw error('unknown statement type', {
+				throw create('unknown statement type', {
 					code: 'BMOOR_CRUD_CONNECTOR_HTTP_UNKNOWN'
 				});
 			}

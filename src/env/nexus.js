@@ -53,8 +53,6 @@ async function ensure(settings, prom, label) {
 			const timeout = settings.get('timeout');
 
 			const clear = setTimeout(function () {
-				console.log('timed out: ' + label, JSON.stringify(waiting, null, 2));
-
 				reject(new Error('lookup timed out: ' + label));
 			}, timeout);
 

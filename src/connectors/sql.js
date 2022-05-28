@@ -1,4 +1,4 @@
-const error = require('bmoor/src/lib/error.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {
 	StatementExpression,
@@ -258,7 +258,7 @@ function buildConnector(settings) {
 					resultIndex
 				};
 			} else {
-				throw error('unknown statement type', {
+				throw create('unknown statement type', {
 					code: 'BMOOR_CRUD_CONNECTOR_SQL_UNKNOWN'
 				});
 			}

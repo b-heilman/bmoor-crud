@@ -25,9 +25,9 @@ class Querier extends Controller {
 
 		let view = null;
 		if (type === 'document') {
-			view = await this.nexus.getDocument(name);
+			view = await this.nexus.loadDocument(name);
 		} else {
-			view = await this.nexus.getCrud(name);
+			view = await this.nexus.loadCrud(name);
 		}
 
 		if (ctx.hasQuery()) {

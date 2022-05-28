@@ -1,4 +1,4 @@
-const error = require('bmoor/src/lib/error.js');
+const {create} = require('bmoor/src/lib/error.js');
 
 const {factory: sqlFactory} = require('./sql.js');
 
@@ -9,7 +9,7 @@ function buildConnector(settings) {
 		const {knex} = settings;
 
 		if (!knex) {
-			throw error('no knex connector configured', {
+			throw create('no knex connector configured', {
 				code: 'BMOOR_CRUD_CONNECTOR_KNEX'
 			});
 		}

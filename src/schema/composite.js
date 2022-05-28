@@ -594,6 +594,10 @@ class Composite extends Structure {
 
 	// produces representation for interface layer
 	async getQuery(settings = {}, ctx = {}) {
+		if (!this.preparedQuery) {
+			throw new Error('getQuery called without prepared query: ' + this.name);
+		}
+
 		const query = this.preparedQuery.clone();
 
 		return super.extendQuery(query, settings, ctx);
