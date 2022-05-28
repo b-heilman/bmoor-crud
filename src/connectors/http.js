@@ -19,7 +19,7 @@ const {
 function buildConnector(connectorSettings) {
 	return {
 		execute: async function (stmt, ctx) {
-			if (!ctx.fetch) {
+			if (!ctx.canFetch()) {
 				throw create('context has no defined fetch', {
 					code: 'BMOOR_CRUD_CONNECTOR_HTTP'
 				});
@@ -64,7 +64,27 @@ function buildConnector(connectorSettings) {
 				headers: {'Content-Type': 'application/json'} // ctx.fetch should be able to wrap security headers
 			});
 
-			return res.json();
+			// validate the status response
+			if (res.ok){
+				return res.json();
+			} else {
+				let response = {};
+
+				try {
+					response = await res.json();
+				} catch(ex){
+					// TODO: if it's not JSON, what do I want to do?
+				}
+
+				// TODO: handle 300s
+				throw create(
+					response.message||'downstream server failed', 
+					Object.assign(response, {
+						code: 'BMOOR_CRUD_CONNECTOR_HTTP_STATUS',
+						status: response.status
+					})
+				);
+			}
 		}
 	};
 }

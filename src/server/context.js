@@ -22,15 +22,23 @@ class Context {
 		this.content = get(systemContext, cfg.content) || null;
 		this.permissions = get(systemContext, cfg.permissions) || {};
 
+		// change management and side effect awareness
 		this.changes = [];
 		this.waitlist = new Waitlist();
 		this.trackingChanges = true;
 
 		// controller specific properties
 		this.info = {};
+
+		// memory and session optimizations
 		this.cache = settings.cache;
 		this.sessionCache = new Cache({default: {ttl: 60}});
+
+		// security
 		this.claims = {};
+
+		// data access
+		this.fetcher = settings.fetch;
 	}
 
 	setInfo(info) {
@@ -179,6 +187,14 @@ class Context {
 	// server/controller is written to handle the rollback condition
 	getChanges() {
 		return this.changes.slice(0);
+	}
+
+	canFetch(){
+		return !!this.fetcher;
+	}
+
+	fetch(url, settings){
+		return this.fetcher(url, settings);
 	}
 
 	toJSON() {

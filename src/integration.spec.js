@@ -5,47 +5,62 @@ const {expect} = require('chai');
 const bodyParser = require('body-parser');
 
 const {Config, ConfigObject} = require('bmoor/src/lib/config.js');
-const {factory: httpConnector} = require('./connectors/http.js');
 
-const {build, config} = require('./index.js');
+const {Context} = require('./server/context.js');
+const {factory: httpConnector} = require('./connectors/http.js');
+const {build, config: scafoldingConfig} = require('./index.js');
 
 async function buildBootstrap(app, settings) {
 	const localStub = sinon.stub();
 	const httpStub = sinon.stub();
 
-	const bootstrapCfg = config.getSub('bootstrap').override(
+	const cfg = scafoldingConfig.override(
 		{},
 		{
-			connectors: new Config({
-				local: () => ({
-					execute: localStub
-				}),
-				http: httpConnector
-			}),
-			sources: new Config({
-				local: new ConfigObject({
-					connector: 'local'
-				}),
-				http: new ConfigObject({
-					connector: 'http',
-					connectorSettings: {
-						// TODO: do I want different bases based on query structure?
-						// TODO: rename this variable, it's not the crud base
-						crudBase: 'http://localhost:9091/bmoor/querier'
-					}
-				})
-			}),
-			directories: new Config({
-				// do not load any directories
-			})
-		}
-	);
-
-	const cfg = config.override(
-		{},
-		{
-			bootstrap: bootstrapCfg,
-			server: new Config({
+			bootstrap: scafoldingConfig.getSub('bootstrap').override(
+				{},
+				{
+					connectors: new Config({
+						local: () => ({
+							execute: localStub
+						}),
+						http: httpConnector
+					}),
+					sources: new Config({
+						local: new ConfigObject({
+							connector: 'local'
+						}),
+						http: new ConfigObject({
+							connector: 'http',
+							connectorSettings: {
+								queryBase: 'http://localhost:9091/bmoor/querier'
+							}
+						})
+					}),
+					directories: new Config({
+						// do not load any directories
+					})
+				}
+			),
+			hooks: scafoldingConfig.getSub('hooks').override(
+				{
+					buildContext: (req) => new Context(
+						req,
+						{
+							query: 'query',
+							params: 'params',
+							method: 'method',
+							content: 'body',
+							permissions: 'permissions'
+						},
+						{
+							cache: null, // no cross session cache
+							fetch
+						}
+					),
+				}
+			),
+			server: scafoldingConfig.getSub('server').override({
 				buildRouter: () => express.Router()
 			})
 		}
@@ -628,7 +643,7 @@ describe('integration tests', function () {
 			}
 		});
 
-		xit('should allow direct query with a call through', async function () {
+		it.only('should allow direct query with a call through', async function () {
 			instance2.localStub.resolves([
 				{
 					id: 'id-1',

@@ -2,39 +2,32 @@ const {Config} = require('bmoor/src/lib/config.js');
 
 const {Bootstrap, config: bootConfig} = require('../env/bootstrap.js');
 const {Context} = require('./context.js');
-const {Cache} = require('./cache.js');
-
-const hooks = new Config({
-	buildContext: (req) =>
-		new Context(
-			req,
-			{
-				query: 'query',
-				params: 'params',
-				method: 'method',
-				content: 'body',
-				permissions: 'permissions'
-			},
-			new Cache()
-		),
-	beforeLoad: async () => null,
-	beforeConfigure: async () => null,
-	beforeStart: async () => null,
-	afterStart: async () => null
-});
-
-const server = new Config({
-	buildRouter: function () {
-		throw new Error('Define a router factory');
-	}
-});
 
 const config = new Config(
 	{},
 	{
 		bootstrap: bootConfig,
-		hooks,
-		server
+		hooks: new Config({
+			buildContext: (req) => new Context(
+				req,
+				{
+					query: 'query',
+					params: 'params',
+					method: 'method',
+					content: 'body',
+					permissions: 'permissions'
+				}
+			),
+			beforeLoad: async () => null,
+			beforeConfigure: async () => null,
+			beforeStart: async () => null,
+			afterStart: async () => null
+		}),
+		server: new Config({
+			buildRouter: function () {
+				throw new Error('Define a router factory');
+			}
+		})
 	}
 );
 
