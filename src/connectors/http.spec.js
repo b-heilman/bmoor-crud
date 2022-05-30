@@ -23,7 +23,8 @@ describe('src/connectors/http.js', function () {
 			});
 
 			context = {
-				fetch: sinon.stub()
+				fetch: sinon.stub(),
+				canFetch: () => true
 			};
 		});
 
@@ -42,6 +43,7 @@ describe('src/connectors/http.js', function () {
 					});
 
 				context.fetch.resolves({
+					ok: true,
 					json: async () => [
 						{
 							foo: 'bar'
@@ -91,6 +93,7 @@ describe('src/connectors/http.js', function () {
 					.addParam(new StatementVariable('model-1', 'id', 123));
 
 				context.fetch.resolves({
+					ok: true,
 					json: async () => [
 						{
 							foo: 'bar'
@@ -139,6 +142,7 @@ describe('src/connectors/http.js', function () {
 					.addParam(new StatementVariable('model-1', 'id', 123));
 
 				context.fetch.resolves({
+					ok: true,
 					json: async () => [
 						{
 							foo: 'bar'
@@ -183,7 +187,8 @@ describe('src/connectors/http.js', function () {
 			});
 
 			context = {
-				fetch: sinon.stub()
+				fetch: sinon.stub(),
+				canFetch: () => true
 			};
 		});
 
@@ -198,6 +203,7 @@ describe('src/connectors/http.js', function () {
 				.addParam(new StatementVariable('model-1', 'id', 123));
 
 			context.fetch.resolves({
+				ok: true,
 				json: async () => [
 					{
 						foo: 'bar'
@@ -237,6 +243,7 @@ describe('src/connectors/http.js', function () {
 			]);
 
 			context.fetch.resolves({
+				ok: true,
 				json: async () => [
 					{
 						foo: 'bar'
@@ -273,6 +280,7 @@ describe('src/connectors/http.js', function () {
 			]);
 
 			context.fetch.resolves({
+				ok: true,
 				json: async () => [
 					{
 						foo: 'bar'
@@ -319,6 +327,7 @@ describe('src/connectors/http.js', function () {
 				.addParam(new StatementVariable('test-person', 'foo', 'bar'));
 
 			context.fetch.resolves({
+				ok: true,
 				json: async () => [
 					{
 						foo: 'bar'

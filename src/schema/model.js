@@ -63,6 +63,11 @@ class Model extends Structure {
 		}
 	}
 
+	/*** settings
+	 * source: 
+	 * schema:
+	 * fields: 
+	 ***/
 	async configure(settings) {
 		await super.configure(settings);
 

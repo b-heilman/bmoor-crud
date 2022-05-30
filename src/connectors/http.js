@@ -58,9 +58,10 @@ function buildConnector(connectorSettings) {
 			}
 
 			// queryBase vs crudBase
+			const body = JSON.stringify(request, null, 2);
 			const res = await ctx.fetch(url, {
 				method,
-				body: JSON.stringify(request),
+				body,
 				headers: {'Content-Type': 'application/json'} // ctx.fetch should be able to wrap security headers
 			});
 
