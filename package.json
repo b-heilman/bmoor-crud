@@ -13,7 +13,7 @@
 		"bmoor": "^0.11.1",
 		"bmoor-data": "^0.11.1",
 		"bmoor-schema": "^0.11.0",
-		"knex": "^0.95.2",
+		"knex": "^2.4.0",
 		"mysql": "^2.18.1"
 	},
 	"devDependencies": {
